@@ -10,7 +10,7 @@ datasource db {
 
 model User {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  phone         String?   @unique
+  phone         String?
   name          String?
   email         String?   @unique
   emailVerified DateTime?
@@ -21,6 +21,7 @@ model User {
   sessions Session[]
   bookings Booking[]
 
+  @@index([phone])
   @@map("users")
 }
 

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { EquipmentCategory, PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -121,6 +121,118 @@ const sampleEquipment = [
   },
 ];
 
+interface ExternalEquipmentSeed {
+  name: string;
+  category: string;
+  imageUrl: string;
+  pricing: {
+    daily: number;
+  };
+  specs: Record<string, string>;
+}
+
+const externalEquipmentSeed: ExternalEquipmentSeed[] = [
+  {
+    name: "Mini Excavator (3-Ton)",
+    category: "Earthmoving",
+    imageUrl:
+      "https://images.unsplash.com/photo-1580982319985-0205845ce9b6?auto=format&fit=crop&w=800&q=80",
+    pricing: { daily: 4500 },
+    specs: { weight: "3 tonnes", diggingDepth: "2.5 m", bucketCapacity: "0.1 m3" },
+  },
+  {
+    name: "Heavy Crawler Excavator (20-Ton)",
+    category: "Earthmoving",
+    imageUrl:
+      "https://images.unsplash.com/photo-1621689698716-43b95a5fbc40?auto=format&fit=crop&w=800&q=80",
+    pricing: { daily: 8500 },
+    specs: { weight: "21 tonnes", diggingDepth: "6.7 m", power: "140 HP" },
+  },
+  {
+    name: "Vibratory Soil Compactor (Road Roller)",
+    category: "Compaction",
+    imageUrl:
+      "https://images.unsplash.com/photo-1585827552631-f1f4560ea517?auto=format&fit=crop&w=800&q=80",
+    pricing: { daily: 5500 },
+    specs: { weight: "11 tonnes", drumWidth: "2.1 m", type: "Single Drum" },
+  },
+  {
+    name: "Bulldozer (D6 Equivalent)",
+    category: "Earthmoving",
+    imageUrl:
+      "https://images.unsplash.com/photo-1584988782928-1b2067ed3a10?auto=format&fit=crop&w=800&q=80",
+    pricing: { daily: 12000 },
+    specs: { power: "200 HP", bladeCapacity: "4.2 m3", trackType: "Standard" },
+  },
+  {
+    name: "Water Tanker (5000 Liters)",
+    category: "Support",
+    imageUrl:
+      "https://images.unsplash.com/photo-1616432130768-450f681ab3dc?auto=format&fit=crop&w=800&q=80",
+    pricing: { daily: 2500 },
+    specs: { capacity: "5000 L", pumpType: "PTO Driven", application: "Dust Control/Curing" },
+  },
+  {
+    name: "Combine Harvester (Paddy/Wheat)",
+    category: "Agriculture",
+    imageUrl:
+      "https://images.unsplash.com/photo-1601662998634-8b64e03f0b2f?auto=format&fit=crop&w=800&q=80",
+    pricing: { daily: 14000 },
+    specs: { power: "100 HP", cutterBarWidth: "14 ft", grainTank: "2.5 m3" },
+  },
+  {
+    name: "Tractor with Rotavator",
+    category: "Agriculture",
+    imageUrl:
+      "https://images.unsplash.com/photo-1592982537443-d1e462ad5221?auto=format&fit=crop&w=800&q=80",
+    pricing: { daily: 3500 },
+    specs: { power: "55 HP", implement: "7 ft Rotary Tiller", blades: "42" },
+  },
+  {
+    name: "Heavy Duty Cultivator (9-Tine)",
+    category: "Agriculture",
+    imageUrl:
+      "https://images.unsplash.com/photo-1530558661601-52319aeb3e45?auto=format&fit=crop&w=800&q=80",
+    pricing: { daily: 2800 },
+    specs: { linkage: "3-Point", workingDepth: "9 inches", suitableFor: "Hard Soil" },
+  },
+  {
+    name: "Tractor-Mounted Sprayer",
+    category: "Agriculture",
+    imageUrl:
+      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=800&q=80",
+    pricing: { daily: 2000 },
+    specs: { tankCapacity: "500 L", boomWidth: "12 m", pump: "Diaphragm" },
+  },
+];
+
+function mapToEquipmentCategory(name: string, category: string): EquipmentCategory {
+  const text = `${name} ${category}`.toLowerCase();
+  if (text.includes("crane")) {
+    return EquipmentCategory.Crane;
+  }
+  if (text.includes("excavator")) {
+    return EquipmentCategory.Excavator;
+  }
+  return EquipmentCategory.JCB;
+}
+
+const normalizedExternalEquipment = externalEquipmentSeed.map((item) => ({
+  name: item.name,
+  category: mapToEquipmentCategory(item.name, item.category),
+  subType: item.category,
+  pricing: {
+    daily: item.pricing.daily,
+    hourly: Number((item.pricing.daily / 8).toFixed(2)),
+  },
+  images: [item.imageUrl],
+  specifications: {
+    description: `${item.name} from ${item.category} category.`,
+    imageUrl: item.imageUrl,
+    ...item.specs,
+  },
+}));
+
 async function seed(): Promise<void> {
   const allLabels = [...bookingLabels, ...adminLabels];
 
@@ -138,7 +250,9 @@ async function seed(): Promise<void> {
     });
   }
 
-  for (const eq of sampleEquipment) {
+  const allEquipment = [...sampleEquipment, ...normalizedExternalEquipment];
+
+  for (const eq of allEquipment) {
     const exists = await prisma.equipment.findFirst({
       where: { name: eq.name },
     });

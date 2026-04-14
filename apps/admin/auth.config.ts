@@ -7,7 +7,11 @@ import type { NextAuthConfig } from "next-auth";
  * native modules.
  */
 export const authConfig: NextAuthConfig = {
+  secret: process.env.AUTH_SECRET,
   providers: [],
+  session: {
+    strategy: "jwt",
+  },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
