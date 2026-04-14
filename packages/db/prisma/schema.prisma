@@ -1,0 +1,169 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  phone         String?   @unique
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole  @default(USER)
+
+  accounts Account[]
+  sessions Session[]
+  bookings Booking[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  PARTNER
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Otp {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  phone     String
+  code      String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone, code])
+  @@map("otps")
+}
+
+model Equipment {
+  id             String            @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  category       EquipmentCategory
+  subType        String?
+  partnerId      String?           @db.ObjectId
+  pricing        EquipmentPricing
+  images         String[]
+  specifications Json
+
+  bookings Booking[]
+
+  @@map("equipment")
+}
+
+enum EquipmentCategory {
+  JCB
+  Crane
+  Excavator
+}
+
+type EquipmentPricing {
+  hourly Float
+  daily  Float
+}
+
+model Booking {
+  id          String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String             @db.ObjectId
+  equipmentId String             @db.ObjectId
+  partnerId   String?            @db.ObjectId
+  status      BookingStatus      @default(PENDING)
+  location    BookingLocation
+  pricing     BookingPricingType
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id])
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@map("bookings")
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  DISPATCHED
+  COMPLETED
+  CANCELLED
+}
+
+type BookingLocation {
+  address     String
+  coordinates Coordinates
+  pincode     String
+}
+
+type Coordinates {
+  lat Float
+  lng Float
+}
+
+type BookingPricingType {
+  total    Float
+  duration Float
+  unit     String
+}
+
+model ServiceableArea {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  pincode  String  @unique
+  isActive Boolean @default(true)
+  name     String
+
+  @@map("serviceable_areas")
+}
+
+model Dictionary {
+  id       String        @id @default(auto()) @map("_id") @db.ObjectId
+  key      String
+  value    String
+  language String        @default("en")
+  app      DictionaryApp
+
+  @@unique([key, app, language])
+  @@map("dictionary")
+}
+
+enum DictionaryApp {
+  BOOKING
+  ADMIN
+}
