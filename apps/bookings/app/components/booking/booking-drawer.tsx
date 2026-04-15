@@ -122,9 +122,18 @@ export function BookingDrawer({
     });
   }
 
+  function preventCloseOnPacClick(e: Event) {
+    if ((e.target as Element | null)?.closest?.(".pac-container")) {
+      e.preventDefault();
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-      <SheetContent>
+      <SheetContent
+        onPointerDownOutside={preventCloseOnPacClick}
+        onInteractOutside={preventCloseOnPacClick}
+      >
         <SheetHeader>
           <SheetTitle className="text-[#1E293B]">{t("DRAWER_TITLE")}</SheetTitle>
           <SheetDescription>{equipment?.name ?? ""}</SheetDescription>

@@ -74,12 +74,12 @@ export function EquipmentCard({
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold leading-tight text-brand-navy">{name}</h3>
-          <Badge variant="secondary" className="shrink-0">
+          <Badge variant="secondary" className="shrink-0 p-1">
             {category}
           </Badge>
         </div>
         {subType && (
-          <Badge variant="outline" className="w-fit">{subType}</Badge>
+          <Badge variant="outline" className="w-fit p-1">{subType}</Badge>
         )}
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
           {Object.entries(specifications)
