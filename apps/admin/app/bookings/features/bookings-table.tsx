@@ -91,7 +91,7 @@ export function BookingsTable({
                 {booking.user.name ?? "Guest"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {booking.user.phone ?? "—"}
+                {booking.user.phoneNumber ?? "—"}
               </p>
             </TableCell>
 

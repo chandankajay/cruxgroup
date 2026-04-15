@@ -5,7 +5,7 @@ import {
   useJsApiLoader,
   GoogleMap,
   Marker,
-  Autocomplete,
+  StandaloneSearchBox,
 } from "@react-google-maps/api";
 import type { Libraries } from "@react-google-maps/api";
 
@@ -103,17 +103,13 @@ const MAP_OPTIONS = {
   gestureHandling: "cooperative",
 };
 
-const AUTOCOMPLETE_OPTIONS = {
-  componentRestrictions: { country: "in" },
-  fields: ["geometry", "formatted_address"],
-};
-
 const INPUT_CLASS =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 interface SiteAddressPickerProps {
   readonly address: string;
   readonly onAddressChange: (address: string) => void;
+  readonly onLocationChange?: (coords: { lat: number; lng: number }) => void;
   readonly placeholder?: string;
 }
 
@@ -152,6 +148,7 @@ function PlainAddressInput({
 export function SiteAddressPicker({
   address,
   onAddressChange,
+  onLocationChange,
   placeholder,
 }: SiteAddressPickerProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
@@ -164,45 +161,46 @@ export function SiteAddressPicker({
   const [markerPos, setMarkerPos] = useState<LatLng>(INDIA_CENTER);
 
   const mapRef = useRef<google.maps.Map | null>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const searchBoxRef = useRef<google.maps.places.SearchBox | null>(null);
 
   const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
   }, []);
 
-  const handleAutocompleteLoad = useCallback(
-    (ac: google.maps.places.Autocomplete) => {
-      autocompleteRef.current = ac;
+  const updateMapPosition = useCallback(
+    (newPos: LatLng, formattedAddress?: string) => {
+      setMarkerPos(newPos);
+      onLocationChange?.(newPos);
+      mapRef.current?.panTo(newPos);
+      mapRef.current?.setZoom(15);
+      if (formattedAddress) {
+        onAddressChange(formattedAddress);
+      }
     },
-    []
+    [onAddressChange, onLocationChange]
   );
 
-  const handlePlaceChanged = useCallback(() => {
-    const place = autocompleteRef.current?.getPlace();
+  const handleSearchBoxLoad = useCallback((sb: google.maps.places.SearchBox) => {
+    searchBoxRef.current = sb;
+  }, []);
+
+  const handlePlacesChanged = useCallback(() => {
+    const place = searchBoxRef.current?.getPlaces()?.[0];
     if (!place?.geometry?.location) return;
 
     const newPos: LatLng = {
       lat: place.geometry.location.lat(),
       lng: place.geometry.location.lng(),
     };
-    setMarkerPos(newPos);
-    mapRef.current?.panTo(newPos);
-    mapRef.current?.setZoom(15);
-
-    if (place.formatted_address) {
-      onAddressChange(place.formatted_address);
-    }
-  }, [onAddressChange]);
+    updateMapPosition(newPos, place.formatted_address);
+  }, [updateMapPosition]);
 
   const handleDragEnd = useCallback(
     (event: google.maps.MapMouseEvent) => {
       if (!event.latLng) return;
 
-      const newPos: LatLng = {
-        lat: event.latLng.lat(),
-        lng: event.latLng.lng(),
-      };
-      setMarkerPos(newPos);
+      const newPos: LatLng = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+      updateMapPosition(newPos);
 
       const geocoder = new google.maps.Geocoder();
       geocoder.geocode({ location: newPos }, (results, status) => {
@@ -214,8 +212,32 @@ export function SiteAddressPicker({
         }
       });
     },
-    [onAddressChange]
+    [onAddressChange, updateMapPosition]
   );
+
+  const handleLocateMe = useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const newPos: LatLng = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ location: newPos }, (results, status) => {
+          const resolvedAddress =
+            status === google.maps.GeocoderStatus.OK
+              ? results?.[0]?.formatted_address
+              : undefined;
+          updateMapPosition(newPos, resolvedAddress);
+        });
+      },
+      () => {
+        // Graceful fallback: keep manual input path if geolocation denied.
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [updateMapPosition]);
 
   if (!apiKey) {
     return (
@@ -250,10 +272,9 @@ export function SiteAddressPicker({
 
   return (
     <div className="space-y-2">
-      <Autocomplete
-        onLoad={handleAutocompleteLoad}
-        onPlaceChanged={handlePlaceChanged}
-        options={AUTOCOMPLETE_OPTIONS}
+      <StandaloneSearchBox
+        onLoad={handleSearchBoxLoad}
+        onPlacesChanged={handlePlacesChanged}
       >
         <input
           value={address}
@@ -261,7 +282,15 @@ export function SiteAddressPicker({
           placeholder={placeholder ?? "Search site address…"}
           className={INPUT_CLASS}
         />
-      </Autocomplete>
+      </StandaloneSearchBox>
+
+      <button
+        type="button"
+        onClick={handleLocateMe}
+        className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
+      >
+        Locate Me
+      </button>
 
       <div className="overflow-hidden rounded-lg border border-border shadow-sm">
         <GoogleMap

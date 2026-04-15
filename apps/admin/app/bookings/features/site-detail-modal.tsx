@@ -114,7 +114,7 @@ export function SiteDetailModal({ booking, onClose }: SiteDetailModalProps) {
           />
           <DetailRow
             label="Phone"
-            value={booking.user.phone ?? "—"}
+            value={booking.user.phoneNumber ?? "—"}
           />
           <DetailRow label="Site Address" value={location.address} />
           <DetailRow label="Pincode" value={location.pincode} />

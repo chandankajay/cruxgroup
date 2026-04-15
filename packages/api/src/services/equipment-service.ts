@@ -39,6 +39,7 @@ export async function createEquipment(input: CreateEquipmentInput) {
       name: input.name,
       category: input.category,
       subType: input.subType,
+      hourlyRate: input.hourlyRate,
       pricing: { hourly: input.hourlyRate, daily: input.dailyRate },
       images: input.images,
       specifications: input.specifications,
@@ -74,6 +75,7 @@ export async function updateEquipment(input: UpdateEquipmentInput) {
       ...(input.specifications !== undefined && {
         specifications: input.specifications,
       }),
+      ...(input.hourlyRate !== undefined && { hourlyRate: input.hourlyRate }),
       ...((input.hourlyRate !== undefined || input.dailyRate !== undefined) && {
         pricing: {
           hourly: input.hourlyRate ?? existing.pricing.hourly,

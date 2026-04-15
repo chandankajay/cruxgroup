@@ -20,7 +20,8 @@ import type { DateRange } from "react-day-picker";
 interface EquipmentForDrawer {
   id: string;
   name: string;
-  pricing: { daily: number };
+  pricing: { daily: number; hourly: number };
+  hourlyRate?: number;
 }
 
 interface BookingDrawerProps {
@@ -31,6 +32,10 @@ interface BookingDrawerProps {
     equipmentId: string;
     address: string;
     pincode: string;
+    lat: number;
+    lng: number;
+    pricingUnit: "daily" | "hourly";
+    duration: number;
     startDate: Date;
     endDate: Date;
   }) => void;
@@ -53,6 +58,9 @@ export function BookingDrawer({
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [priceType, setPriceType] = useState<"daily" | "hourly">("daily");
+  const [hours, setHours] = useState("1");
 
   const today = useMemo(() => new Date(), []);
 
@@ -61,31 +69,53 @@ export function BookingDrawer({
     return calculateDays(dateRange.from, dateRange.to);
   }, [dateRange]);
 
+  const duration = useMemo(() => {
+    if (priceType === "hourly") {
+      const parsed = Number(hours);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    }
+    return days;
+  }, [days, hours, priceType]);
+
   useEffect(() => {
     if (!open) {
       setDateRange(undefined);
       setAddress("");
       setPincode("");
+      setCoords(null);
+      setPriceType("daily");
+      setHours("1");
     }
   }, [open]);
 
   const canSubmit =
     equipment &&
-    dateRange?.from &&
-    dateRange?.to &&
+    (priceType === "hourly" || (dateRange?.from && dateRange?.to)) &&
     address.length > 0 &&
     pincode.length >= 4 &&
+    duration > 0 &&
     !isSubmitting;
 
   function handleSubmit() {
-    if (!canSubmit || !dateRange?.from || !dateRange?.to || !equipment) return;
+    if (!canSubmit || !equipment) return;
+
+    const now = new Date();
+    const startDate = priceType === "daily" ? (dateRange?.from ?? now) : now;
+    const endDate =
+      priceType === "daily"
+        ? (dateRange?.to ?? now)
+        : new Date(now.getTime() + Number(hours) * 60 * 60 * 1000);
 
     onSubmit({
       equipmentId: equipment.id,
       address,
       pincode,
-      startDate: dateRange.from,
-      endDate: dateRange.to,
+      lat: coords?.lat ?? 0,
+      lng: coords?.lng ?? 0,
+      pricingUnit: priceType,
+      duration,
+      startDate,
+      endDate,
     });
   }
 
@@ -99,16 +129,62 @@ export function BookingDrawer({
 
         <div className="space-y-4">
           <div>
-            <Label className="mb-2 block">{t("DRAWER_SELECT_DATES")}</Label>
-            <div className="w-full">
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={setDateRange}
-                disabled={{ before: today }}
-                numberOfMonths={1}
-              />
+            <Label className="mb-2 block">Price Type</Label>
+            <div className="grid grid-cols-2 gap-2 rounded-lg bg-amber-50 p-1">
+              <Button
+                type="button"
+                variant={priceType === "daily" ? "default" : "ghost"}
+                className={
+                  priceType === "daily"
+                    ? "bg-amber-500 text-white hover:bg-amber-600"
+                    : "text-amber-700 hover:bg-amber-100"
+                }
+                onClick={() => setPriceType("daily")}
+              >
+                Daily
+              </Button>
+              <Button
+                type="button"
+                variant={priceType === "hourly" ? "default" : "ghost"}
+                className={
+                  priceType === "hourly"
+                    ? "bg-amber-500 text-white hover:bg-amber-600"
+                    : "text-amber-700 hover:bg-amber-100"
+                }
+                onClick={() => setPriceType("hourly")}
+              >
+                Hourly
+              </Button>
             </div>
+          </div>
+
+          <div>
+            {priceType === "daily" ? (
+              <>
+                <Label className="mb-2 block">{t("DRAWER_SELECT_DATES")}</Label>
+                <div className="w-full">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    disabled={{ before: today }}
+                    numberOfMonths={1}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="drawer-hours">Total Hours</Label>
+                <Input
+                  id="drawer-hours"
+                  value={hours}
+                  onChange={(e) => setHours(e.target.value.replace(/[^\d.]/g, ""))}
+                  placeholder="Enter hours"
+                  className="px-3 py-2"
+                  inputMode="decimal"
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -116,6 +192,7 @@ export function BookingDrawer({
             <SiteAddressPicker
               address={address}
               onAddressChange={setAddress}
+              onLocationChange={setCoords}
               placeholder={t("DRAWER_ADDRESS")}
             />
           </div>
@@ -133,8 +210,13 @@ export function BookingDrawer({
             />
           </div>
 
-          {days > 0 && equipment && (
-            <PriceSummary dailyRate={equipment.pricing.daily} days={days} />
+          {duration > 0 && equipment && (
+            <PriceSummary
+              priceType={priceType}
+              dailyRate={equipment.pricing.daily}
+              hourlyRate={equipment.hourlyRate ?? equipment.pricing.hourly}
+              duration={duration}
+            />
           )}
 
           <Button

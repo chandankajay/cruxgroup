@@ -10,8 +10,8 @@ datasource db {
 
 model User {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  phone         String?
-  name          String?
+  phoneNumber   String?   @unique @map("phone")
+  name          String    @default("")
   email         String?   @unique
   emailVerified DateTime?
   image         String?
@@ -21,7 +21,6 @@ model User {
   sessions Session[]
   bookings Booking[]
 
-  @@index([phone])
   @@map("users")
 }
 
@@ -80,6 +79,7 @@ model Equipment {
   category       EquipmentCategory
   subType        String?
   partnerId      String?           @db.ObjectId
+  hourlyRate     Float             @default(0)
   pricing        EquipmentPricing
   images         String[]
   specifications Json

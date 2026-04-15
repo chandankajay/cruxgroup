@@ -14,6 +14,7 @@ interface EquipmentItem {
   name: string;
   category: string;
   subType?: string | null;
+  hourlyRate?: number;
   pricing: { hourly: number; daily: number };
   images: string[];
   specifications: unknown;
@@ -27,6 +28,10 @@ interface BookingFormData {
   equipmentId: string;
   address: string;
   pincode: string;
+  lat: number;
+  lng: number;
+  pricingUnit: "daily" | "hourly";
+  duration: number;
   startDate: Date;
   endDate: Date;
 }
@@ -57,6 +62,10 @@ export function HomeContent({ equipment }: HomeContentProps) {
           equipmentId: data.equipmentId,
           address: data.address,
           pincode: data.pincode,
+          lat: data.lat,
+          lng: data.lng,
+          pricingUnit: data.pricingUnit,
+          duration: data.duration,
           startDate: data.startDate.toISOString(),
           endDate: data.endDate.toISOString(),
         });

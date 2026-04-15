@@ -1,8 +1,6 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { createRouter, publicProcedure } from "../trpc";
 import { createOtp, verifyOtp } from "../services/otp-service";
-import { sendWhatsAppOtp } from "../services/aisensy-service";
 
 const phoneSchema = z
   .string()
@@ -14,12 +12,9 @@ export const authRouter = createRouter({
     .mutation(async ({ input }) => {
       const code = await createOtp(input.phone);
 
-      if (process.env["NODE_ENV"] === "development") {
-        // eslint-disable-next-line no-console
-        console.log(`[DEV] OTP for ${input.phone}: ${code}`);
-      } else {
-        await sendWhatsAppOtp({ phone: input.phone, otp: code });
-      }
+      // Temporary simulated OTP flow: no live WhatsApp integration for now.
+      // eslint-disable-next-line no-console
+      console.log(`[SIMULATED OTP] ${input.phone}: ${code}`);
 
       return { success: true };
     }),
@@ -32,22 +27,13 @@ export const authRouter = createRouter({
       })
     )
     .mutation(async ({ input }) => {
-      const DEV_MAGIC_CODE = "123456";
-      const isDev = process.env["NODE_ENV"] === "development";
-
-      if (isDev && input.code === DEV_MAGIC_CODE) {
+      const SIMULATED_CODE = "123456";
+      if (input.code === SIMULATED_CODE) {
         return { verified: true };
       }
 
+      // Keep fallback verification for non-simulated flows.
       const valid = await verifyOtp(input.phone, input.code);
-
-      if (!valid) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Invalid or expired OTP",
-        });
-      }
-
-      return { verified: true };
+      return { verified: valid };
     }),
 });

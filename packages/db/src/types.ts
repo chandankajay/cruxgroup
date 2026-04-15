@@ -2,8 +2,8 @@ export type UserRole = "USER" | "ADMIN" | "PARTNER";
 
 export interface User {
   id: string;
-  phone?: string;
-  name?: string;
+  phoneNumber?: string;
+  name: string;
   email?: string;
   emailVerified?: Date;
   image?: string;
@@ -54,6 +54,7 @@ export interface Equipment {
   category: EquipmentCategory;
   subType?: string;
   partnerId?: string;
+  hourlyRate: number;
   pricing: EquipmentPricing;
   images: string[];
   specifications: Record<string, unknown>;

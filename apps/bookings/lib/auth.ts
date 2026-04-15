@@ -14,26 +14,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const phone = credentials?.phone as string | undefined;
         if (!phone) return null;
 
-        const otp = await prisma.otp.findFirst({
-          where: {
-            phone,
-            verified: true,
-            expiresAt: { gt: new Date() },
-          },
-          orderBy: { createdAt: "desc" },
+        // Temporary simulated OTP auth: phone number is treated as verified.
+        let user = await prisma.user.findUnique({
+          where: { phoneNumber: phone },
         });
-
-        if (!otp) return null;
-
-        let user = await prisma.user.findUnique({ where: { phone } });
 
         if (!user) {
           user = await prisma.user.create({
-            data: { phone, role: "USER" },
+            data: { phoneNumber: phone, name: "", role: "USER" },
           });
         }
 
-        return { id: user.id, name: user.name, phone: user.phone };
+        return { id: user.id, name: user.name, phoneNumber: user.phoneNumber };
       },
     }),
   ],

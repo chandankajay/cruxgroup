@@ -19,6 +19,8 @@ interface CreateBookingInput {
   pincode: string;
   lat: number;
   lng: number;
+  pricingUnit: "daily" | "hourly";
+  duration: number;
   startDate: Date;
   endDate: Date;
 }
@@ -38,7 +40,12 @@ async function resolveUserId(rawUserId: string): Promise<string> {
   await prisma.user.upsert({
     where: { id: resolvedId },
     update: {},
-    create: { id: resolvedId, name: "Dev Guest", role: "USER" },
+    create: {
+      id: resolvedId,
+      name: "Dev Guest",
+      phoneNumber: `guest-${resolvedId.slice(-6)}`,
+      role: "USER",
+    },
   });
 
   return resolvedId;
@@ -55,8 +62,12 @@ export async function createBooking(input: CreateBookingInput) {
 
   if (!equipment) throw new Error("Equipment not found");
 
-  const days = calculateDays(startDate, endDate);
-  const total = days * equipment.pricing.daily + TRANSPORT_FEE;
+  const dailyDays = calculateDays(startDate, endDate);
+  const isHourly = input.pricingUnit === "hourly";
+  const chargeableDuration = isHourly ? input.duration : dailyDays;
+  const hourlyRate = equipment.hourlyRate > 0 ? equipment.hourlyRate : equipment.pricing.hourly;
+  const selectedRate = isHourly ? hourlyRate : equipment.pricing.daily;
+  const total = chargeableDuration * selectedRate + TRANSPORT_FEE;
 
   return prisma.booking.create({
     data: {
@@ -70,7 +81,7 @@ export async function createBooking(input: CreateBookingInput) {
         pincode: input.pincode,
         coordinates: { lat: input.lat, lng: input.lng },
       },
-      pricing: { total, duration: days, unit: "daily" },
+      pricing: { total, duration: chargeableDuration, unit: input.pricingUnit },
     },
   });
 }
@@ -78,7 +89,7 @@ export async function createBooking(input: CreateBookingInput) {
 export async function listBookings() {
   return prisma.booking.findMany({
     include: {
-      user: { select: { id: true, name: true, phone: true } },
+      user: { select: { id: true, name: true, phoneNumber: true } },
       equipment: { select: { id: true, name: true, category: true } },
     },
     orderBy: { createdAt: "desc" },

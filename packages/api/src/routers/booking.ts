@@ -25,6 +25,8 @@ export const bookingRouter = createRouter({
         pincode: z.string().min(4),
         lat: z.number(),
         lng: z.number(),
+        pricingUnit: z.enum(["daily", "hourly"]),
+        duration: z.number().positive(),
         startDate: z.coerce.date(),
         endDate: z.coerce.date(),
       })
