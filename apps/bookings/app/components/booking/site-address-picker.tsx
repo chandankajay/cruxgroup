@@ -5,11 +5,11 @@ import {
   useJsApiLoader,
   GoogleMap,
   Marker,
-  StandaloneSearchBox,
+  Autocomplete,
 } from "@react-google-maps/api";
 import type { Libraries } from "@react-google-maps/api";
 
-// Must be a stable module-level constant — recreating this array causes @react-google-maps/api
+// Stable module-level constant — recreating this array causes @react-google-maps/api
 // to reload the Maps JS SDK on every render.
 const LIBRARIES: Libraries = ["places"];
 
@@ -17,7 +17,6 @@ const INDIA_CENTER = { lat: 20.5937, lng: 78.9629 };
 
 const MAP_CONTAINER_STYLE = { width: "100%", height: "200px" };
 
-// Official Google Maps "Silver" style — clean neutral tones that complement Navy/Orange branding
 const SILVER_STYLES = [
   { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
   { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
@@ -28,71 +27,19 @@ const SILVER_STYLES = [
     elementType: "labels.text.fill",
     stylers: [{ color: "#bdbdbd" }],
   },
-  {
-    featureType: "poi",
-    elementType: "geometry",
-    stylers: [{ color: "#eeeeee" }],
-  },
-  {
-    featureType: "poi",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#757575" }],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "geometry",
-    stylers: [{ color: "#e5e5e5" }],
-  },
-  {
-    featureType: "poi.park",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#9e9e9e" }],
-  },
-  {
-    featureType: "road",
-    elementType: "geometry",
-    stylers: [{ color: "#ffffff" }],
-  },
-  {
-    featureType: "road.arterial",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#757575" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "geometry",
-    stylers: [{ color: "#dadada" }],
-  },
-  {
-    featureType: "road.highway",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#616161" }],
-  },
-  {
-    featureType: "road.local",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#9e9e9e" }],
-  },
-  {
-    featureType: "transit.line",
-    elementType: "geometry",
-    stylers: [{ color: "#e5e5e5" }],
-  },
-  {
-    featureType: "transit.station",
-    elementType: "geometry",
-    stylers: [{ color: "#eeeeee" }],
-  },
-  {
-    featureType: "water",
-    elementType: "geometry",
-    stylers: [{ color: "#c9c9c9" }],
-  },
-  {
-    featureType: "water",
-    elementType: "labels.text.fill",
-    stylers: [{ color: "#9e9e9e" }],
-  },
+  { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
+  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+  { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+  { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+  { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
+  { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9c9c9" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
 ];
 
 const MAP_OPTIONS = {
@@ -103,17 +50,34 @@ const MAP_OPTIONS = {
   gestureHandling: "cooperative",
 };
 
+// Include address_components so we can extract pincode after place selection.
+const AUTOCOMPLETE_OPTIONS = {
+  componentRestrictions: { country: "in" },
+  fields: ["geometry", "formatted_address", "address_components"],
+};
+
 const INPUT_CLASS =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 interface SiteAddressPickerProps {
   readonly address: string;
   readonly onAddressChange: (address: string) => void;
   readonly onLocationChange?: (coords: { lat: number; lng: number }) => void;
+  readonly onPincodeChange?: (pincode: string) => void;
   readonly placeholder?: string;
 }
 
 type LatLng = { lat: number; lng: number };
+
+function extractPincode(
+  components: google.maps.GeocoderAddressComponent[] | undefined
+): string {
+  if (!components) return "";
+  const postalEntry = components.find((c) =>
+    c.types.includes("postal_code")
+  );
+  return postalEntry?.long_name ?? "";
+}
 
 function MapSkeleton() {
   return (
@@ -138,9 +102,7 @@ function PlainAddressInput({
         placeholder={placeholder ?? "Enter site address"}
         className={INPUT_CLASS}
       />
-      {warning && (
-        <p className="text-xs text-amber-600">{warning}</p>
-      )}
+      {warning && <p className="text-xs text-amber-600">{warning}</p>}
     </div>
   );
 }
@@ -149,6 +111,7 @@ export function SiteAddressPicker({
   address,
   onAddressChange,
   onLocationChange,
+  onPincodeChange,
   placeholder,
 }: SiteAddressPickerProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
@@ -159,60 +122,64 @@ export function SiteAddressPicker({
   });
 
   const [markerPos, setMarkerPos] = useState<LatLng>(INDIA_CENTER);
-
   const mapRef = useRef<google.maps.Map | null>(null);
-  const searchBoxRef = useRef<google.maps.places.SearchBox | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
   }, []);
 
   const updateMapPosition = useCallback(
-    (newPos: LatLng, formattedAddress?: string) => {
+    (newPos: LatLng, formattedAddress?: string, pincode?: string) => {
       setMarkerPos(newPos);
       onLocationChange?.(newPos);
       mapRef.current?.panTo(newPos);
       mapRef.current?.setZoom(15);
-      if (formattedAddress) {
-        onAddressChange(formattedAddress);
-      }
+      if (formattedAddress) onAddressChange(formattedAddress);
+      if (pincode) onPincodeChange?.(pincode);
     },
-    [onAddressChange, onLocationChange]
+    [onAddressChange, onLocationChange, onPincodeChange]
   );
 
-  const handleSearchBoxLoad = useCallback((sb: google.maps.places.SearchBox) => {
-    searchBoxRef.current = sb;
-  }, []);
+  const handleAutocompleteLoad = useCallback(
+    (ac: google.maps.places.Autocomplete) => {
+      autocompleteRef.current = ac;
+    },
+    []
+  );
 
-  const handlePlacesChanged = useCallback(() => {
-    const place = searchBoxRef.current?.getPlaces()?.[0];
+  // Fires on both mouse click AND keyboard Enter — reliable on mobile too.
+  const handlePlaceChanged = useCallback(() => {
+    const place = autocompleteRef.current?.getPlace();
     if (!place?.geometry?.location) return;
 
     const newPos: LatLng = {
       lat: place.geometry.location.lat(),
       lng: place.geometry.location.lng(),
     };
-    updateMapPosition(newPos, place.formatted_address);
+    const pincode = extractPincode(place.address_components);
+    updateMapPosition(newPos, place.formatted_address, pincode);
   }, [updateMapPosition]);
 
   const handleDragEnd = useCallback(
     (event: google.maps.MapMouseEvent) => {
       if (!event.latLng) return;
-
-      const newPos: LatLng = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-      updateMapPosition(newPos);
+      const newPos: LatLng = {
+        lat: event.latLng.lat(),
+        lng: event.latLng.lng(),
+      };
 
       const geocoder = new google.maps.Geocoder();
       geocoder.geocode({ location: newPos }, (results, status) => {
-        if (
-          status === google.maps.GeocoderStatus.OK &&
-          results?.[0]?.formatted_address
-        ) {
-          onAddressChange(results[0].formatted_address);
+        if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
+          const pincode = extractPincode(results[0].address_components);
+          updateMapPosition(newPos, results[0].formatted_address, pincode);
+        } else {
+          updateMapPosition(newPos);
         }
       });
     },
-    [onAddressChange, updateMapPosition]
+    [updateMapPosition]
   );
 
   const handleLocateMe = useCallback(() => {
@@ -225,15 +192,16 @@ export function SiteAddressPicker({
         };
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode({ location: newPos }, (results, status) => {
-          const resolvedAddress =
-            status === google.maps.GeocoderStatus.OK
-              ? results?.[0]?.formatted_address
-              : undefined;
-          updateMapPosition(newPos, resolvedAddress);
+          if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
+            const pincode = extractPincode(results[0].address_components);
+            updateMapPosition(newPos, results[0].formatted_address, pincode);
+          } else {
+            updateMapPosition(newPos);
+          }
         });
       },
       () => {
-        // Graceful fallback: keep manual input path if geolocation denied.
+        // Graceful fallback — keep manual input if geolocation denied.
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -272,23 +240,29 @@ export function SiteAddressPicker({
 
   return (
     <div className="space-y-2">
-      <StandaloneSearchBox
-        onLoad={handleSearchBoxLoad}
-        onPlacesChanged={handlePlacesChanged}
+      <Autocomplete
+        onLoad={handleAutocompleteLoad}
+        onPlaceChanged={handlePlaceChanged}
+        options={AUTOCOMPLETE_OPTIONS}
       >
         <input
           value={address}
           onChange={(e) => onAddressChange(e.target.value)}
           placeholder={placeholder ?? "Search site address…"}
           className={INPUT_CLASS}
+          autoComplete="off"
         />
-      </StandaloneSearchBox>
+      </Autocomplete>
 
       <button
         type="button"
         onClick={handleLocateMe}
-        className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
+        className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 active:bg-amber-200"
       >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        </svg>
         Locate Me
       </button>
 

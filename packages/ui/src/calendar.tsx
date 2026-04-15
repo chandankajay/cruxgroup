@@ -24,16 +24,16 @@ function Calendar({ className, classNames, ...props }: CalendarProps) {
         weekday:
           "flex-1 text-center text-muted-foreground font-normal text-xs",
         week: "flex w-full mt-2",
-        day: "flex-1 text-center text-sm relative p-0 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md",
+        day: "flex-1 text-center text-sm relative p-0 [&:has([aria-selected])]:bg-amber-100 first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md",
         day_button:
-          "w-full aspect-square p-0 font-normal inline-flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground aria-selected:opacity-100",
+          "w-full aspect-square p-0 font-normal inline-flex items-center justify-center rounded-md hover:bg-amber-100 hover:text-amber-900 aria-selected:opacity-100",
         selected:
-          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-md",
-        today: "bg-accent text-accent-foreground rounded-md",
-        outside: "text-muted-foreground opacity-50",
-        disabled: "text-muted-foreground opacity-50",
+          "bg-amber-500 text-white hover:bg-amber-600 hover:text-white focus:bg-amber-500 focus:text-white rounded-md",
+        today: "bg-amber-50 text-amber-800 font-semibold rounded-md",
+        outside: "text-muted-foreground opacity-40",
+        disabled: "text-muted-foreground opacity-40",
         range_middle:
-          "aria-selected:bg-accent aria-selected:text-accent-foreground",
+          "aria-selected:bg-amber-100 aria-selected:text-amber-900",
         hidden: "invisible",
         ...classNames,
       }}

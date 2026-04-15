@@ -56,6 +56,7 @@ export function BookingDrawer({
 }: BookingDrawerProps) {
   const t = useLabels();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [hourlyDate, setHourlyDate] = useState<Date | undefined>();
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -80,6 +81,7 @@ export function BookingDrawer({
   useEffect(() => {
     if (!open) {
       setDateRange(undefined);
+      setHourlyDate(undefined);
       setAddress("");
       setPincode("");
       setCoords(null);
@@ -90,7 +92,7 @@ export function BookingDrawer({
 
   const canSubmit =
     equipment &&
-    (priceType === "hourly" || (dateRange?.from && dateRange?.to)) &&
+    (priceType === "daily" ? (dateRange?.from && dateRange?.to) : hourlyDate) &&
     address.length > 0 &&
     pincode.length >= 4 &&
     duration > 0 &&
@@ -100,11 +102,12 @@ export function BookingDrawer({
     if (!canSubmit || !equipment) return;
 
     const now = new Date();
-    const startDate = priceType === "daily" ? (dateRange?.from ?? now) : now;
+    const bookingBase = priceType === "hourly" ? (hourlyDate ?? now) : now;
+    const startDate = priceType === "daily" ? (dateRange?.from ?? now) : bookingBase;
     const endDate =
       priceType === "daily"
         ? (dateRange?.to ?? now)
-        : new Date(now.getTime() + Number(hours) * 60 * 60 * 1000);
+        : new Date(bookingBase.getTime() + Number(hours) * 60 * 60 * 1000);
 
     onSubmit({
       equipmentId: equipment.id,
@@ -173,16 +176,28 @@ export function BookingDrawer({
                 </div>
               </>
             ) : (
-              <div className="space-y-2">
-                <Label htmlFor="drawer-hours">Total Hours</Label>
-                <Input
-                  id="drawer-hours"
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value.replace(/[^\d.]/g, ""))}
-                  placeholder="Enter hours"
-                  className="px-3 py-2"
-                  inputMode="decimal"
-                />
+              <div className="space-y-3">
+                <div>
+                  <Label className="mb-2 block">Booking Date</Label>
+                  <Calendar
+                    mode="single"
+                    selected={hourlyDate}
+                    onSelect={setHourlyDate}
+                    disabled={{ before: today }}
+                    numberOfMonths={1}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="drawer-hours">Total Hours</Label>
+                  <Input
+                    id="drawer-hours"
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value.replace(/[^\d.]/g, ""))}
+                    placeholder="Enter hours (e.g. 4)"
+                    className="px-3 py-2"
+                    inputMode="decimal"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -193,6 +208,7 @@ export function BookingDrawer({
               address={address}
               onAddressChange={setAddress}
               onLocationChange={setCoords}
+              onPincodeChange={setPincode}
               placeholder={t("DRAWER_ADDRESS")}
             />
           </div>
