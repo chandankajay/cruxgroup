@@ -36,8 +36,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (!user.email) return false;
       return isAllowed(user.email);
     },
-    async session({ session, user }) {
-      session.user.id = user.id;
+    // Runs when a JWT is created (sign-in) or refreshed.
+    // The `user` arg is only present on first sign-in — persist the DB id into token.
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    // Runs every time session is read. With jwt strategy, `user` is undefined —
+    // read the id from the token instead.
+    async session({ session, token }) {
+      if (token.id) {
+        session.user.id = token.id as string;
+      }
       return session;
     },
   },
