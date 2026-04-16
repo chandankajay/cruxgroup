@@ -10,7 +10,7 @@ export const authConfig: NextAuthConfig = {
   secret: process.env.AUTH_SECRET,
   providers: [],
   session: {
-    strategy: "jwt",
+    strategy: "database",
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
