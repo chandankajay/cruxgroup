@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { createRouter, publicProcedure } from "../trpc";
 import {
   listEquipment,
+  listEquipmentByPartner,
   getEquipmentById,
   searchEquipment,
   createEquipment,
@@ -14,6 +15,10 @@ const categoryEnum = z.enum(["JCB", "Crane", "Excavator"]);
 
 export const equipmentRouter = createRouter({
   list: publicProcedure.query(() => listEquipment()),
+
+  listByPartner: publicProcedure
+    .input(z.object({ partnerId: z.string().min(1) }))
+    .query(({ input }) => listEquipmentByPartner(input.partnerId)),
 
   byId: publicProcedure
     .input(z.object({ id: z.string() }))

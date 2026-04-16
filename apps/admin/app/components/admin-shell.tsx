@@ -7,6 +7,7 @@ interface AdminShellProps {
   readonly userName: string | null;
   readonly userEmail: string | null;
   readonly userImage: string | null;
+  readonly role: string;
 }
 
 export function AdminShell({
@@ -15,9 +16,9 @@ export function AdminShell({
   userName,
   userEmail,
   userImage,
+  role,
 }: AdminShellProps) {
   if (!isAuthenticated) {
-    // Unauthenticated — render bare children (login page)
     return <>{children}</>;
   }
 
@@ -27,6 +28,7 @@ export function AdminShell({
         userName={userName}
         userEmail={userEmail}
         userImage={userImage}
+        role={role}
       />
       <main className="flex-1 overflow-y-auto bg-gray-50 p-8">
         {children}

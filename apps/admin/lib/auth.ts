@@ -5,8 +5,8 @@ import { prisma } from "@repo/db";
 import { authConfig } from "../auth.config";
 
 // Comma-separated list of explicitly allowed email addresses.
-// Takes precedence over domain restriction. Set via ALLOWED_ADMIN_EMAILS env var.
-// Example: "you@gmail.com,colleague@gmail.com"
+// These are the bootstrap admin emails that can log in even before their
+// role is set to ADMIN in the database.
 const ALLOWED_EMAILS = (process.env.ALLOWED_ADMIN_EMAILS ?? "")
   .split(",")
   .map((e) => e.trim().toLowerCase())
@@ -14,11 +14,10 @@ const ALLOWED_EMAILS = (process.env.ALLOWED_ADMIN_EMAILS ?? "")
 
 const ALLOWED_DOMAIN = "cruxgroup.in";
 
-function isAllowed(email: string): boolean {
+function isAllowedAdmin(email: string): boolean {
   const normalised = email.toLowerCase();
-  if (ALLOWED_EMAILS.length > 0 && ALLOWED_EMAILS.includes(normalised)) {
+  if (ALLOWED_EMAILS.length > 0 && ALLOWED_EMAILS.includes(normalised))
     return true;
-  }
   return normalised.endsWith(`@${ALLOWED_DOMAIN}`);
 }
 
@@ -34,22 +33,53 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async signIn({ user }) {
       if (!user.email) return false;
-      return isAllowed(user.email);
+      const email = user.email.toLowerCase();
+
+      // Check if this email already has an elevated role in the DB.
+      const dbUser = await prisma.user.findUnique({
+        where: { email },
+        select: { role: true },
+      });
+
+      if (dbUser?.role === "PARTNER" || dbUser?.role === "ADMIN") return true;
+
+      // Regular USERs are not allowed into the admin app.
+      if (dbUser?.role === "USER" && !isAllowedAdmin(email)) return false;
+
+      // New user (not in DB) — allow only explicitly listed admin emails.
+      return isAllowedAdmin(email);
     },
-    // Runs when a JWT is created (sign-in) or refreshed.
-    // The `user` arg is only present on first sign-in — persist the DB id into token.
+
+    // Runs when a JWT is minted (sign-in) or refreshed.
     async jwt({ token, user }) {
       if (user?.id) {
         token.id = user.id;
+
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { role: true, email: true },
+        });
+
+        const email = dbUser?.email ?? "";
+
+        // Allowlisted emails that haven't been promoted yet → treat as ADMIN.
+        if (
+          (!dbUser?.role || dbUser.role === "USER") &&
+          isAllowedAdmin(email)
+        ) {
+          token.role = "ADMIN";
+        } else {
+          token.role = dbUser?.role ?? "USER";
+        }
       }
       return token;
     },
-    // Runs every time session is read. With jwt strategy, `user` is undefined —
-    // read the id from the token instead.
-    async session({ session, token }) {
-      if (token.id) {
-        session.user.id = token.id as string;
-      }
+
+    // Mirror of the edge session callback — ensures server-side auth() also
+    // returns id and role on session.user.
+    session({ session, token }) {
+      if (token.id) session.user.id = token.id as string;
+      if (token.role) session.user.role = token.role as string;
       return session;
     },
   },

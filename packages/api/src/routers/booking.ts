@@ -4,6 +4,7 @@ import { createRouter, publicProcedure } from "../trpc";
 import {
   createBooking,
   listBookings,
+  listBookingsByPartner,
   updateBookingStatus,
 } from "../services/booking-service";
 
@@ -42,6 +43,10 @@ export const bookingRouter = createRouter({
     }),
 
   getAll: publicProcedure.query(() => listBookings()),
+
+  getByPartner: publicProcedure
+    .input(z.object({ partnerId: z.string().min(1) }))
+    .query(({ input }) => listBookingsByPartner(input.partnerId)),
 
   updateStatus: publicProcedure
     .input(

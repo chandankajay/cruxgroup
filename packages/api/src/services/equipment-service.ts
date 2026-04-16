@@ -7,6 +7,13 @@ export async function listEquipment() {
   });
 }
 
+export async function listEquipmentByPartner(partnerId: string) {
+  return prisma.equipment.findMany({
+    where: { partnerId },
+    orderBy: { name: "asc" },
+  });
+}
+
 export async function getEquipmentById(id: string) {
   return prisma.equipment.findUnique({ where: { id } });
 }

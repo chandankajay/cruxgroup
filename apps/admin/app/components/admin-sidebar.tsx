@@ -5,26 +5,118 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@repo/ui/lib/utils";
-import { useLabels } from "@repo/ui/dictionary-provider";
 
 interface NavItem {
   href: string;
-  labelKey: string;
-  icon: string;
+  label: string;
+  icon: React.ReactNode;
 }
 
-const navItems: NavItem[] = [
-  { href: "/", labelKey: "NAV_DASHBOARD", icon: "📊" },
-  { href: "/equipment", labelKey: "NAV_EQUIPMENT", icon: "🏗️" },
-  { href: "/bookings", labelKey: "NAV_BOOKINGS", icon: "📋" },
-  { href: "/partners", labelKey: "NAV_PARTNERS", icon: "🤝" },
-  { href: "/areas", labelKey: "NAV_AREAS", icon: "📍" },
+// ── Icon helpers (inline SVG, no extra dep) ──────────────────────────────────
+
+function Icon({ d, ...rest }: { d: string } & React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...rest}
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+const ADMIN_NAV: NavItem[] = [
+  {
+    href: "/",
+    label: "Dashboard",
+    icon: (
+      <Icon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    ),
+  },
+  {
+    href: "/partners",
+    label: "Partners",
+    icon: (
+      <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    ),
+  },
+  {
+    href: "/equipment",
+    label: "All Equipment",
+    icon: (
+      <Icon d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+    ),
+  },
+  {
+    href: "/bookings",
+    label: "Global Bookings",
+    icon: (
+      <Icon d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    ),
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: (
+      <Icon d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm0-14a6 6 0 1 0 6 6 6 6 0 0 0-6-6z" />
+    ),
+  },
 ];
 
-interface AdminSidebarProps {
-  readonly userName: string | null;
-  readonly userEmail: string | null;
-  readonly userImage: string | null;
+const PARTNER_NAV: NavItem[] = [
+  {
+    href: "/fleet",
+    label: "My Fleet",
+    icon: (
+      <Icon d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+    ),
+  },
+  {
+    href: "/my-bookings",
+    label: "My Bookings",
+    icon: (
+      <Icon d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    ),
+  },
+  {
+    href: "/service-area",
+    label: "Service Area",
+    icon: (
+      <Icon d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" />
+    ),
+  },
+  {
+    href: "/earnings",
+    label: "Earnings",
+    icon: (
+      <Icon d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    ),
+  },
+];
+
+// Role badge shown at the top of the nav
+function RoleBadge({ role }: { role: string }) {
+  const isPartner = role === "PARTNER";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        isPartner
+          ? "bg-amber-500/20 text-amber-300"
+          : "bg-emerald-500/20 text-emerald-300"
+      )}
+    >
+      {isPartner ? "Partner" : "Admin"}
+    </span>
+  );
 }
 
 function UserAvatar({
@@ -62,19 +154,38 @@ function UserAvatar({
   );
 }
 
-export function AdminSidebar({ userName, userEmail, userImage }: AdminSidebarProps) {
+interface AdminSidebarProps {
+  readonly userName: string | null;
+  readonly userEmail: string | null;
+  readonly userImage: string | null;
+  readonly role: string;
+}
+
+export function AdminSidebar({
+  userName,
+  userEmail,
+  userImage,
+  role,
+}: AdminSidebarProps) {
   const pathname = usePathname();
-  const t = useLabels();
+  const navItems = role === "PARTNER" ? PARTNER_NAV : ADMIN_NAV;
 
   return (
     <aside className="flex h-screen w-64 flex-col bg-charcoal text-white">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-charcoal-light px-6">
-        <Image src="/logo.png" alt="Crux Group" width={120} height={34} priority />
+      <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
+        <Image
+          src="/logo.png"
+          alt="Crux Group"
+          width={110}
+          height={32}
+          priority
+        />
+        <RoleBadge role={role} />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
         {navItems.map((item) => {
           const isActive =
             item.href === "/"
@@ -86,26 +197,26 @@ export function AdminSidebar({ userName, userEmail, userImage }: AdminSidebarPro
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                 isActive
-                  ? "bg-brand-orange text-white"
-                  : "text-gray-300 hover:bg-charcoal-light hover:text-white"
+                  ? "bg-brand-orange text-white shadow-sm"
+                  : "text-gray-400 hover:bg-white/5 hover:text-white"
               )}
             >
-              <span className="text-base">{item.icon}</span>
-              {t(item.labelKey)}
+              <span className="shrink-0 opacity-80">{item.icon}</span>
+              {item.label}
             </Link>
           );
         })}
       </nav>
 
       {/* User footer */}
-      <div className="border-t border-charcoal-light p-3">
+      <div className="border-t border-white/10 p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           <UserAvatar name={userName} image={userImage} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-white">
-              {userName ?? "Admin"}
+              {userName ?? "User"}
             </p>
             <p className="truncate text-xs text-gray-400">
               {userEmail ?? ""}
@@ -114,9 +225,21 @@ export function AdminSidebar({ userName, userEmail, userImage }: AdminSidebarPro
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-charcoal-light hover:text-white"
+          className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
         >
-          <span>↩</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
           Sign Out
         </button>
       </div>

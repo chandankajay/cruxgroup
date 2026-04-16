@@ -115,6 +115,26 @@ export async function listBookings() {
   });
 }
 
+export async function listBookingsByPartner(partnerId: string) {
+  return prisma.booking.findMany({
+    where: {
+      equipment: { partnerId },
+    },
+    select: {
+      id: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      createdAt: true,
+      location: true,
+      pricing: true,
+      user: { select: { id: true, name: true, phoneNumber: true } },
+      equipment: { select: { id: true, name: true, category: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 export async function updateBookingStatus(id: string, status: BookingStatus) {
   return prisma.booking.update({
     where: { id },

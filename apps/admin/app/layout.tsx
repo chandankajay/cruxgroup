@@ -27,6 +27,8 @@ export default async function RootLayout({
     auth(),
   ]);
 
+  const role = (session?.user as { role?: string } | undefined)?.role ?? "ADMIN";
+
   return (
     <html lang="en">
       <body className={geist.className}>
@@ -36,6 +38,7 @@ export default async function RootLayout({
             userName={session?.user?.name ?? null}
             userEmail={session?.user?.email ?? null}
             userImage={session?.user?.image ?? null}
+            role={role}
           >
             {children}
           </AdminShell>
