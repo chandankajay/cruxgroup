@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Sheet,
   SheetContent,
@@ -62,6 +62,8 @@ export function BookingDrawer({
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [priceType, setPriceType] = useState<"daily" | "hourly">("daily");
   const [hours, setHours] = useState("1");
+  // null = not yet fetched / fetching in progress; number = resolved km distance
+  const [partnerDistanceKm, setPartnerDistanceKm] = useState<number | null>(null);
 
   const today = useMemo(() => new Date(), []);
 
@@ -87,8 +89,32 @@ export function BookingDrawer({
       setCoords(null);
       setPriceType("daily");
       setHours("1");
+      setPartnerDistanceKm(null);
     }
   }, [open]);
+
+  // When job-site coords are set, fetch the nearest partner distance to
+  // preview transport fee in real time before the user submits.
+  const handleLocationChange = useCallback(
+    (newCoords: { lat: number; lng: number }) => {
+      setCoords(newCoords);
+      setPartnerDistanceKm(null);
+
+      fetch(
+        `/api/search?lat=${newCoords.lat}&lng=${newCoords.lng}&bookingDurationDays=${duration || 1}`
+      )
+        .then((r) => r.json())
+        .then((data: { results?: { distanceKm: number }[] }) => {
+          const nearest = data.results?.[0];
+          setPartnerDistanceKm(nearest?.distanceKm ?? 0);
+        })
+        .catch(() => {
+          // Graceful fallback: treat distance as 0 (free transport) if search fails.
+          setPartnerDistanceKm(0);
+        });
+    },
+    [duration]
+  );
 
   const canSubmit =
     equipment &&
@@ -216,7 +242,7 @@ export function BookingDrawer({
             <SiteAddressPicker
               address={address}
               onAddressChange={setAddress}
-              onLocationChange={setCoords}
+              onLocationChange={handleLocationChange}
               onPincodeChange={setPincode}
               placeholder={t("DRAWER_ADDRESS")}
             />
@@ -241,6 +267,7 @@ export function BookingDrawer({
               dailyRate={equipment.pricing.daily}
               hourlyRate={equipment.hourlyRate ?? equipment.pricing.hourly}
               duration={duration}
+              distanceKm={coords ? partnerDistanceKm : null}
             />
           )}
 

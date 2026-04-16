@@ -8,6 +8,14 @@ export interface User {
   emailVerified?: Date;
   image?: string;
   role: UserRole;
+  location?: GeoPoint;
+  maxServiceRadius?: number;
+  baseAddress?: string;
+}
+
+export interface GeoPoint {
+  type: "Point";
+  coordinates: [number, number];
 }
 
 export interface Account {
@@ -55,6 +63,7 @@ export interface Equipment {
   subType?: string;
   partnerId?: string;
   hourlyRate: number;
+  minDaysForExtendedRadius: number;
   pricing: EquipmentPricing;
   images: string[];
   specifications: Record<string, unknown>;

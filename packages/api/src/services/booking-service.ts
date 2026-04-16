@@ -1,6 +1,4 @@
-import { prisma } from "@repo/db";
-
-const TRANSPORT_FEE = 1500;
+import { prisma, calculateDistance, calculateTransportFee } from "@repo/db";
 
 // Valid 24-hex-char ObjectId used as the dev/guest user until real auth is wired up.
 const DEV_GUEST_USER_ID = "65f1a2b3c4d5e6f7a8b9c0d1";
@@ -62,12 +60,33 @@ export async function createBooking(input: CreateBookingInput) {
 
   if (!equipment) throw new Error("Equipment not found");
 
+  // Look up partner base location for distance-based transport fee.
+  const partner = equipment.partnerId
+    ? await prisma.user.findUnique({
+        where: { id: equipment.partnerId },
+        select: { location: true },
+      })
+    : null;
+
+  const partnerCoords = partner?.location?.coordinates;
+  const jobSiteHasCoords = input.lat !== 0 || input.lng !== 0;
+
+  const distanceKm =
+    partnerCoords && partnerCoords.length === 2 && jobSiteHasCoords
+      ? calculateDistance(
+          { lat: input.lat, lng: input.lng },
+          { lat: partnerCoords[1], lng: partnerCoords[0] }
+        )
+      : 0;
+
+  const transportFee = calculateTransportFee(distanceKm, "FLATBED");
+
   const dailyDays = calculateDays(startDate, endDate);
   const isHourly = input.pricingUnit === "hourly";
   const chargeableDuration = isHourly ? input.duration : dailyDays;
   const hourlyRate = equipment.hourlyRate > 0 ? equipment.hourlyRate : equipment.pricing.hourly;
   const selectedRate = isHourly ? hourlyRate : equipment.pricing.daily;
-  const total = chargeableDuration * selectedRate + TRANSPORT_FEE;
+  const total = chargeableDuration * selectedRate + transportFee.totalFee;
 
   return prisma.booking.create({
     data: {

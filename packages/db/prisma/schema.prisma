@@ -17,6 +17,11 @@ model User {
   image         String?
   role          UserRole  @default(USER)
 
+  // Partner-specific fields (used when role = PARTNER)
+  location         GeoPoint?
+  maxServiceRadius Int?      // kilometers
+  baseAddress      String?
+
   accounts Account[]
   sessions Session[]
   bookings Booking[]
@@ -80,6 +85,7 @@ model Equipment {
   subType        String?
   partnerId      String?           @db.ObjectId
   hourlyRate     Float             @default(0)
+  minDaysForExtendedRadius Int     @default(0)
   pricing        EquipmentPricing
   images         String[]
   specifications Json
@@ -136,6 +142,12 @@ type BookingLocation {
 type Coordinates {
   lat Float
   lng Float
+}
+
+// MongoDB GeoJSON Point (used for partner location)
+type GeoPoint {
+  type        String  @default("Point")
+  coordinates Float[]
 }
 
 type BookingPricingType {

@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./transport-fee": "./src/transportFee.ts"
   },
   "scripts": {
     "db:generate": "prisma generate",
