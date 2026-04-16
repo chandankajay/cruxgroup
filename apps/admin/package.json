@@ -14,6 +14,7 @@
     "@auth/prisma-adapter": "^2.11.1",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.19.3",
+    "@react-google-maps/api": "^2.20.8",
     "@repo/api": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/ui": "workspace:*",
@@ -23,6 +24,7 @@
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.72.1",
     "server-only": "^0.0.1",
+    "sonner": "^2.0.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {
