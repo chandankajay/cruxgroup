@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "@repo/tailwind-config";
 
+/* Only root-level UI components (avoids heavy recursive scans that slow dev/build). */
+@source "../../../packages/ui/src/*.tsx";
+
 body {
   color: var(--color-foreground);
   background-color: var(--color-background);

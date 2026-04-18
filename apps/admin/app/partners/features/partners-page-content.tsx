@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { ServiceAreaMap } from "./service-area-map";
+import { PartnerKycForm } from "./partner-kyc-form";
 import { updateServiceAreaAction } from "../actions";
 
 interface PartnerLocation {
@@ -140,7 +141,8 @@ export function PartnersPageContent({ partners }: PartnersPageContentProps) {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-charcoal">Partners</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Select a partner to configure their service area and base location.
+          Select a partner to configure their service area, KYC identifiers, and base
+          location.
         </p>
       </div>
 
@@ -171,27 +173,34 @@ export function PartnersPageContent({ partners }: PartnersPageContentProps) {
 
           {/* Service area map panel */}
           {selectedPartner && (
-            <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-              <div className="border-b border-border px-6 py-4">
-                <h2 className="font-semibold text-charcoal">
-                  {selectedPartner.name ?? "Partner"} — Service Area
-                </h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Click the map to drop a pin on their base. Drag the pin or
-                  adjust the slider to change the radius.
-                </p>
+            <div className="flex flex-col gap-6">
+              <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+                <div className="border-b border-border px-6 py-4">
+                  <h2 className="font-semibold text-charcoal">
+                    {selectedPartner.name ?? "Partner"} — Service Area
+                  </h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Click the map to drop a pin on their base. Drag the pin or
+                    adjust the slider to change the radius.
+                  </p>
+                </div>
+
+                <div className="p-6">
+                  <ServiceAreaMap
+                    key={selectedPartner.id}
+                    initialLocation={initialLocation}
+                    initialRadius={selectedPartner.maxServiceRadius ?? 10}
+                    initialBaseAddress={selectedPartner.baseAddress ?? ""}
+                    onSave={handleSave}
+                    isSaving={isSaving}
+                  />
+                </div>
               </div>
 
-              <div className="p-6">
-                <ServiceAreaMap
-                  key={selectedPartner.id}
-                  initialLocation={initialLocation}
-                  initialRadius={selectedPartner.maxServiceRadius ?? 10}
-                  initialBaseAddress={selectedPartner.baseAddress ?? ""}
-                  onSave={handleSave}
-                  isSaving={isSaving}
-                />
-              </div>
+              <PartnerKycForm
+                partnerUserId={selectedPartner.id}
+                partnerName={selectedPartner.name ?? "Partner"}
+              />
             </div>
           )}
         </div>

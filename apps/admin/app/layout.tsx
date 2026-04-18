@@ -7,6 +7,7 @@ import { DictionaryProvider } from "@repo/ui/dictionary-provider";
 import { getAdminLabels } from "./lib/get-labels";
 import { AdminShell } from "./components/admin-shell";
 import { auth } from "../lib/auth";
+import { prisma } from "@repo/db";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -28,6 +29,15 @@ export default async function RootLayout({
   ]);
 
   const role = (session?.user as { role?: string } | undefined)?.role ?? "ADMIN";
+  const userId = session?.user?.id;
+
+  const hasPartner =
+    !session || role !== "PARTNER" || !userId
+      ? true
+      : !!(await prisma.partner.findUnique({
+          where: { userId },
+          select: { id: true },
+        }));
 
   return (
     <html lang="en">
@@ -39,6 +49,7 @@ export default async function RootLayout({
             userEmail={session?.user?.email ?? null}
             userImage={session?.user?.image ?? null}
             role={role}
+            hasPartner={hasPartner}
           >
             {children}
           </AdminShell>

@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useEffect, useCallback } from "react";
+import { type ReactNode, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "./lib/utils";
 
 interface DialogProps {
@@ -31,26 +32,32 @@ export function Dialog({ open, onClose, children, className }: DialogProps) {
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+  const layer = (
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
       <div
-        className="absolute inset-0 bg-black/50"
+        className="fixed inset-0 bg-black/50"
         onClick={onClose}
         role="button"
         tabIndex={-1}
         aria-label="Close dialog"
       />
-      <div
-        className={cn(
-          "relative z-10 w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-lg",
-          "animate-[scaleIn_0.2s_ease-out]",
-          className
-        )}
-      >
-        {children}
+      <div className="relative z-10 flex min-h-full justify-center px-4 py-8">
+        <div
+          className={cn(
+            "w-full max-w-lg self-start rounded-xl border border-border bg-background p-6 shadow-lg",
+            "animate-[scaleIn_0.2s_ease-out]",
+            className
+          )}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(layer, document.body);
 }
 
 interface DialogHeaderProps {

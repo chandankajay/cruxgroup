@@ -233,7 +233,114 @@ const normalizedExternalEquipment = externalEquipmentSeed.map((item) => ({
   },
 }));
 
+const masterCatalogSeed = [
+  {
+    name: "JCB 3DX Backhoe Loader",
+    category: "Earthmoving",
+    imageUrl: "/assets/jcb-3dx.webp",
+    specifications: {
+      Engine: "74 HP",
+      "Max Dig Depth": "4.77m",
+      "Loader Bucket": "1.1 cu.m",
+    },
+    minHourlyRate: 700,
+    maxHourlyRate: 1500,
+    minDailyRate: 6000,
+    maxDailyRate: 12000,
+  },
+  {
+    name: "Mini Excavator (3-Ton)",
+    category: "Earthmoving",
+    imageUrl: "/assets/mini-excavator.webp",
+    specifications: {
+      "Operating Weight": "3150 kg",
+      "Max Dig Depth": "2.8m",
+      "Bucket Width": "600mm",
+    },
+    minHourlyRate: 800,
+    maxHourlyRate: 1600,
+    minDailyRate: 7000,
+    maxDailyRate: 13000,
+  },
+  {
+    name: "Crawler Excavator (20-Ton)",
+    category: "Earthmoving",
+    imageUrl: "/assets/crawler-excavator.webp",
+    specifications: {
+      Engine: "140 HP",
+      "Operating Weight": "20.5 Tons",
+      "Bucket Capacity": "0.9 cu.m",
+    },
+    minHourlyRate: 1500,
+    maxHourlyRate: 3500,
+    minDailyRate: 12000,
+    maxDailyRate: 25000,
+  },
+  {
+    name: "Escorts Hydra Crane (14-Ton)",
+    category: "Lifting",
+    imageUrl: "/assets/hydra-crane.webp",
+    specifications: {
+      "Max Lift Capacity": "14 Tons",
+      "Max Height": "12m",
+      Transmission: "Heavy Duty",
+    },
+    minHourlyRate: 900,
+    maxHourlyRate: 1800,
+    minDailyRate: 7500,
+    maxDailyRate: 15000,
+  },
+  {
+    name: "Tractor with Post Hole Digger",
+    category: "Agriculture",
+    imageUrl: "/assets/post-hole-digger.webp",
+    specifications: {
+      "Required Power": "45+ HP",
+      "Auger Diameter": "12-18 inches",
+      "Drilling Depth": "Up to 3ft",
+    },
+    minHourlyRate: 600,
+    maxHourlyRate: 1200,
+    minDailyRate: 5000,
+    maxDailyRate: 9000,
+  },
+  {
+    name: "Tractor with Rotavator",
+    category: "Agriculture",
+    imageUrl: "/assets/rotavator.webp",
+    specifications: {
+      "Working Width": "5-7 feet",
+      Blades: "42-54 L-type",
+      "Required Power": "40+ HP",
+    },
+    minHourlyRate: 600,
+    maxHourlyRate: 1100,
+    minDailyRate: 4500,
+    maxDailyRate: 8500,
+  },
+];
+
+async function seedMasterCatalog(): Promise<void> {
+  for (const row of masterCatalogSeed) {
+    await prisma.masterCatalog.upsert({
+      where: { name: row.name },
+      update: {
+        category: row.category,
+        imageUrl: row.imageUrl,
+        specifications: row.specifications,
+        minHourlyRate: row.minHourlyRate,
+        maxHourlyRate: row.maxHourlyRate,
+        minDailyRate: row.minDailyRate,
+        maxDailyRate: row.maxDailyRate,
+      },
+      create: row,
+    });
+  }
+}
+
 async function seed(): Promise<void> {
+  await seedMasterCatalog();
+
   const allLabels = [...bookingLabels, ...adminLabels];
 
   for (const label of allLabels) {

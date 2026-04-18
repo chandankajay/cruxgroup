@@ -35,7 +35,7 @@ function Icon({ d, ...rest }: { d: string } & React.SVGProps<SVGSVGElement>) {
 
 const ADMIN_NAV: NavItem[] = [
   {
-    href: "/",
+    href: "/dashboard",
     label: "Dashboard",
     icon: (
       <Icon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -188,8 +188,8 @@ export function AdminSidebar({
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
         {navItems.map((item) => {
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
+            item.href === "/dashboard"
+              ? pathname === "/dashboard" || pathname === "/"
               : pathname.startsWith(item.href);
 
           return (

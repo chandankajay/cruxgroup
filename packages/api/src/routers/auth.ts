@@ -1,10 +1,19 @@
 import { z } from "zod";
 import { createRouter, publicProcedure } from "../trpc";
-import { createOtp, verifyOtp } from "../services/otp-service";
+import { createOtp, verifyOtp, DEV_MASTER_OTP } from "../services/otp-service";
 
+/** Accepts +91…, 91…, or 10-digit local (stored as +91…). */
 const phoneSchema = z
   .string()
-  .regex(/^\d{10,15}$/, "Invalid phone number");
+  .transform((raw) => {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+    if (digits.length === 10) return `+91${digits}`;
+    if (raw.startsWith("+") && digits.length >= 10) return `+${digits}`;
+    if (digits.length >= 10) return `+${digits}`;
+    return raw;
+  })
+  .pipe(z.string().regex(/^\+[1-9]\d{9,14}$/, "Invalid phone number"));
 
 export const authRouter = createRouter({
   sendOtp: publicProcedure
@@ -27,12 +36,11 @@ export const authRouter = createRouter({
       })
     )
     .mutation(async ({ input }) => {
-      const SIMULATED_CODE = "123456";
-      if (input.code === SIMULATED_CODE) {
+      const codeDigits = input.code.replace(/\D/g, "");
+      if (codeDigits === DEV_MASTER_OTP) {
         return { verified: true };
       }
 
-      // Keep fallback verification for non-simulated flows.
       const valid = await verifyOtp(input.phone, input.code);
       return { verified: valid };
     }),

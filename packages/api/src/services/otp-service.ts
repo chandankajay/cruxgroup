@@ -1,5 +1,8 @@
 import { prisma } from "@repo/db";
 
+/** Dev / pre–WhatsApp bypass — must match bookings NextAuth credentials check. */
+export const DEV_MASTER_OTP = "112233";
+
 const OTP_EXPIRY_MINUTES = 5;
 const OTP_LENGTH = 6;
 
@@ -21,6 +24,11 @@ export async function createOtp(phone: string): Promise<string> {
 }
 
 export async function verifyOtp(phone: string, code: string): Promise<boolean> {
+  const normalizedCode = code.replace(/\D/g, "");
+  if (normalizedCode === DEV_MASTER_OTP) {
+    return true;
+  }
+
   const otp = await prisma.otp.findFirst({
     where: {
       phone,

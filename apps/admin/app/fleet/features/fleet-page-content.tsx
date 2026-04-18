@@ -1,40 +1,29 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
-import { EquipmentTable } from "../../equipment/features/equipment-table";
-import { EquipmentFormDialog } from "../../equipment/features/equipment-form-dialog";
 import { DeleteConfirmDialog } from "../../equipment/features/delete-confirm-dialog";
 import {
-  createFleetItemAction,
   deleteFleetItemAction,
+  toggleFleetEquipmentActiveAction,
+  type FleetEquipmentItem,
 } from "../actions";
-import type { EquipmentFormValues } from "../../equipment/schema";
-
-interface EquipmentItem {
-  id: string;
-  name: string;
-  category: string;
-  subType?: string | null;
-  pricing: { hourly: number; daily: number };
-  images: string[];
-  specifications: unknown;
-}
+import type { KycStatus } from "@prisma/client";
+import { FleetEquipmentCards } from "./fleet-equipment-cards";
 
 interface FleetPageContentProps {
-  readonly partnerId: string;
-  readonly initialData: EquipmentItem[];
+  readonly initialData: FleetEquipmentItem[];
+  readonly partnerKycStatus: KycStatus | null;
 }
 
-export function FleetPageContent({
-  partnerId,
-  initialData,
-}: FleetPageContentProps) {
+export function FleetPageContent({ initialData, partnerKycStatus }: FleetPageContentProps) {
   const [items, setItems] = useState(initialData);
-  const [formOpen, setFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const partnerKycVerified = partnerKycStatus === "VERIFIED";
+  const showKycBanner = partnerKycStatus !== "VERIFIED";
 
   const deletingItem = useMemo(
     () => items.find((i) => i.id === deleteId) ?? null,
@@ -44,39 +33,6 @@ export function FleetPageContent({
   const totalDailyRevenuePotential = useMemo(
     () => items.reduce((sum, i) => sum + i.pricing.daily, 0),
     [items]
-  );
-
-  const handleFormSubmit = useCallback(
-    async (values: EquipmentFormValues) => {
-      setIsSubmitting(true);
-
-      const specs = values.specifications.trim()
-        ? (JSON.parse(values.specifications) as Record<string, unknown>)
-        : {};
-      const images = values.imageUrl ? [values.imageUrl] : [];
-
-      const result = await createFleetItemAction({
-        name: values.name,
-        category: values.category,
-        subType: values.subType || undefined,
-        hourlyRate: values.hourlyRate,
-        dailyRate: values.dailyRate,
-        images,
-        specifications: specs,
-        partnerId,
-      });
-
-      if (result.success) {
-        toast.success("Equipment added to your fleet!");
-        window.location.reload();
-      } else {
-        toast.error(result.error ?? "Failed to add equipment.");
-      }
-
-      setIsSubmitting(false);
-      setFormOpen(false);
-    },
-    [partnerId]
   );
 
   const handleDelete = useCallback(async () => {
@@ -96,25 +52,50 @@ export function FleetPageContent({
     setDeleteId(null);
   }, [deleteId]);
 
+  const handleToggleActive = useCallback(async (id: string, isActive: boolean) => {
+    const result = await toggleFleetEquipmentActiveAction(id, isActive);
+    if (result.success) {
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, isActive } : i)));
+    } else {
+      toast.error(result.error ?? "Could not update availability.");
+    }
+  }, []);
+
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
+      {showKycBanner && (
+        <div
+          className="mb-6 flex flex-col gap-3 rounded-xl border border-amber-500/50 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+          role="alert"
+        >
+          <p className="text-sm leading-relaxed sm:max-w-2xl">
+            Your fleet is safely saved, but hidden from customers. Complete your Trust Center KYC to
+            start receiving bookings.
+          </p>
+          <Link
+            href="/settings/kyc"
+            className="inline-flex shrink-0 items-center justify-center rounded-md border border-amber-700 bg-white px-4 py-2 text-sm font-semibold text-amber-950 shadow-sm transition-colors hover:bg-amber-100"
+          >
+            Go to Trust Center
+          </Link>
+        </div>
+      )}
+
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-charcoal">My Fleet</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage the equipment you offer for rent.
           </p>
         </div>
-        <button
-          onClick={() => setFormOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-orange px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600"
+        <Link
+          href="/fleet/new"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-brand-orange px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600"
         >
           + Add Equipment
-        </button>
+        </Link>
       </div>
 
-      {/* Summary strip */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <StatCard
           label="Machines"
@@ -133,22 +114,15 @@ export function FleetPageContent({
         />
       </div>
 
-      {/* Table */}
-      <div className="rounded-xl border border-border bg-white shadow-sm">
-        <EquipmentTable
+      <div className="rounded-xl border border-border bg-white p-4 shadow-sm sm:p-6">
+        <FleetEquipmentCards
           items={items}
+          partnerKycVerified={partnerKycVerified}
+          onToggleActive={handleToggleActive}
           onEdit={() => {}}
           onDelete={setDeleteId}
         />
       </div>
-
-      <EquipmentFormDialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSubmit={handleFormSubmit}
-        isSubmitting={isSubmitting}
-        equipment={null}
-      />
 
       <DeleteConfirmDialog
         open={deleteId !== null}

@@ -17,11 +17,11 @@
     "lint": "eslint src --max-warnings 0"
   },
   "dependencies": {
-    "@prisma/client": "^6.9.0"
+    "@prisma/client": "6.19.3"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "prisma": "^6.9.0",
+    "prisma": "6.19.3",
     "tsx": "^4.21.0",
     "typescript": "5.9.2"
   }

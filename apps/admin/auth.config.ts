@@ -1,7 +1,17 @@
 import type { NextAuthConfig } from "next-auth";
+import { enterpriseAuthSecurity } from "@repo/auth";
 
 const PARTNER_ONLY = ["/fleet", "/my-bookings", "/service-area", "/earnings"];
-const ADMIN_ONLY = ["/equipment", "/bookings", "/partners", "/settings"];
+
+function isPartnerBlockedFromPath(pathname: string): boolean {
+  if (["/equipment", "/bookings", "/partners"].some((p) => pathname.startsWith(p))) {
+    return true;
+  }
+  if (pathname.startsWith("/settings") && !pathname.startsWith("/settings/kyc")) {
+    return true;
+  }
+  return false;
+}
 
 /**
  * Edge-compatible NextAuth config.
@@ -10,16 +20,15 @@ const ADMIN_ONLY = ["/equipment", "/bookings", "/partners", "/settings"];
  * native modules.
  */
 export const authConfig: NextAuthConfig = {
-  secret: process.env.AUTH_SECRET,
   providers: [],
-  session: {
-    strategy: "jwt",
-  },
   callbacks: {
     // Edge-safe: only reads from the JWT token — no Prisma calls.
     session({ session, token }) {
       if (token.id) session.user.id = token.id as string;
       if (token.role) session.user.role = token.role as string;
+      if (token.phoneNumber) {
+        session.user.phoneNumber = token.phoneNumber as string;
+      }
       return session;
     },
 
@@ -45,17 +54,17 @@ export const authConfig: NextAuthConfig = {
         const isPartnerRoute = PARTNER_ONLY.some((p) =>
           pathname.startsWith(p)
         );
-        if (isPartnerRoute) return Response.redirect(new URL("/", nextUrl));
+        if (isPartnerRoute) return Response.redirect(new URL("/dashboard", nextUrl));
       }
 
       if (isLoggedIn && role === "PARTNER") {
-        const isAdminRoute = ADMIN_ONLY.some((p) => pathname.startsWith(p));
-        if (isAdminRoute)
+        if (isPartnerBlockedFromPath(pathname)) {
           return Response.redirect(new URL("/fleet", nextUrl));
+        }
       }
 
       if (isLoggedIn && isLoginPage) {
-        const home = role === "PARTNER" ? "/fleet" : "/";
+        const home = role === "PARTNER" ? "/fleet" : "/dashboard";
         return Response.redirect(new URL(home, nextUrl));
       }
 
@@ -70,4 +79,5 @@ export const authConfig: NextAuthConfig = {
     signIn: "/login",
     error: "/login",
   },
+  ...enterpriseAuthSecurity,
 };

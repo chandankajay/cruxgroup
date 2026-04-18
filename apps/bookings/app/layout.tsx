@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
 import { DictionaryProvider } from "@repo/ui/dictionary-provider";
-import { NavigationHeader } from "./components/navigation-header";
+import { ConditionalHeader } from "./components/conditional-header";
 import { PageTransition } from "./components/page-transition";
 import { getBookingLabels } from "./lib/get-labels";
 
@@ -28,7 +28,7 @@ export default async function RootLayout({
     <html lang="en">
       <body className={geist.className}>
         <DictionaryProvider labels={labels}>
-          <NavigationHeader />
+          <ConditionalHeader />
           <PageTransition>{children}</PageTransition>
           <Toaster position="top-center" richColors closeButton />
         </DictionaryProvider>

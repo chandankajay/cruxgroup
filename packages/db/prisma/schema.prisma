@@ -8,24 +8,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── User ────────────────────────────────────────────────────────────────────
+
 model User {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  /// Stored as "phone" in Mongo for backwards compat with OTP flow
   phoneNumber   String?   @unique @map("phone")
   name          String    @default("")
-  email         String?   @unique
+  /// Optional — phone/WhatsApp OTP users may have no email.
+  /// Not @unique: MongoDB rejects multiple `null` values on a unique index.
+  email         String?
   emailVerified DateTime?
   image         String?
   role          UserRole  @default(USER)
 
-  // Partner-specific fields (used when role = PARTNER)
-  location         GeoPoint?
-  maxServiceRadius Int?      // kilometers
-  baseAddress      String?
-
   accounts Account[]
   sessions Session[]
   bookings Booking[]
+  trips    Trip[]
+  /// 1-to-1: present only when role = PARTNER
+  partner  Partner?
 
+  @@index([email])
   @@map("users")
 }
 
@@ -34,6 +38,15 @@ enum UserRole {
   ADMIN
   PARTNER
 }
+
+enum KycStatus {
+  PENDING
+  SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+// ─── Auth (NextAuth adapter models) ──────────────────────────────────────────
 
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
@@ -78,20 +91,113 @@ model Otp {
   @@map("otps")
 }
 
+// ─── Partner ─────────────────────────────────────────────────────────────────
+
+model Partner {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Unique userId enforces strict 1-to-1 with `User` (each partner account owns at most one profile).
+  userId String @unique @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Fleet / yard display name (from onboarding)
+  companyName String @default("")
+
+  /// Primary yard address (from onboarding)
+  address String
+
+  /// City label or coordinates text from onboarding (e.g. "Kothur" or "17.4, 78.4")
+  baseLocation String?
+
+  /// Service radius in kilometres
+  maxRadius Int
+
+  kycStatus          KycStatus @default(PENDING)
+  kycRejectionReason String?
+
+  /// Identity numbers + Vercel Blob URLs for ID scans (uniqueness enforced in app)
+  panNumber     String?
+  panDocUrl     String?
+  aadhaarNumber String?
+  aadhaarDocUrl String?
+  gstNumber     String?
+
+  bankAccountNumber  String?
+  bankIfscCode       String?
+  cancelledChequeUrl String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  equipment Equipment[]
+  trips     Trip[]
+
+  @@index([panNumber])
+  @@index([aadhaarNumber])
+  @@index([gstNumber])
+  @@map("partners")
+}
+
+// ─── Master catalog (standard equipment types) ───────────────────────────────
+
+model MasterCatalog {
+  id               String @id @default(auto()) @map("_id") @db.ObjectId
+  name             String @unique
+  category         String
+  imageUrl         String @default("")
+  specifications   Json?
+  minHourlyRate    Float  @default(0)
+  maxHourlyRate    Float  @default(0)
+  minDailyRate     Float  @default(0)
+  maxDailyRate     Float  @default(0)
+
+  /// Partner fleet rows (`Equipment`) link here via `catalogId`.
+  equipment Equipment[]
+
+  @@map("master_catalog")
+}
+
+// ─── Equipment ───────────────────────────────────────────────────────────────
+
 model Equipment {
-  id             String            @id @default(auto()) @map("_id") @db.ObjectId
-  name           String
-  category       EquipmentCategory
-  subType        String?
-  partnerId      String?           @db.ObjectId
-  hourlyRate     Float             @default(0)
-  minDaysForExtendedRadius Int     @default(0)
-  pricing        EquipmentPricing
-  images         String[]
-  specifications Json
+  id                       String            @id @default(auto()) @map("_id") @db.ObjectId
+  name                     String
+  category                 EquipmentCategory
+  subType                  String?
+  /// Linked to Partner — null means platform-owned equipment
+  partnerId                String?           @db.ObjectId
+  partner                  Partner?          @relation(fields: [partnerId], references: [id])
+  /// Optional link to standard catalog row (partner fleet entries)
+  catalogId                String?           @db.ObjectId
+  catalog                  MasterCatalog?    @relation(fields: [catalogId], references: [id])
+  hp                       Int               @default(0)
+  /// Free delivery radius in km before per-km transport charges apply
+  freeRadiusKm             Int               @default(5)
+  /// Transport fee per km beyond freeRadiusKm (₹)
+  transportRatePerKm       Float             @default(0)
+  hourlyRate               Float             @default(0)
+  minDaysForExtendedRadius Int               @default(0)
+  /// Absolute maximum distance (km) this unit will travel for a job
+  maxRadiusKm              Int               @default(0)
+  /// Minimum billable hours per booking
+  minBookingHours          Int               @default(1)
+  /// Vehicle / machine registration (e.g. TS07 EA 1234). Uniqueness enforced in app — Mongo unique on optional fields rejects multiple nulls.
+  registrationNumber       String?
+  operatorName             String            @default("")
+  operatorPhone            String            @default("")
+  manufacturingYear        Int?
+  /// Availability toggle (e.g. maintenance off-hire)
+  isActive                 Boolean           @default(true)
+  pricing                  EquipmentPricing
+  images                   String[]
+  specifications           Json
+  /// Registration certificate (RC) photo URL for this machine
+  rcDocumentUrl            String?
 
   bookings Booking[]
+  trips    Trip[]
 
+  @@index([registrationNumber])
   @@map("equipment")
 }
 
@@ -105,6 +211,8 @@ type EquipmentPricing {
   hourly Float
   daily  Float
 }
+
+// ─── Booking ──────────────────────────────────────────────────────────────────
 
 model Booking {
   id          String             @id @default(auto()) @map("_id") @db.ObjectId
@@ -123,6 +231,82 @@ model Booking {
   equipment Equipment @relation(fields: [equipmentId], references: [id])
 
   @@map("bookings")
+}
+
+// ─── Trip (operational job lifecycle; rates locked at booking) ───────────────
+
+enum TripStatus {
+  PENDING
+  CONFIRMED
+  EN_ROUTE
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+model Trip {
+  id     String @id @default(uuid()) @map("_id")
+  /// Customer
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Partner fleet machine (`Equipment`)
+  equipmentId String    @db.ObjectId
+  equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  partnerId   String    @db.ObjectId
+  partner     Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  scheduledDate    DateTime
+  actualStartTime  DateTime?
+  actualEndTime    DateTime?
+  totalBilledHours Float?
+
+  status        TripStatus @default(PENDING)
+  /// 4-digit OTP to authorize start (set when trip is confirmed / booked)
+  startOtp      String     @default("")
+  /// 4-digit OTP to authorize completion
+  endOtp        String     @default("")
+  /// Magic-link token for operator actions (UUID)
+  operatorToken String     @unique @default(uuid())
+  /// Customer review link (UUID); set when the trip is marked COMPLETED
+  reviewToken   String?    @unique
+
+  lockedHourlyRate   Float
+  lockedTransportFee Float
+  totalAmount        Float?
+
+  /// Worksite location (e.g. { "lat": number, "lng": number } or GeoJSON)
+  jobLocation Json
+  distanceKm  Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review Review?
+
+  @@index([userId])
+  @@index([partnerId])
+  @@index([equipmentId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@map("trips")
+}
+
+// ─── Trip review (dual rating: machine + operator) ───────────────────────────
+
+model Review {
+  id    String @id @default(uuid()) @map("_id")
+  tripId String @unique
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  equipmentRating   Int // 1–5
+  equipmentComment  String?
+  operatorRating    Int // 1–5
+  operatorComment   String?
+
+  createdAt DateTime @default(now())
+
+  @@map("reviews")
 }
 
 enum BookingStatus {
@@ -144,17 +328,21 @@ type Coordinates {
   lng Float
 }
 
-// MongoDB GeoJSON Point (used for partner location)
-type GeoPoint {
-  type        String  @default("Point")
-  coordinates Float[]
-}
-
 type BookingPricingType {
   total    Float
   duration Float
   unit     String
 }
+
+// ─── Geo helpers ─────────────────────────────────────────────────────────────
+
+/// MongoDB GeoJSON Point — kept for potential $geoNear queries
+type GeoPoint {
+  type        String  @default("Point")
+  coordinates Float[]
+}
+
+// ─── Supporting models ────────────────────────────────────────────────────────
 
 model ServiceableArea {
   id       String  @id @default(auto()) @map("_id") @db.ObjectId

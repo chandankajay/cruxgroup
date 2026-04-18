@@ -13,5 +13,7 @@ export default async function FleetPage() {
 
   const fleet = await fetchFleet(userId);
 
-  return <FleetPageContent partnerId={userId} initialData={fleet} />;
+  return (
+    <FleetPageContent initialData={fleet.items} partnerKycStatus={fleet.partnerKycStatus} />
+  );
 }
