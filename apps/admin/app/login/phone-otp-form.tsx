@@ -40,7 +40,7 @@ export function PhoneOtpForm() {
     if (!result.ok) {
       setError(
         result.errorCode === "CredentialsSignin"
-          ? "Sign-in failed. In dev use OTP 112233 and a valid 10-digit mobile. In production this number must already be PARTNER or ADMIN."
+          ? "Sign-in failed. Use the master OTP and a valid 10-digit Indian mobile (+91). If this persists, contact support."
           : "Invalid OTP — check the code and try again.",
       );
       setIsLoading(false);

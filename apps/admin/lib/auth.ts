@@ -7,8 +7,6 @@ import { prisma } from "@repo/db";
 import { authConfig } from "../auth.config";
 import { ADMIN_PHONE_E164, normalizeAdminPhone } from "./phone";
 
-const isDev = process.env["NODE_ENV"] !== "production";
-
 const partnerUserSelect = {
   id: true,
   name: true,
@@ -68,32 +66,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           select: partnerUserSelect,
         });
 
-        // Development: same ergonomics as bookings — any valid +91 number + 112233
-        // can sign in; we create or promote to PARTNER so the admin app allows access.
-        if (isDev) {
-          if (!user) {
-            try {
-              user = await prisma.user.create({
-                data: {
-                  phoneNumber,
-                  name: "",
-                  role: "PARTNER",
-                },
-                select: partnerUserSelect,
-              });
-            } catch {
-              user = await prisma.user.findUnique({
-                where: { phoneNumber },
-                select: partnerUserSelect,
-              });
-            }
-          } else if (user.role === "USER") {
-            user = await prisma.user.update({
-              where: { id: user.id },
-              data: { role: "PARTNER" },
+        // After valid master OTP: same behaviour as local — new numbers self-register
+        // as PARTNER (then onboarding creates the Partner profile). Existing USERs
+        // logging in via phone are promoted to PARTNER so they are not sent to the
+        // public bookings app (middleware treats USER as bookings-only).
+        if (!user) {
+          try {
+            user = await prisma.user.create({
+              data: {
+                phoneNumber,
+                name: "",
+                role: "PARTNER",
+              },
+              select: partnerUserSelect,
+            });
+          } catch {
+            user = await prisma.user.findUnique({
+              where: { phoneNumber },
               select: partnerUserSelect,
             });
           }
+        } else if (user.role === "USER") {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { role: "PARTNER" },
+            select: partnerUserSelect,
+          });
         }
 
         if (!user || (user.role !== "PARTNER" && user.role !== "ADMIN")) {
