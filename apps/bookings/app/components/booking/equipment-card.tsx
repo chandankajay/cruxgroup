@@ -93,7 +93,7 @@ export function EquipmentCard({
         </div>
         <div className="mt-auto flex items-center justify-between pt-2">
           <p className="text-lg font-bold text-brand-orange">
-            ₹{dailyRate.toLocaleString("en-IN")}
+            ₹{(dailyRate / 100).toLocaleString("en-IN")}
             <span className="text-sm font-normal text-muted-foreground">
               {t("EQUIPMENT_PER_DAY")}
             </span>

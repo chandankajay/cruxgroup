@@ -85,7 +85,17 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
       fd.append("aadhaarDoc", values.aadhaarDoc);
       fd.append("chequeDoc", values.chequeDoc);
 
-      const result = await uploadKycAction(fd);
+      let result: TrustCenterSubmitResult;
+      try {
+        result = await uploadKycAction(fd);
+      } catch (err) {
+        console.error("[KYC] uploadKycAction threw (client)", err);
+        const msg =
+          "We could not reach the server. Check your connection and try again.";
+        form.setError("root", { message: msg });
+        toast.error("KYC submission failed", { description: msg });
+        return;
+      }
 
       if (!result.success) {
         const dup = duplicateCodeMessage(result);

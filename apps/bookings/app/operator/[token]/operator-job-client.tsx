@@ -9,6 +9,8 @@ import type { TripStatus } from "@prisma/client";
 export type OperatorTripPayload = {
   token: string;
   status: TripStatus;
+  /** True when job exceeded planned end (+ grace); billing still uses actual start/end. */
+  isOverrun: boolean;
   jobLabel: string;
   customerMasked: string;
   mapsUrl: string | null;
@@ -148,10 +150,10 @@ export function OperatorJobClient({ initial }: { initial: OperatorTripPayload })
     });
   };
 
-  const showPreStart =
-    initial.status === "CONFIRMED" || initial.status === "EN_ROUTE";
-  const startIso =
-    initial.status === "IN_PROGRESS" ? initial.actualStartTimeIso : null;
+  const showPreStart = initial.status === "ENROUTE";
+  const onSiteOrOverrun =
+    initial.status === "ON_SITE" || initial.status === "OVERRUN";
+  const startIso = onSiteOrOverrun ? initial.actualStartTimeIso : null;
   const showDone = initial.status === "COMPLETED";
 
   return (
@@ -196,6 +198,20 @@ export function OperatorJobClient({ initial }: { initial: OperatorTripPayload })
 
       {startIso ? (
         <div className="flex flex-col gap-8">
+          {initial.isOverrun ? (
+            <div
+              className="rounded-2xl border-2 border-amber-500/70 bg-amber-950/40 px-4 py-4 text-center"
+              role="status"
+            >
+              <p className="text-lg font-bold text-amber-300 sm:text-xl">
+                This job has exceeded the expected hours (overrun).
+              </p>
+              <p className="mt-2 text-sm font-semibold text-amber-200/90">
+                End the job with your end code when work is finished — time billed runs from your
+                start time to when you submit the end code.
+              </p>
+            </div>
+          ) : null}
           <LiveTimer startIso={startIso} />
           <button
             type="button"
@@ -208,7 +224,7 @@ export function OperatorJobClient({ initial }: { initial: OperatorTripPayload })
             END JOB (Enter OTP)
           </button>
         </div>
-      ) : initial.status === "IN_PROGRESS" ? (
+      ) : onSiteOrOverrun ? (
         <p className="text-center text-2xl font-bold text-amber-400">
           Start time is missing for this job. Please contact dispatch.
         </p>

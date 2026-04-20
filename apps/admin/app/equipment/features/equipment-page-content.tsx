@@ -92,8 +92,8 @@ export function EquipmentPageContent({
                     category: values.category,
                     subType: values.subType || null,
                     pricing: {
-                      hourly: values.hourlyRate,
-                      daily: values.dailyRate,
+                      hourly: Math.round(values.hourlyRate * 100),
+                      daily: Math.round(values.dailyRate * 100),
                     },
                     images,
                     specifications: specs,

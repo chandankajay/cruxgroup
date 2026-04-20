@@ -134,7 +134,7 @@ export function SiteDetailModal({ booking, onClose }: SiteDetailModalProps) {
           />
           <DetailRow
             label="Total Price"
-            value={`₹${pricing.total.toLocaleString("en-IN")}`}
+            value={`₹${(pricing.total / 100).toLocaleString("en-IN")}`}
           />
           <DetailRow label="Requested On" value={formatDate(createdAt)} />
         </div>

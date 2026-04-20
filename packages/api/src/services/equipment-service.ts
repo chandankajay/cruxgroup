@@ -1,6 +1,11 @@
 import { EquipmentCategory, Prisma } from "@prisma/client";
 import { prisma } from "@repo/db";
 
+/** Convert rupees from partner/admin forms to integer paise for persistence. */
+function rupeesToPaise(rupees: number): number {
+  return Math.round(rupees * 100);
+}
+
 export function mapCatalogCategoryToEquipmentCategory(
   category: string
 ): EquipmentCategory {
@@ -74,20 +79,22 @@ interface CreateEquipmentInput {
 }
 
 export async function createEquipment(input: CreateEquipmentInput) {
+  const hourlyPaise = rupeesToPaise(input.hourlyRate);
+  const dailyPaise = rupeesToPaise(input.dailyRate);
   return prisma.equipment.create({
     data: {
       name: input.name,
       category: input.category,
       subType: input.subType,
-      hourlyRate: input.hourlyRate,
-      pricing: { hourly: input.hourlyRate, daily: input.dailyRate },
+      hourlyRate: hourlyPaise,
+      pricing: { hourly: hourlyPaise, daily: dailyPaise },
       images: input.images,
       specifications: input.specifications as Prisma.InputJsonValue,
       partnerId: input.partnerId ?? null,
       catalogId: input.catalogId ?? null,
       hp: input.hp ?? 0,
       freeRadiusKm: input.freeRadiusKm ?? 5,
-      transportRatePerKm: input.transportRatePerKm ?? 0,
+      transportRatePerKm: rupeesToPaise(input.transportRatePerKm ?? 0),
     },
   });
 }
@@ -126,11 +133,13 @@ export async function createPartnerFleetEquipment(
     throw new Error("CATALOG_NOT_FOUND");
   }
 
+  const hourlyPaise = rupeesToPaise(input.hourlyRate);
+  const dailyPaise = rupeesToPaise(input.dailyRate);
   if (
-    input.hourlyRate < catalog.minHourlyRate ||
-    input.hourlyRate > catalog.maxHourlyRate ||
-    input.dailyRate < catalog.minDailyRate ||
-    input.dailyRate > catalog.maxDailyRate
+    hourlyPaise < catalog.minHourlyRate ||
+    hourlyPaise > catalog.maxHourlyRate ||
+    dailyPaise < catalog.minDailyRate ||
+    dailyPaise > catalog.maxDailyRate
   ) {
     throw new Error("RATES_OUT_OF_RANGE");
   }
@@ -170,9 +179,9 @@ export async function createPartnerFleetEquipment(
       partnerId: partner.id,
       catalogId: catalog.id,
       hp: input.hp,
-      hourlyRate: input.hourlyRate,
+      hourlyRate: hourlyPaise,
       freeRadiusKm: input.freeRadiusKm,
-      transportRatePerKm: input.transportRatePerKm,
+      transportRatePerKm: rupeesToPaise(input.transportRatePerKm),
       maxRadiusKm: input.maxRadiusKm,
       minBookingHours: input.minBookingHours,
       registrationNumber: reg,
@@ -181,7 +190,7 @@ export async function createPartnerFleetEquipment(
       manufacturingYear: input.manufacturingYear,
       isActive: input.isActive,
       minDaysForExtendedRadius: 0,
-      pricing: { hourly: input.hourlyRate, daily: input.dailyRate },
+      pricing: { hourly: hourlyPaise, daily: dailyPaise },
       images,
       specifications: {
         ...catalogSpecs,
@@ -219,6 +228,15 @@ export async function updateEquipment(input: UpdateEquipmentInput) {
 
   if (!existing) throw new Error("Equipment not found");
 
+  const nextHourlyPaise =
+    input.hourlyRate !== undefined
+      ? rupeesToPaise(input.hourlyRate)
+      : existing.pricing.hourly;
+  const nextDailyPaise =
+    input.dailyRate !== undefined
+      ? rupeesToPaise(input.dailyRate)
+      : existing.pricing.daily;
+
   return prisma.equipment.update({
     where: { id: input.id },
     data: {
@@ -229,11 +247,11 @@ export async function updateEquipment(input: UpdateEquipmentInput) {
       ...(input.specifications !== undefined && {
         specifications: input.specifications as Prisma.InputJsonValue,
       }),
-      ...(input.hourlyRate !== undefined && { hourlyRate: input.hourlyRate }),
       ...((input.hourlyRate !== undefined || input.dailyRate !== undefined) && {
+        hourlyRate: nextHourlyPaise,
         pricing: {
-          hourly: input.hourlyRate ?? existing.pricing.hourly,
-          daily: input.dailyRate ?? existing.pricing.daily,
+          hourly: nextHourlyPaise,
+          daily: nextDailyPaise,
         },
       }),
     },

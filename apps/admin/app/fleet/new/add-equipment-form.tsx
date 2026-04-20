@@ -86,8 +86,9 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
       const result = await submitAddFleetEquipmentFromSession(values);
       if (result.success) {
         toast.success("Equipment added to your fleet.");
-        router.push("/fleet");
-        router.refresh();
+        // Replace avoids stacking /fleet on history; revalidatePath runs in the server action.
+        // Do not call router.refresh() here — it targets the *current* route (/fleet/new) and can block navigation.
+        router.replace("/fleet");
       } else {
         toast.error(result.error ?? "Could not save equipment.");
       }
@@ -239,16 +240,16 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
                   step="0.01"
                   {...(selected
                     ? {
-                        min: selected.minHourlyRate,
-                        max: selected.maxHourlyRate,
+                        min: selected.minHourlyRate / 100,
+                        max: selected.maxHourlyRate / 100,
                       }
                     : { min: 0 })}
                   {...register("hourlyRate")}
                 />
                 {selected ? (
                   <p className="text-xs text-muted-foreground">
-                    Platform limits: {fmtInr(selected.minHourlyRate)} –{" "}
-                    {fmtInr(selected.maxHourlyRate)}/hr
+                    Platform limits: {fmtInr(selected.minHourlyRate / 100)} –{" "}
+                    {fmtInr(selected.maxHourlyRate / 100)}/hr
                   </p>
                 ) : null}
                 {errors.hourlyRate && (
@@ -266,16 +267,16 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
                   step="0.01"
                   {...(selected
                     ? {
-                        min: selected.minDailyRate,
-                        max: selected.maxDailyRate,
+                        min: selected.minDailyRate / 100,
+                        max: selected.maxDailyRate / 100,
                       }
                     : { min: 0 })}
                   {...register("dailyRate")}
                 />
                 {selected ? (
                   <p className="text-xs text-muted-foreground">
-                    Platform limits: {fmtInr(selected.minDailyRate)} –{" "}
-                    {fmtInr(selected.maxDailyRate)}/day
+                    Platform limits: {fmtInr(selected.minDailyRate / 100)} –{" "}
+                    {fmtInr(selected.maxDailyRate / 100)}/day
                   </p>
                 ) : null}
                 {errors.dailyRate && (

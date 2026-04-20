@@ -71,6 +71,34 @@ const ADMIN_NAV: NavItem[] = [
     ),
   },
   {
+    href: "/bookings/new",
+    label: "Walk-in booking",
+    icon: (
+      <Icon d="M12 5v14M5 12h14" />
+    ),
+  },
+  {
+    href: "/jobs",
+    label: "Live jobs",
+    icon: (
+      <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    ),
+  },
+  {
+    href: "/customers",
+    label: "Customers",
+    icon: (
+      <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm12-4v6M21 7h-6" />
+    ),
+  },
+  {
+    href: "/payroll",
+    label: "Payroll",
+    icon: (
+      <Icon d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    ),
+  },
+  {
     href: "/settings",
     label: "Settings",
     icon: (
@@ -213,7 +241,17 @@ export function AdminSidebar({
           const isActive =
             item.href === "/dashboard"
               ? pathname === "/dashboard" || pathname === "/"
-              : pathname.startsWith(item.href);
+              : item.href === "/bookings"
+                ? pathname === "/bookings"
+                : item.href === "/bookings/new"
+                  ? pathname === "/bookings/new"
+                  : item.href === "/jobs"
+                    ? pathname === "/jobs"
+                    : item.href === "/customers"
+                      ? pathname === "/customers" || pathname.startsWith("/customers/")
+                      : item.href === "/payroll"
+                        ? pathname === "/payroll"
+                        : pathname.startsWith(item.href);
 
           return (
             <Link

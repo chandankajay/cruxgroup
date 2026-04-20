@@ -23,15 +23,16 @@ export function PriceSummary({
   distanceKm,
 }: PriceSummaryProps) {
   const t = useLabels();
-  const unitRate = priceType === "hourly" ? hourlyRate : dailyRate;
+  /** Equipment rates from API are in paise. */
+  const unitRatePaise = priceType === "hourly" ? hourlyRate : dailyRate;
   const unitLabel = priceType === "hourly" ? "Hours" : t("DRAWER_DAYS");
   const rateLabel = priceType === "hourly" ? "Hourly Rate" : t("DRAWER_DAILY_RATE");
-  const subtotal = duration * unitRate;
+  const subtotalPaise = duration * unitRatePaise;
 
   const transport =
     distanceKm !== null ? calculateTransportFee(distanceKm, "FLATBED") : null;
 
-  const total = subtotal + (transport?.totalFee ?? 0);
+  const totalPaise = subtotalPaise + (transport?.totalFeePaise ?? 0);
 
   return (
     <div className="space-y-2 rounded-lg bg-orange-50 p-4 text-sm">
@@ -39,7 +40,7 @@ export function PriceSummary({
       <div className="flex justify-between">
         <span className="text-muted-foreground">{rateLabel}</span>
         <span className="font-bold text-amber-600">
-          ₹{unitRate.toLocaleString("en-IN")}
+          ₹{(unitRatePaise / 100).toLocaleString("en-IN")}
         </span>
       </div>
 
@@ -52,7 +53,7 @@ export function PriceSummary({
       {/* Subtotal */}
       <div className="flex justify-between">
         <span className="text-muted-foreground">Subtotal</span>
-        <span>₹{subtotal.toLocaleString("en-IN")}</span>
+        <span>₹{(subtotalPaise / 100).toLocaleString("en-IN")}</span>
       </div>
 
       {/* Transport fee — detailed breakdown */}
@@ -64,7 +65,7 @@ export function PriceSummary({
               ({transport.distanceKm} km
               {transport.isFree
                 ? ` — free within ${FREE_ZONE_KM} km`
-                : `, ₹${transport.feePerKm}/km × ${transport.chargeableKm} km`}
+                : `, ₹${transport.feePerKmPaise / 100}/km × ${transport.chargeableKm} km`}
               )
             </span>
           )}
@@ -78,7 +79,7 @@ export function PriceSummary({
             <span className="font-semibold text-green-600">Free</span>
           ) : (
             <span className="font-bold text-amber-600">
-              ₹{transport.totalFee.toLocaleString("en-IN")}
+              ₹{(transport.totalFeePaise / 100).toLocaleString("en-IN")}
             </span>
           )
         ) : (
@@ -90,7 +91,7 @@ export function PriceSummary({
       <div className="flex justify-between border-t border-border pt-2 font-semibold">
         <span>{t("DRAWER_TOTAL")}</span>
         <span className="font-bold text-amber-700">
-          ₹{total.toLocaleString("en-IN")}
+          ₹{(totalPaise / 100).toLocaleString("en-IN")}
         </span>
       </div>
     </div>

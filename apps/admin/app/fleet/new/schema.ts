@@ -49,24 +49,20 @@ export function buildAddFleetEquipmentSchema(catalog: readonly CatalogGuardRow[]
       });
       return;
     }
-    if (
-      data.hourlyRate < row.minHourlyRate ||
-      data.hourlyRate > row.maxHourlyRate
-    ) {
+    const hourlyPaise = Math.round(data.hourlyRate * 100);
+    const dailyPaise = Math.round(data.dailyRate * 100);
+    if (hourlyPaise < row.minHourlyRate || hourlyPaise > row.maxHourlyRate) {
       ctx.addIssue({
         code: "custom",
         path: ["hourlyRate"],
-        message: `Hourly rate must be between ₹${row.minHourlyRate.toLocaleString("en-IN")} and ₹${row.maxHourlyRate.toLocaleString("en-IN")}`,
+        message: `Hourly rate must be between ₹${(row.minHourlyRate / 100).toLocaleString("en-IN")} and ₹${(row.maxHourlyRate / 100).toLocaleString("en-IN")}`,
       });
     }
-    if (
-      data.dailyRate < row.minDailyRate ||
-      data.dailyRate > row.maxDailyRate
-    ) {
+    if (dailyPaise < row.minDailyRate || dailyPaise > row.maxDailyRate) {
       ctx.addIssue({
         code: "custom",
         path: ["dailyRate"],
-        message: `Daily rate must be between ₹${row.minDailyRate.toLocaleString("en-IN")} and ₹${row.maxDailyRate.toLocaleString("en-IN")}`,
+        message: `Daily rate must be between ₹${(row.minDailyRate / 100).toLocaleString("en-IN")} and ₹${(row.maxDailyRate / 100).toLocaleString("en-IN")}`,
       });
     }
     if (data.freeRadiusKm > data.maxRadiusKm) {

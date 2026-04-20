@@ -8,6 +8,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Monetary amounts use `Int` in paise (1 INR = 100 paise) unless noted.
+// `Float` in this schema is reserved for non-money: geo coordinates, km, hour-meter
+// readings, fractional billable `duration` on bookings, etc.
+
 // ─── User ────────────────────────────────────────────────────────────────────
 
 model User {
@@ -22,12 +26,15 @@ model User {
   image         String?
   role          UserRole  @default(USER)
 
-  accounts Account[]
-  sessions Session[]
-  bookings Booking[]
-  trips    Trip[]
+  accounts         Account[]
+  sessions         Session[]
+  bookings         Booking[]
+  trips            Trip[]
   /// 1-to-1: present only when role = PARTNER
-  partner  Partner?
+  partner          Partner?
+  /// Operator payroll / rate card (fleet operators)
+  operatorProfile  OperatorProfile?
+  payrollEntries   PayrollEntry[]
 
   @@index([email])
   @@map("users")
@@ -91,6 +98,26 @@ model Otp {
   @@map("otps")
 }
 
+// ─── Partner OS: Customer (B2B / saved sites) ───────────────────────────────
+
+model Customer {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  company        String   @default("")
+  phone          String
+  gstin          String?
+  /// JSON array of coordinates/addresses (structure defined by app)
+  savedLocations Json     @default("[]")
+  /// Credit limit in paise (1 INR = 100 paise)
+  creditLimit    Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  bookings Booking[]
+
+  @@map("customers")
+}
+
 // ─── Partner ─────────────────────────────────────────────────────────────────
 
 model Partner {
@@ -146,10 +173,11 @@ model MasterCatalog {
   category         String
   imageUrl         String @default("")
   specifications   Json?
-  minHourlyRate    Float  @default(0)
-  maxHourlyRate    Float  @default(0)
-  minDailyRate     Float  @default(0)
-  maxDailyRate     Float  @default(0)
+  /// Catalog guardrails in paise (1 INR = 100 paise)
+  minHourlyRate    Int    @default(0)
+  maxHourlyRate    Int    @default(0)
+  minDailyRate     Int    @default(0)
+  maxDailyRate     Int    @default(0)
 
   /// Partner fleet rows (`Equipment`) link here via `catalogId`.
   equipment Equipment[]
@@ -173,9 +201,10 @@ model Equipment {
   hp                       Int               @default(0)
   /// Free delivery radius in km before per-km transport charges apply
   freeRadiusKm             Int               @default(5)
-  /// Transport fee per km beyond freeRadiusKm (₹)
-  transportRatePerKm       Float             @default(0)
-  hourlyRate               Float             @default(0)
+  /// Paise charged per km beyond `freeRadiusKm` (UI may show as INR/km = value ÷ 100)
+  transportRatePerKm       Int               @default(0)
+  /// Hourly rate in paise (duplicate of `pricing.hourly` for indexed access)
+  hourlyRate               Int               @default(0)
   minDaysForExtendedRadius Int               @default(0)
   /// Absolute maximum distance (km) this unit will travel for a job
   maxRadiusKm              Int               @default(0)
@@ -194,8 +223,20 @@ model Equipment {
   /// Registration certificate (RC) photo URL for this machine
   rcDocumentUrl            String?
 
-  bookings Booking[]
-  trips    Trip[]
+  /// Preventive maintenance interval in engine hours (e.g. 250)
+  serviceIntervalHours     Int     @default(250)
+  /// WhatsApp partner when this many hours remain before due service
+  serviceAlertBeforeHours    Int     @default(10)
+  /// Cumulative hour-meter reading at last recorded service (baseline for next due)
+  lastServiceHourReading     Float   @default(0)
+  /// Throttle repeat maintenance alerts (same machine)
+  lastMaintenanceAlertSentAt DateTime?
+
+  bookings           Booking[]
+  trips              Trip[]
+  machineServiceLogs MachineServiceLog[] @relation("EquipmentServiceLogs")
+  hourMeterEntries    HourMeterEntry[]    @relation("EquipmentHourMeters")
+  breakdownReports    BreakdownReport[]   @relation("EquipmentBreakdowns")
 
   @@index([registrationNumber])
   @@map("equipment")
@@ -208,8 +249,10 @@ enum EquipmentCategory {
 }
 
 type EquipmentPricing {
-  hourly Float
-  daily  Float
+  /// Hourly hire rate in paise
+  hourly Int
+  /// Daily hire rate in paise
+  daily  Int
 }
 
 // ─── Booking ──────────────────────────────────────────────────────────────────
@@ -219,35 +262,49 @@ model Booking {
   userId      String             @db.ObjectId
   equipmentId String             @db.ObjectId
   partnerId   String?            @db.ObjectId
+  /// Optional CRM customer (B2B); distinct from `userId` (platform user placing the request)
+  customerId  String?            @db.ObjectId
+  customer    Customer?          @relation(fields: [customerId], references: [id])
   status      BookingStatus      @default(PENDING)
   location    BookingLocation
+  /// `total` is quoted job amount in paise
   pricing     BookingPricingType
   startDate   DateTime?
   endDate     DateTime?
+  /// Site address line as agreed for dispatch (may mirror or override `location.address`)
+  siteAddress    String?
+  /// Expected shift label or window (app-defined, e.g. "DAY", "NIGHT", ISO range)
+  expectedShift  String?
+  /// Quoted amount in paise
+  quoteAmount    Int?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
   user      User      @relation(fields: [userId], references: [id])
   equipment Equipment @relation(fields: [equipmentId], references: [id])
+  trips     Trip[]
 
+  @@index([customerId])
   @@map("bookings")
 }
 
 // ─── Trip (operational job lifecycle; rates locked at booking) ───────────────
 
+/// Field / partner job status (Partner OS).
 enum TripStatus {
-  PENDING
-  CONFIRMED
-  EN_ROUTE
-  IN_PROGRESS
+  SCHEDULED
+  ENROUTE
+  ON_SITE
   COMPLETED
+  OVERRUN
+  /// Retained for operational edge cases (cancellation / disputes)
   CANCELLED
   DISPUTED
 }
 
 model Trip {
-  id     String @id @default(uuid()) @map("_id")
-  /// Customer
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Customer (platform user)
   userId String @db.ObjectId
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Partner fleet machine (`Equipment`)
@@ -255,13 +312,19 @@ model Trip {
   equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
   partnerId   String    @db.ObjectId
   partner     Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  /// Optional link to the booking row (walk-in / future flows) for GST + billing context
+  bookingId   String?   @db.ObjectId
+  booking     Booking?  @relation(fields: [bookingId], references: [id])
 
   scheduledDate    DateTime
+  /// Planned job end (UTC) — used with overrun rules vs wall clock
+  expectedEndTime  DateTime?
+  /// Actual on-site window (UTC)
   actualStartTime  DateTime?
   actualEndTime    DateTime?
   totalBilledHours Float?
 
-  status        TripStatus @default(PENDING)
+  status        TripStatus @default(SCHEDULED)
   /// 4-digit OTP to authorize start (set when trip is confirmed / booked)
   startOtp      String     @default("")
   /// 4-digit OTP to authorize completion
@@ -271,9 +334,12 @@ model Trip {
   /// Customer review link (UUID); set when the trip is marked COMPLETED
   reviewToken   String?    @unique
 
-  lockedHourlyRate   Float
-  lockedTransportFee Float
-  totalAmount        Float?
+  /// Locked unit rate: paise/hour when `booking.pricing.unit` is hourly, else paise/day
+  lockedHourlyRate   Int
+  /// Transport component in paise (locked at booking)
+  lockedTransportFee Int
+  /// Final billable amount in paise when completed
+  totalAmount        Int?
 
   /// Worksite location (e.g. { "lat": number, "lng": number } or GeoJSON)
   jobLocation Json
@@ -282,21 +348,25 @@ model Trip {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  review Review?
+  review          Review?
+  invoices        Invoice[]
+  hourMeterEntries HourMeterEntry[]
 
   @@index([userId])
   @@index([partnerId])
   @@index([equipmentId])
+  @@index([bookingId])
   @@index([status])
   @@index([scheduledDate])
+  @@index([expectedEndTime])
   @@map("trips")
 }
 
 // ─── Trip review (dual rating: machine + operator) ───────────────────────────
 
 model Review {
-  id    String @id @default(uuid()) @map("_id")
-  tripId String @unique
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  tripId String @unique @db.ObjectId
   trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   equipmentRating   Int // 1–5
@@ -329,9 +399,154 @@ type Coordinates {
 }
 
 type BookingPricingType {
-  total    Float
+  /// Quoted total in paise
+  total    Int
   duration Float
   unit     String
+}
+
+// ─── Partner OS: Invoicing & payments ────────────────────────────────────────
+
+enum InvoicePaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+}
+
+/// Sequential invoice numbers per Indian financial year (Apr–Mar).
+model InvoiceCounter {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  fyKey   String @unique
+  lastSeq Int    @default(0)
+
+  @@map("invoice_counters")
+}
+
+model Invoice {
+  id            String               @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceNumber String               @unique
+  tripId        String               @unique @db.ObjectId
+  trip          Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  partnerGstin  String?
+  customerGstin String?
+  sacCode       String               @default("997319")
+  amount        Int
+  pdfUrl        String?
+  paymentStatus InvoicePaymentStatus @default(UNPAID)
+  reminderD3SentAt  DateTime?
+  reminderD7SentAt  DateTime?
+  reminderD15SentAt DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  payments Payment[]
+
+  @@map("invoices")
+}
+
+enum PaymentRecordStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Payment {
+  id             String              @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId      String              @db.ObjectId
+  invoice        Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  razorpayLinkId String?
+  paymentLinkUrl String?
+  amountPaid     Int
+  status         PaymentRecordStatus @default(PENDING)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+// ─── Partner OS: Operator payroll ────────────────────────────────────────────
+
+model OperatorProfile {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String @unique @db.ObjectId
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyRate      Int    @default(0)
+  pfApplicable   Boolean @default(false)
+  advanceBalance Int    @default(0)
+
+  @@map("operator_profiles")
+}
+
+model PayrollEntry {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  operatorId String @db.ObjectId
+  operator   User   @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  month      Int
+  year       Int
+  daysWorked Int
+  grossPay   Int
+  /// Manual deductions (paise), e.g. damages, advances recovered
+  deductionPaise Int @default(0)
+  /// Amount applied against operator advance balance this cycle (paise)
+  advanceRecoveryPaise Int @default(0)
+  netPayable Int
+  pdfUrl     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([operatorId, year, month])
+  @@index([operatorId])
+  @@map("payroll_entries")
+}
+
+// ─── Partner OS: Fleet maintenance & hour meters ─────────────────────────────
+
+model MachineServiceLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  machineId   String   @db.ObjectId
+  equipment   Equipment @relation("EquipmentServiceLogs", fields: [machineId], references: [id], onDelete: Cascade)
+  serviceType String
+  date        DateTime
+  /// Repair / service cost in paise
+  cost        Int
+  vendor      String
+  /// Cumulative hour-meter reading at time of service (updates equipment baseline when set)
+  hourMeterAtService Float?
+  createdAt   DateTime @default(now())
+
+  @@index([machineId])
+  @@index([date])
+  @@map("machine_service_logs")
+}
+
+model HourMeterEntry {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  machineId     String    @db.ObjectId
+  equipment     Equipment @relation("EquipmentHourMeters", fields: [machineId], references: [id], onDelete: Cascade)
+  tripId        String?   @db.ObjectId
+  trip          Trip?     @relation(fields: [tripId], references: [id])
+  recordedHours Float
+  reportedBy    String
+  createdAt     DateTime  @default(now())
+
+  @@index([machineId])
+  @@index([tripId])
+  @@map("hour_meter_entries")
+}
+
+model BreakdownReport {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  machineId   String    @db.ObjectId
+  equipment   Equipment @relation("EquipmentBreakdowns", fields: [machineId], references: [id], onDelete: Cascade)
+  description String
+  photoUrl    String?
+  reportedAt  DateTime  @default(now())
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([machineId])
+  @@map("breakdown_reports")
 }
 
 // ─── Geo helpers ─────────────────────────────────────────────────────────────

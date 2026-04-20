@@ -11,6 +11,7 @@
     "lint": "eslint src --max-warnings 0"
   },
   "dependencies": {
+    "@repo/lib": "workspace:*",
     "@repo/db": "workspace:*",
     "@trpc/server": "11.13.0",
     "superjson": "^2.2.2",

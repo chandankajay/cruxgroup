@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Table,
   TableHeader,
@@ -59,13 +60,16 @@ export function EquipmentTable({ items, onEdit, onDelete }: EquipmentTableProps)
               )}
             </TableCell>
             <TableCell className="text-right">
-              ₹{item.pricing.daily.toLocaleString("en-IN")}
+              ₹{(item.pricing.daily / 100).toLocaleString("en-IN")}
             </TableCell>
             <TableCell className="text-right">
-              ₹{item.pricing.hourly.toLocaleString("en-IN")}
+              ₹{(item.pricing.hourly / 100).toLocaleString("en-IN")}
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
+                <Button size="sm" variant="secondary" asChild>
+                  <Link href={`/fleet/${item.id}/health`}>Health</Link>
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"

@@ -51,6 +51,7 @@ export interface Otp {
 
 export type EquipmentCategory = "JCB" | "Crane" | "Excavator";
 
+/** Stored on `Equipment` JSON — amounts in paise (1 INR = 100 paise). */
 export interface EquipmentPricing {
   hourly: number;
   daily: number;
@@ -62,6 +63,7 @@ export interface Equipment {
   category: EquipmentCategory;
   subType?: string;
   partnerId?: string;
+  /** Paise per hour (mirrors `pricing.hourly`). */
   hourlyRate: number;
   minDaysForExtendedRadius: number;
   pricing: EquipmentPricing;
@@ -83,6 +85,7 @@ export interface BookingLocation {
 }
 
 export interface BookingPricing {
+  /** Quoted job total in paise */
   total: number;
   duration: number;
   unit: "hourly" | "daily";

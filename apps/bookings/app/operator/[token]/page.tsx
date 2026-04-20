@@ -52,7 +52,7 @@ export default async function OperatorMagicLinkPage({
 
   if (!trip) return <LinkExpired />;
 
-  if (trip.status === "PENDING") {
+  if (trip.status === "SCHEDULED") {
     return (
       <InactiveJobMessage
         title="Job not ready"
@@ -74,6 +74,7 @@ export default async function OperatorMagicLinkPage({
   const payload: OperatorTripPayload = {
     token,
     status: trip.status,
+    isOverrun: trip.status === "OVERRUN",
     jobLabel,
     customerMasked: maskCustomerPhone(trip.user.phoneNumber),
     mapsUrl,

@@ -3,27 +3,32 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { KycStatus } from "@prisma/client";
+import type { PartnerBusinessDashboard } from "@repo/db";
 import {
   Activity,
   AlertCircle,
   BarChart3,
   IndianRupee,
   Map as MapIcon,
+  Receipt,
   Tractor,
+  TrendingUp,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { cn } from "@repo/ui/lib/utils";
+import {
+  IdleMachineBanner,
+  TopCustomersCard,
+  UtilizationHeatmap,
+  formatPartnerInrPaise,
+} from "./partner-bi-panels";
 
 export interface PartnerCommandCenterProps {
   readonly companyName: string;
   readonly kycStatus: KycStatus;
   readonly fleet: { total: number; active: number; pending: number };
-  readonly mockMetrics: {
-    readonly totalEarnings: number;
-    readonly activeTrips: number;
-    readonly utilizationPct: number;
-  };
+  readonly bi: PartnerBusinessDashboard;
 }
 
 const containerVariants = {
@@ -49,21 +54,19 @@ const metricsGridVariants = {
   },
 };
 
-function formatInr(amount: number): string {
-  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
 export function PartnerCommandCenter({
   companyName,
   kycStatus,
   fleet,
-  mockMetrics,
+  bi,
 }: PartnerCommandCenterProps) {
   const displayName = companyName.trim() || "Partner";
   const kycVerified = kycStatus === "VERIFIED";
   const pendingKycCount = kycVerified ? 0 : fleet.total;
-  const utilizationLabel = `${mockMetrics.utilizationPct}%`;
+  const utilizationLabel = `${bi.fleetUtilizationPct}%`;
   const activeSharePct = fleet.total > 0 ? Math.round((fleet.active / fleet.total) * 100) : 0;
+  const collectionLabel =
+    bi.collectionRatePct == null ? "—" : `${bi.collectionRatePct}%`;
 
   return (
     <motion.div
@@ -111,35 +114,59 @@ export function PartnerCommandCenter({
         ) : null}
       </motion.header>
 
+      <IdleMachineBanner idleMachines={bi.idleMachines} />
+
       <motion.div className="mb-8" variants={cardVariants} role="region" aria-label="Key metrics">
         <p className="mb-3 text-xs font-medium uppercase tracking-widest text-zinc-400">Overview</p>
         <motion.div
-          className="grid grid-cols-2 gap-3 lg:grid-cols-2 xl:grid-cols-4 xl:gap-4"
+          className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6 xl:gap-4"
           variants={metricsGridVariants}
           initial="initial"
           animate="animate"
         >
           <MetricCard
-            title="Active Trips"
-            value={String(mockMetrics.activeTrips)}
-            icon={<Activity className="size-5 text-amber-500" aria-hidden />}
-          />
-          <MetricCard
-            title="Total Earnings"
-            value={formatInr(mockMetrics.totalEarnings)}
+            title="Monthly revenue"
+            value={formatPartnerInrPaise(bi.monthlyRevenuePaise)}
+            subtext="Paid this month"
             icon={<IndianRupee className="size-5 text-amber-500" aria-hidden />}
           />
           <MetricCard
-            title="Fleet Utilization"
+            title="Collection rate"
+            value={collectionLabel}
+            subtext="Paid ÷ invoiced (all time)"
+            icon={<TrendingUp className="size-5 text-amber-500" aria-hidden />}
+          />
+          <MetricCard
+            title="Overdue receivables"
+            value={formatPartnerInrPaise(bi.overdueReceivablesPaise)}
+            subtext="Unpaid &gt; 7 days"
+            icon={<Receipt className="size-5 text-amber-500" aria-hidden />}
+          />
+          <MetricCard
+            title="Active trips"
+            value={String(bi.activeTrips)}
+            icon={<Activity className="size-5 text-amber-500" aria-hidden />}
+          />
+          <MetricCard
+            title="Utilisation"
             value={utilizationLabel}
-            subtext="Machines on rent"
+            subtext="This month (avg days)"
             icon={<BarChart3 className="size-5 text-amber-500" aria-hidden />}
           />
           <MetricCard
-            title="Total Fleet"
+            title="Fleet size"
             value={String(fleet.total)}
             icon={<Tractor className="size-5 text-amber-500" aria-hidden />}
           />
+        </motion.div>
+      </motion.div>
+
+      <motion.div className="mb-8 grid gap-6 lg:grid-cols-12" variants={containerVariants}>
+        <motion.div className="lg:col-span-8" variants={cardVariants}>
+          <UtilizationHeatmap bi={bi} />
+        </motion.div>
+        <motion.div className="lg:col-span-4" variants={cardVariants}>
+          <TopCustomersCard bi={bi} />
         </motion.div>
       </motion.div>
 

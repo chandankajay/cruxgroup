@@ -4,6 +4,7 @@ import { randomUUID, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@repo/db";
 import { revalidatePath } from "next/cache";
+import { generateInvoiceForCompletedTrip } from "../../lib/invoice/generate-invoice-for-trip";
 
 function billedHoursFromRange(start: Date, end: Date): number {
   const ms = Math.max(0, end.getTime() - start.getTime());
@@ -67,7 +68,7 @@ export async function operatorStartJobAction(
         where: { operatorToken },
       });
       if (!trip) return { type: "NOT_FOUND" as const };
-      if (trip.status !== "CONFIRMED" && trip.status !== "EN_ROUTE") {
+      if (trip.status !== "ENROUTE") {
         return { type: "BAD_STATE" as const };
       }
       if (!fourDigitOtpMatches(trip.startOtp, parsed.digits)) return { type: "BAD_OTP" as const };
@@ -75,7 +76,7 @@ export async function operatorStartJobAction(
       await tx.trip.update({
         where: { operatorToken },
         data: {
-          status: "IN_PROGRESS",
+          status: "ON_SITE",
           actualStartTime: new Date(),
         },
       });
@@ -120,9 +121,12 @@ export async function operatorEndJobAction(
     const result = await prisma.$transaction(async (tx) => {
       const trip = await tx.trip.findUnique({
         where: { operatorToken },
+        include: { booking: true },
       });
       if (!trip) return { type: "NOT_FOUND" as const };
-      if (trip.status !== "IN_PROGRESS" || !trip.actualStartTime) {
+      const canEndWithEndOtp =
+        (trip.status === "ON_SITE" || trip.status === "OVERRUN") && trip.actualStartTime;
+      if (!canEndWithEndOtp) {
         return { type: "BAD_STATE" as const };
       }
       if (!fourDigitOtpMatches(trip.endOtp, digits)) {
@@ -133,18 +137,26 @@ export async function operatorEndJobAction(
       const totalBilledHours = billedHoursFromRange(trip.actualStartTime, end);
       const reviewToken = randomUUID();
 
-      await tx.trip.update({
+      let totalPaise = Math.round(totalBilledHours * trip.lockedHourlyRate);
+      if (trip.booking?.pricing.unit === "daily") {
+        totalPaise = Math.round(trip.booking.pricing.duration * trip.lockedHourlyRate);
+      }
+
+      const updated = await tx.trip.update({
         where: { operatorToken },
         data: {
           status: "COMPLETED",
           actualEndTime: end,
           totalBilledHours,
+          totalAmount: totalPaise,
           reviewToken,
         },
+        select: { id: true },
       });
 
       return {
         type: "ok" as const,
+        tripId: updated.id,
         totalBilledHours,
         completedAtIso: end.toISOString(),
         reviewToken,
@@ -173,10 +185,13 @@ export async function operatorEndJobAction(
       };
     }
 
-    const { totalBilledHours, completedAtIso, reviewToken } = result;
+    const { totalBilledHours, completedAtIso, reviewToken, tripId } = result;
     const reviewLinkForWhatsApp = `https://bookings.cruxgroup.in/review/${reviewToken}`;
-    // TODO: Trigger AiSensy WhatsApp with review link: https://bookings.cruxgroup.in/review/${reviewToken}
     void reviewLinkForWhatsApp;
+
+    void generateInvoiceForCompletedTrip(tripId).catch((err) => {
+      console.error("[operatorEndJobAction] invoice generation failed", err);
+    });
 
     revalidatePath(`/operator/${operatorToken}`);
 

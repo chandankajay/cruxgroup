@@ -67,8 +67,8 @@ export function EquipmentFormDialog({
         name: equipment.name,
         category: equipment.category as EquipmentFormValues["category"],
         subType: equipment.subType ?? "",
-        dailyRate: equipment.pricing.daily,
-        hourlyRate: equipment.pricing.hourly,
+        dailyRate: equipment.pricing.daily / 100,
+        hourlyRate: equipment.pricing.hourly / 100,
         imageUrl: equipment.images[0] ?? "",
         specifications: JSON.stringify(equipment.specifications, null, 2),
       });

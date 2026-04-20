@@ -123,7 +123,7 @@ export function BookingsTable({
             {/* Total */}
             <TableCell className="text-right">
               <span className="font-bold text-brand-orange">
-                ₹{booking.pricing.total.toLocaleString("en-IN")}
+                ₹{(booking.pricing.total / 100).toLocaleString("en-IN")}
               </span>
             </TableCell>
 

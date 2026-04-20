@@ -1,6 +1,7 @@
 import { auth } from "../../lib/auth";
+import { getPartnerBusinessDashboard, prisma } from "@repo/db";
 import { redirect } from "next/navigation";
-import { prisma } from "@repo/db";
+import { unstable_cache } from "next/cache";
 import { DashboardHome } from "./features/dashboard-home";
 import { PartnerCommandCenter } from "./features/partner-command-center";
 
@@ -20,10 +21,15 @@ export default async function DashboardPage() {
     });
     if (!partner) redirect("/onboarding");
 
-    const [total, active, pending] = await Promise.all([
+    const [total, active, pending, bi] = await Promise.all([
       prisma.equipment.count({ where: { partnerId: partner.id } }),
       prisma.equipment.count({ where: { partnerId: partner.id, isActive: true } }),
       prisma.equipment.count({ where: { partnerId: partner.id, isActive: false } }),
+      unstable_cache(
+        async () => getPartnerBusinessDashboard(partner.id),
+        ["partner-business-dashboard", partner.id],
+        { revalidate: 120, tags: [`partner-dashboard-${partner.id}`] }
+      )(),
     ]);
 
     return (
@@ -31,7 +37,7 @@ export default async function DashboardPage() {
         companyName={partner.companyName}
         kycStatus={partner.kycStatus}
         fleet={{ total, active, pending }}
-        mockMetrics={{ totalEarnings: 0, activeTrips: 0, utilizationPct: 0 }}
+        bi={bi}
       />
     );
   }

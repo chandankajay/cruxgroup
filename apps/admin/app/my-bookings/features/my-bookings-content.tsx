@@ -117,13 +117,13 @@ export function MyBookingsContent({ initialData }: MyBookingsContentProps) {
         />
         <StatCard
           label="Revenue Earned"
-          value={`₹${stats.earned.toLocaleString("en-IN")}`}
+          value={`₹${(stats.earned / 100).toLocaleString("en-IN")}`}
           sub="From completed"
           accent
         />
         <StatCard
           label="Total Pipeline"
-          value={`₹${stats.total.toLocaleString("en-IN")}`}
+          value={`₹${(stats.total / 100).toLocaleString("en-IN")}`}
           sub="All bookings"
         />
       </div>
@@ -188,7 +188,7 @@ export function MyBookingsContent({ initialData }: MyBookingsContentProps) {
 
                   <TableCell className="text-right">
                     <span className="font-bold text-brand-orange">
-                      ₹{booking.pricing.total.toLocaleString("en-IN")}
+                      ₹{(booking.pricing.total / 100).toLocaleString("en-IN")}
                     </span>
                   </TableCell>
 

@@ -97,9 +97,9 @@ export function FleetEquipmentCards({
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium text-charcoal">₹{item.pricing.daily.toLocaleString("en-IN")}</span>
+                  <span className="font-medium text-charcoal">₹{(item.pricing.daily / 100).toLocaleString("en-IN")}</span>
                   {" / day · "}
-                  <span className="font-medium text-charcoal">₹{item.pricing.hourly.toLocaleString("en-IN")}</span>
+                  <span className="font-medium text-charcoal">₹{(item.pricing.hourly / 100).toLocaleString("en-IN")}</span>
                   {" / hr"}
                 </p>
                 <div className="flex items-center justify-between gap-3 border-t border-border pt-3">

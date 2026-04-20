@@ -5,6 +5,7 @@ export type MasterCatalogFormRow = {
   readonly category: string;
   readonly imageUrl: string;
   readonly specifications: unknown;
+  /** Platform guardrails in paise */
   readonly minHourlyRate: number;
   readonly maxHourlyRate: number;
   readonly minDailyRate: number;

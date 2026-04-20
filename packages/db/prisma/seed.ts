@@ -74,7 +74,7 @@ const sampleEquipment = [
   {
     name: "Mahindra Tractor with Auger",
     category: "JCB" as const,
-    pricing: { hourly: 450, daily: 2500 },
+    pricing: { hourly: 45_000, daily: 250_000 },
     images: [
       "https://images.unsplash.com/photo-1592982537447-6f2a6a0dbe73?auto=format&fit=crop&w=1200&q=80",
     ],
@@ -90,7 +90,7 @@ const sampleEquipment = [
   {
     name: "JCB Backhoe Loader",
     category: "JCB" as const,
-    pricing: { hourly: 800, daily: 4500 },
+    pricing: { hourly: 80_000, daily: 450_000 },
     images: [
       "https://images.unsplash.com/photo-1581093588401-16ecf2dca803?auto=format&fit=crop&w=1200&q=80",
     ],
@@ -106,7 +106,7 @@ const sampleEquipment = [
   {
     name: "20-ton Crane",
     category: "Crane" as const,
-    pricing: { hourly: 1400, daily: 8000 },
+    pricing: { hourly: 140_000, daily: 800_000 },
     images: [
       "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1200&q=80",
     ],
@@ -222,8 +222,8 @@ const normalizedExternalEquipment = externalEquipmentSeed.map((item) => ({
   category: mapToEquipmentCategory(item.name, item.category),
   subType: item.category,
   pricing: {
-    daily: item.pricing.daily,
-    hourly: Number((item.pricing.daily / 8).toFixed(2)),
+    daily: Math.round(item.pricing.daily * 100),
+    hourly: Math.round((item.pricing.daily / 8) * 100),
   },
   images: [item.imageUrl],
   specifications: {
@@ -243,10 +243,10 @@ const masterCatalogSeed = [
       "Max Dig Depth": "4.77m",
       "Loader Bucket": "1.1 cu.m",
     },
-    minHourlyRate: 700,
-    maxHourlyRate: 1500,
-    minDailyRate: 6000,
-    maxDailyRate: 12000,
+    minHourlyRate: 70_000,
+    maxHourlyRate: 150_000,
+    minDailyRate: 600_000,
+    maxDailyRate: 1_200_000,
   },
   {
     name: "Mini Excavator (3-Ton)",
@@ -257,10 +257,10 @@ const masterCatalogSeed = [
       "Max Dig Depth": "2.8m",
       "Bucket Width": "600mm",
     },
-    minHourlyRate: 800,
-    maxHourlyRate: 1600,
-    minDailyRate: 7000,
-    maxDailyRate: 13000,
+    minHourlyRate: 80_000,
+    maxHourlyRate: 160_000,
+    minDailyRate: 700_000,
+    maxDailyRate: 1_300_000,
   },
   {
     name: "Crawler Excavator (20-Ton)",
@@ -271,10 +271,10 @@ const masterCatalogSeed = [
       "Operating Weight": "20.5 Tons",
       "Bucket Capacity": "0.9 cu.m",
     },
-    minHourlyRate: 1500,
-    maxHourlyRate: 3500,
-    minDailyRate: 12000,
-    maxDailyRate: 25000,
+    minHourlyRate: 150_000,
+    maxHourlyRate: 350_000,
+    minDailyRate: 1_200_000,
+    maxDailyRate: 2_500_000,
   },
   {
     name: "Escorts Hydra Crane (14-Ton)",
@@ -285,10 +285,10 @@ const masterCatalogSeed = [
       "Max Height": "12m",
       Transmission: "Heavy Duty",
     },
-    minHourlyRate: 900,
-    maxHourlyRate: 1800,
-    minDailyRate: 7500,
-    maxDailyRate: 15000,
+    minHourlyRate: 90_000,
+    maxHourlyRate: 180_000,
+    minDailyRate: 750_000,
+    maxDailyRate: 1_500_000,
   },
   {
     name: "Tractor with Post Hole Digger",
@@ -299,10 +299,10 @@ const masterCatalogSeed = [
       "Auger Diameter": "12-18 inches",
       "Drilling Depth": "Up to 3ft",
     },
-    minHourlyRate: 600,
-    maxHourlyRate: 1200,
-    minDailyRate: 5000,
-    maxDailyRate: 9000,
+    minHourlyRate: 60_000,
+    maxHourlyRate: 120_000,
+    minDailyRate: 500_000,
+    maxDailyRate: 900_000,
   },
   {
     name: "Tractor with Rotavator",
@@ -313,10 +313,10 @@ const masterCatalogSeed = [
       Blades: "42-54 L-type",
       "Required Power": "40+ HP",
     },
-    minHourlyRate: 600,
-    maxHourlyRate: 1100,
-    minDailyRate: 4500,
-    maxDailyRate: 8500,
+    minHourlyRate: 60_000,
+    maxHourlyRate: 110_000,
+    minDailyRate: 450_000,
+    maxDailyRate: 850_000,
   },
 ];
 

@@ -30,7 +30,7 @@ export function FleetPageContent({ initialData, partnerKycStatus }: FleetPageCon
     [items, deleteId]
   );
 
-  const totalDailyRevenuePotential = useMemo(
+  const totalDailyRevenuePotentialPaise = useMemo(
     () => items.reduce((sum, i) => sum + i.pricing.daily, 0),
     [items]
   );
@@ -104,7 +104,7 @@ export function FleetPageContent({ initialData, partnerKycStatus }: FleetPageCon
         />
         <StatCard
           label="Daily Revenue Potential"
-          value={`₹${totalDailyRevenuePotential.toLocaleString("en-IN")}`}
+          value={`₹${(totalDailyRevenuePotentialPaise / 100).toLocaleString("en-IN")}`}
           icon="💰"
         />
         <StatCard

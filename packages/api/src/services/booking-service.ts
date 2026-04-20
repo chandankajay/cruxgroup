@@ -84,9 +84,11 @@ export async function createBooking(input: CreateBookingInput) {
   const dailyDays = calculateDays(startDate, endDate);
   const isHourly = input.pricingUnit === "hourly";
   const chargeableDuration = isHourly ? input.duration : dailyDays;
-  const hourlyRate = equipment.hourlyRate > 0 ? equipment.hourlyRate : equipment.pricing.hourly;
-  const selectedRate = isHourly ? hourlyRate : equipment.pricing.daily;
-  const total = chargeableDuration * selectedRate + transportFee.totalFee;
+  const hourlyRatePaise =
+    equipment.hourlyRate > 0 ? equipment.hourlyRate : equipment.pricing.hourly;
+  const selectedRatePaise = isHourly ? hourlyRatePaise : equipment.pricing.daily;
+  const equipmentSubtotalPaise = Math.round(chargeableDuration * selectedRatePaise);
+  const totalPaise = equipmentSubtotalPaise + transportFee.totalFeePaise;
 
   return prisma.booking.create({
     data: {
@@ -100,7 +102,11 @@ export async function createBooking(input: CreateBookingInput) {
         pincode: input.pincode,
         coordinates: { lat: input.lat, lng: input.lng },
       },
-      pricing: { total, duration: chargeableDuration, unit: input.pricingUnit },
+      pricing: {
+        total: totalPaise,
+        duration: chargeableDuration,
+        unit: input.pricingUnit,
+      },
     },
   });
 }

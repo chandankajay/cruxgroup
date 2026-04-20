@@ -12,8 +12,8 @@ const MONTHS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-function inr(value: number) {
-  return `₹${value.toLocaleString("en-IN")}`;
+function inrPaise(paise: number) {
+  return `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
 function StatCard({
@@ -112,23 +112,23 @@ export function EarningsContent({ bookings }: EarningsContentProps) {
       <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard
           label="Total Earned"
-          value={inr(stats.totalEarned)}
+          value={inrPaise(stats.totalEarned)}
           sub="All completed bookings"
           accent
         />
         <StatCard
           label="This Month"
-          value={inr(stats.thisMonthEarned)}
+          value={inrPaise(stats.thisMonthEarned)}
           sub={MONTHS[currentMonth]}
         />
         <StatCard
           label="Pipeline"
-          value={inr(stats.pending)}
+          value={inrPaise(stats.pending)}
           sub="Pending + Confirmed"
         />
         <StatCard
           label="Avg. Booking Value"
-          value={inr(Math.round(stats.avgBookingValue))}
+          value={inrPaise(Math.round(stats.avgBookingValue))}
           sub="Per completed job"
         />
       </div>
@@ -155,7 +155,7 @@ export function EarningsContent({ bookings }: EarningsContentProps) {
                 >
                   {m.earned > 0 && (
                     <span className="text-xs font-semibold text-amber-700">
-                      {inr(m.earned)}
+                      {inrPaise(m.earned)}
                     </span>
                   )}
                   <div
@@ -207,7 +207,7 @@ export function EarningsContent({ bookings }: EarningsContentProps) {
                     </p>
                   </div>
                   <span className="font-bold text-amber-700">
-                    {inr(b.pricing.total)}
+                    {inrPaise(b.pricing.total)}
                   </span>
                 </div>
               ))}

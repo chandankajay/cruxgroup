@@ -3,6 +3,7 @@
 import type { KycStatus } from "@prisma/client";
 import { createCaller } from "@repo/api";
 import { prisma } from "@repo/db";
+import { revalidatePath } from "next/cache";
 import { auth } from "../../lib/auth";
 import type { AddFleetEquipmentValues } from "./new/schema";
 
@@ -121,6 +122,8 @@ export async function createPartnerFleetEquipmentAction(
       manufacturingYear: input.manufacturingYear,
       isActive: input.isActive,
     });
+    revalidatePath("/fleet");
+    revalidatePath("/fleet/new");
     return { success: true };
   } catch {
     return { success: false, error: "Failed to add equipment." };
