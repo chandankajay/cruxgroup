@@ -1,24 +1,13 @@
 "use server";
 
-import type { Invoice, Payment } from "@prisma/client";
 import { prisma } from "@repo/db";
 import { auth } from "../../../lib/auth";
+import { outstandingPaiseForInvoice } from "./outstanding-paise";
 
 async function requireAdmin(): Promise<boolean> {
   const session = await auth();
   const role = (session?.user as { role?: string } | undefined)?.role;
   return role === "ADMIN" && !!session?.user?.id;
-}
-
-export function outstandingPaiseForInvoice(
-  invoice: Pick<Invoice, "amount"> & {
-    payments: Pick<Payment, "amountPaid" | "status">[];
-  }
-): number {
-  const paid = invoice.payments
-    .filter((p) => p.status === "COMPLETED")
-    .reduce((s, p) => s + p.amountPaid, 0);
-  return Math.max(0, invoice.amount - paid);
 }
 
 export type CrmCustomerRow = {
