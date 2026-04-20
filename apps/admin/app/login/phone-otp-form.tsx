@@ -1,314 +1,293 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { signInPartnerPhoneAction } from "./actions";
 
 type Step = "phone" | "otp";
 
-// ── colours ────────────────────────────────────────────────────────────────
-const AMBER = "#D97706";
-const AMBER_DARK = "#B45309";
-const AMBER_BG = "#FFFBEB";
-const AMBER_BORDER = "#FDE68A";
-
 const isDev = process.env.NODE_ENV === "development";
+
+/** e.g. +919182054293 → display line for OTP step */
+function formatVerifyLine(phone: string): string {
+  const digits = phone.replace(/\D/g, "").slice(-12);
+  if (digits.length >= 10) {
+    const local = digits.slice(-10);
+    return `Verify +91 ${local.slice(0, 5)} ${local.slice(5)}`;
+  }
+  return `Verify ${phone}`;
+}
 
 export function PhoneOtpForm() {
   const [step, setStep] = useState<Step>("phone");
   const [digits, setDigits] = useState("");
-  const [code, setCode] = useState("");
+  const [cells, setCells] = useState<string[]>(() => Array.from({ length: 6 }, () => ""));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const submitLock = useRef(false);
 
   const phoneNumber = `+91${digits.replace(/\D/g, "")}`;
   const phoneValid = digits.replace(/\D/g, "").length === 10;
+  const code = cells.join("");
   const otpValid = code.length === 6;
 
-  async function handleSendOtp(e: React.FormEvent) {
+  const focusIndex = useCallback((i: number) => {
+    const el = inputsRef.current[i];
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (step === "otp") {
+      queueMicrotask(() => focusIndex(0));
+    }
+  }, [step, focusIndex]);
+
+  useEffect(() => {
+    if (!error) return;
+    setCells(Array.from({ length: 6 }, () => ""));
+    queueMicrotask(() => focusIndex(0));
+  }, [error, focusIndex]);
+
+  function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
     if (!phoneValid) return;
     setError(undefined);
+    setCells(Array.from({ length: 6 }, () => ""));
     setStep("otp");
   }
 
-  async function handleVerifyOtp(e: React.FormEvent) {
-    e.preventDefault();
-    if (!otpValid) return;
+  async function submitOtp(full: string) {
+    if (full.length !== 6 || submitLock.current) return;
+    submitLock.current = true;
     setIsLoading(true);
     setError(undefined);
-    const result = await signInPartnerPhoneAction(phoneNumber, code);
-    if (!result.ok) {
-      setError(
-        result.errorCode === "CredentialsSignin"
-          ? "Sign-in failed. Use the master OTP and a valid 10-digit Indian mobile (+91). If this persists, contact support."
-          : "Invalid OTP — check the code and try again.",
-      );
-      setIsLoading(false);
-    } else {
-      window.location.assign("/");
+    try {
+      const result = await signInPartnerPhoneAction(phoneNumber, full);
+      if (!result.ok) {
+        setError(
+          result.errorCode === "CredentialsSignin"
+            ? "Sign-in failed. Use the master OTP and a valid 10-digit Indian mobile (+91). If this persists, contact support."
+            : "Invalid OTP — check the code and try again.",
+        );
+        setIsLoading(false);
+      } else {
+        window.location.assign("/");
+      }
+    } finally {
+      submitLock.current = false;
+    }
+  }
+
+  function setCellAt(index: number, char: string) {
+    setCells((prev) => {
+      const next = [...prev];
+      next[index] = char;
+      return next;
+    });
+  }
+
+  function handleCellChange(index: number, value: string) {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    if (digit) {
+      setCells((prev) => {
+        const next = [...prev];
+        next[index] = digit;
+        const full = next.join("");
+        if (full.length === 6) {
+          queueMicrotask(() => {
+            void submitOtp(full);
+          });
+        }
+        return next;
+      });
+      if (index < 5) focusIndex(index + 1);
+      return;
+    }
+    setCellAt(index, "");
+  }
+
+  function handleKeyDown(index: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !cells[index] && index > 0) {
+      e.preventDefault();
+      focusIndex(index - 1);
+      setCellAt(index - 1, "");
+    }
+    if (e.key === "ArrowLeft" && index > 0) {
+      e.preventDefault();
+      focusIndex(index - 1);
+    }
+    if (e.key === "ArrowRight" && index < 5) {
+      e.preventDefault();
+      focusIndex(index + 1);
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const next = Array.from({ length: 6 }, (_, i) => pasted[i] ?? "");
+    setCells(next);
+    const last = Math.min(pasted.length, 5);
+    focusIndex(last);
+    if (pasted.length === 6) {
+      queueMicrotask(() => void submitOtp(pasted));
     }
   }
 
   function handleBack() {
     setStep("phone");
-    setCode("");
+    setCells(Array.from({ length: 6 }, () => ""));
     setError(undefined);
   }
 
-  if (step === "phone") {
-    return (
-      <form
-        onSubmit={handleSendOtp}
-        style={{ display: "flex", flexDirection: "column", gap: 12 }}
-      >
-        <label
-          style={{
-            fontSize: "0.75rem",
-            fontWeight: 600,
-            color: "#78716C",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-          }}
-        >
-          Partner Phone Number
-        </label>
-
-        {/* +91 prefix row */}
-        <div
-          style={{
-            display: "flex",
-            borderRadius: 10,
-            border: "1.5px solid #E5E7EB",
-            overflow: "hidden",
-            background: "#FAFAFA",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "10px 12px",
-              background: "#FFF",
-              borderRight: "1.5px solid #E5E7EB",
-              fontWeight: 600,
-              fontSize: "0.875rem",
-              color: "#374151",
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontSize: "1rem" }}>🇮🇳</span>
-            <span>+91</span>
-          </div>
-          <input
-            type="tel"
-            inputMode="numeric"
-            placeholder="98765 43210"
-            value={digits}
-            onChange={(e) =>
-              setDigits(e.target.value.replace(/\D/g, "").slice(0, 10))
-            }
-            style={{
-              flex: 1,
-              background: "transparent",
-              padding: "10px 12px",
-              fontSize: "0.875rem",
-              color: "#1C1917",
-              outline: "none",
-              border: "none",
-            }}
-            required
-          />
-        </div>
-
-        {isDev && (
-          <p
-            style={{
-              fontSize: "0.7rem",
-              color: "#64748b",
-              margin: 0,
-              textAlign: "center",
-            }}
-          >
-            Dev: OTP{" "}
-            <code
-              style={{
-                background: "#f1f5f9",
-                padding: "2px 6px",
-                borderRadius: 4,
-                fontWeight: 600,
-              }}
-            >
-              112233
-            </code>
-            . Any 10-digit number works — missing users are created as PARTNER;
-            existing USER rows are promoted to PARTNER (dev only).
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={!phoneValid}
-          style={{
-            width: "100%",
-            padding: "10px 0",
-            borderRadius: 10,
-            background: phoneValid ? AMBER : "#D1D5DB",
-            color: phoneValid ? "#fff" : "#9CA3AF",
-            fontWeight: 600,
-            fontSize: "0.875rem",
-            border: "none",
-            cursor: phoneValid ? "pointer" : "not-allowed",
-            transition: "background 0.2s",
-          }}
-        >
-          Get OTP →
-        </button>
-      </form>
-    );
+  async function handleVerifySubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!otpValid || isLoading) return;
+    await submitOtp(code);
   }
 
-  // OTP step
-  const displayPhone = phoneNumber.replace(
-    /(\+\d{2})(\d{5})(\d{5})/,
-    "$1 ••••• $3",
-  );
-
   return (
-    <form
-      onSubmit={handleVerifyOtp}
-      style={{ display: "flex", flexDirection: "column", gap: 12 }}
-    >
-      {/* Sent-to banner */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 14px",
-          background: AMBER_BG,
-          border: `1px solid ${AMBER_BORDER}`,
-          borderRadius: 10,
-        }}
-      >
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: AMBER,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "0.875rem",
-            flexShrink: 0,
-          }}
+    <AnimatePresence mode="wait">
+      {step === "phone" ? (
+        <motion.div
+          key="phone-step"
+          initial={{ x: -28, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -28, opacity: 0 }}
+          transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
         >
-          📱
-        </div>
-        <div>
-          <p style={{ fontSize: "0.7rem", color: "#92400E", margin: 0 }}>
-            OTP sent to
-          </p>
-          <p
-            style={{
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              color: "#78350F",
-              margin: 0,
-            }}
-          >
-            {displayPhone}
-          </p>
-        </div>
-      </div>
+          <form onSubmit={handleSendOtp} className="space-y-6">
+            <div>
+              <label
+                htmlFor="admin-phone-input"
+                className="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-400"
+              >
+                WhatsApp Number
+              </label>
 
-      <label
-        style={{
-          fontSize: "0.75rem",
-          fontWeight: 600,
-          color: "#78716C",
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-        }}
-      >
-        6-digit OTP
-      </label>
-      <input
-        type="text"
-        inputMode="numeric"
-        placeholder="• • • • • •"
-        value={code}
-        onChange={(e) =>
-          setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-        }
-        autoFocus
-        style={{
-          width: "100%",
-          padding: "14px 12px",
-          borderRadius: 10,
-          border: `1.5px solid ${error ? "#FCA5A5" : "#E5E7EB"}`,
-          background: error ? "#FEF2F2" : "#FAFAFA",
-          fontFamily: "monospace",
-          fontSize: "1.5rem",
-          fontWeight: 700,
-          letterSpacing: "0.4em",
-          textAlign: "center",
-          color: "#1C1917",
-          outline: "none",
-          boxSizing: "border-box",
-        }}
-        required
-      />
+              <div className="flex overflow-hidden rounded-xl border border-white/20 bg-white/5 py-1 transition-all focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500">
+                <span className="flex shrink-0 items-center px-3 text-sm font-semibold tabular-nums text-gray-400 sm:px-4">
+                  +91
+                </span>
+                <input
+                  id="admin-phone-input"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  placeholder="98765 43210"
+                  value={digits}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    setDigits(raw);
+                  }}
+                  className="min-w-0 flex-1 bg-transparent py-4 pr-3 text-base font-medium tabular-nums text-white outline-none placeholder:text-gray-500 sm:pr-4 sm:text-lg"
+                  required
+                />
+              </div>
 
-      {error && (
-        <p style={{ fontSize: "0.8rem", color: "#DC2626", margin: 0 }}>
-          ⚠ {error}
-        </p>
+              <p className="mt-2 text-xs text-gray-500">
+                We&apos;ll send a one-time code to WhatsApp (data rates may apply).
+              </p>
+
+              {isDev && (
+                <p className="mt-3 text-center text-xs text-gray-500">
+                  Dev OTP{" "}
+                  <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-amber-400/90">112233</code>
+                  . Any 10-digit number works — missing users are created as PARTNER; existing USER rows are promoted to
+                  PARTNER (dev only).
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={!phoneValid}
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-center font-black uppercase tracking-tighter text-black shadow-lg transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+            >
+              GET OTP
+            </button>
+          </form>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="otp-step"
+          initial={{ x: 56, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 56, opacity: 0 }}
+          transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <form onSubmit={handleVerifySubmit} className="space-y-6">
+            <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+              <p className="text-base font-semibold tracking-tight text-white">{formatVerifyLine(phoneNumber)}</p>
+              <button
+                type="button"
+                onClick={handleBack}
+                disabled={isLoading}
+                className="self-start text-sm font-semibold text-amber-400 underline-offset-2 transition-colors hover:text-amber-300 hover:underline disabled:opacity-50 sm:self-auto"
+              >
+                Edit
+              </button>
+            </div>
+
+            <fieldset>
+              <legend className="sr-only">Enter 6-digit verification code</legend>
+              <div className="flex flex-wrap justify-center gap-2 sm:gap-2.5" onPaste={handlePaste}>
+                {cells.map((val, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => {
+                      inputsRef.current[i] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete={i === 0 ? "one-time-code" : "off"}
+                    maxLength={1}
+                    value={val}
+                    onChange={(e) => handleCellChange(i, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(i, e)}
+                    disabled={isLoading}
+                    className="h-14 w-12 rounded-lg border border-white/20 bg-white/10 text-center text-2xl font-bold tabular-nums text-white outline-none transition-all focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
+                    aria-label={`Digit ${i + 1} of 6`}
+                  />
+                ))}
+              </div>
+            </fieldset>
+
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center text-sm font-medium text-red-400"
+              >
+                {error}
+              </motion.p>
+            )}
+
+            {isLoading && (
+              <p className="flex items-center justify-center gap-2 text-sm font-medium text-gray-400">
+                <span
+                  className="inline-block size-4 animate-spin rounded-full border-2 border-amber-500/30 border-t-amber-500"
+                  aria-hidden
+                />
+                Verifying…
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={!otpValid || isLoading}
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-center font-black uppercase tracking-tighter text-black shadow-lg transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+            >
+              {isLoading ? "Verifying…" : "Verify & Sign In"}
+            </button>
+          </form>
+        </motion.div>
       )}
-
-      <button
-        type="submit"
-        disabled={!otpValid || isLoading}
-        style={{
-          width: "100%",
-          padding: "10px 0",
-          borderRadius: 10,
-          background: otpValid && !isLoading ? AMBER : "#D1D5DB",
-          color: otpValid && !isLoading ? "#fff" : "#9CA3AF",
-          fontWeight: 600,
-          fontSize: "0.875rem",
-          border: "none",
-          cursor: otpValid && !isLoading ? "pointer" : "not-allowed",
-          transition: "background 0.2s",
-        }}
-        onMouseEnter={(e) => {
-          if (otpValid && !isLoading)
-            (e.currentTarget as HTMLButtonElement).style.background = AMBER_DARK;
-        }}
-        onMouseLeave={(e) => {
-          if (otpValid && !isLoading)
-            (e.currentTarget as HTMLButtonElement).style.background = AMBER;
-        }}
-      >
-        {isLoading ? "Verifying…" : "Verify & Sign In ✓"}
-      </button>
-
-      <button
-        type="button"
-        onClick={handleBack}
-        style={{
-          background: "none",
-          border: "none",
-          fontSize: "0.8125rem",
-          color: "#78716C",
-          cursor: "pointer",
-          padding: 0,
-          textAlign: "center",
-        }}
-      >
-        ← Change phone number
-      </button>
-    </form>
+    </AnimatePresence>
   );
 }

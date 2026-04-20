@@ -4,6 +4,9 @@ import type { ReactNode } from "react";
 import { useLayoutEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminSidebar } from "./admin-sidebar";
+import { PageTransition } from "./page-transition";
+import { PartnerBottomNav } from "./partner-bottom-nav";
+import { PartnerMobileHeader } from "./partner-mobile-header";
 
 interface AdminShellProps {
   readonly children: ReactNode;
@@ -52,6 +55,33 @@ export function AdminShell({
     );
   }
 
+  const isPartner = role === "PARTNER";
+
+  if (isPartner) {
+    return (
+      <div className="flex min-h-dvh flex-col bg-gray-50 lg:h-screen lg:flex-row lg:overflow-hidden">
+        <AdminSidebar
+          className="hidden lg:flex"
+          userName={userName}
+          userEmail={userEmail}
+          userImage={userImage}
+          role={role}
+        />
+        <div className="relative flex min-h-dvh flex-1 flex-col lg:min-h-0">
+          <PartnerMobileHeader
+            userName={userName}
+            userEmail={userEmail}
+            userImage={userImage}
+          />
+          <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-20 pt-0 lg:px-8 lg:pb-8 lg:pt-8">
+            <PageTransition>{children}</PageTransition>
+          </main>
+          <PartnerBottomNav />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <AdminSidebar
@@ -60,7 +90,9 @@ export function AdminShell({
         userImage={userImage}
         role={role}
       />
-      <main className="min-h-0 flex-1 overflow-y-auto bg-gray-50 p-8">{children}</main>
+      <main className="min-h-0 flex-1 overflow-y-auto bg-gray-50 p-8">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
   );
 }

@@ -98,8 +98,8 @@ export function MyBookingsContent({ initialData }: MyBookingsContentProps) {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-charcoal">My Bookings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="select-none text-2xl font-semibold tracking-tight text-charcoal">My Bookings</h1>
+        <p className="mt-1 text-sm text-zinc-600 lg:text-muted-foreground">
           Rental requests for your fleet equipment.
         </p>
       </div>
@@ -154,7 +154,7 @@ export function MyBookingsContent({ initialData }: MyBookingsContentProps) {
                 <TableRow
                   key={booking.id}
                   style={{ opacity: updatingId === booking.id ? 0.5 : 1 }}
-                  className="transition-colors hover:bg-slate-50"
+                  className="min-h-14 touch-manipulation py-3 transition-colors active:bg-slate-100 lg:hover:bg-slate-50"
                 >
                   <TableCell>
                     <p className="font-semibold text-charcoal">

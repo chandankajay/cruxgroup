@@ -133,10 +133,22 @@ export function FleetEquipmentCards({
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end gap-2 border-t border-border bg-muted/30 py-3">
-                <Button size="sm" variant="outline" type="button" onClick={() => onEdit(item.id)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  className="h-12 min-w-11 touch-manipulation rounded-xl sm:h-9 sm:rounded-md"
+                  onClick={() => onEdit(item.id)}
+                >
                   Edit
                 </Button>
-                <Button size="sm" variant="destructive" type="button" onClick={() => onDelete(item.id)}>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  type="button"
+                  className="h-12 min-w-11 touch-manipulation rounded-xl sm:h-9 sm:rounded-md"
+                  onClick={() => onDelete(item.id)}
+                >
                   Delete
                 </Button>
               </CardFooter>

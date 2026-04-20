@@ -7,4 +7,5 @@
 body {
   color: var(--color-foreground);
   background-color: var(--color-background);
+  overscroll-behavior-y: none;
 }

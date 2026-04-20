@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { ServiceAreaMap } from "../../partners/features/service-area-map";
 import { updateServiceAreaAction } from "../../partners/actions";
+import { useIsLgUp } from "../../lib/use-media-query";
 
 interface ServiceAreaSelfContentProps {
   readonly partnerId: string;
@@ -21,6 +22,15 @@ export function ServiceAreaSelfContent({
   initialBaseAddress,
 }: ServiceAreaSelfContentProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const isLg = useIsLgUp();
+
+  const mobileMapStyle = useMemo(() => {
+    if (isLg === true) return undefined;
+    return {
+      width: "100%",
+      height: "calc(100dvh - 56px - 64px - env(safe-area-inset-bottom))",
+    } as const;
+  }, [isLg]);
 
   const handleSave = useCallback(
     async (data: {
@@ -48,39 +58,37 @@ export function ServiceAreaSelfContent({
 
   return (
     <div>
-      {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-charcoal">Service Area</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="select-none text-2xl font-semibold tracking-tight text-charcoal">
+          Service Area
+        </h1>
+        <p className="mt-1 text-sm text-zinc-600 lg:text-muted-foreground">
           Set your base location and define how far you can deliver equipment.
         </p>
       </div>
 
-      {/* Info banner if no location set */}
       {!initialLocation && (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-          <p className="text-sm font-semibold text-amber-800">
-            📍 No base location set yet
-          </p>
+        <div className="mb-6 rounded-2xl border border-amber-500/50 bg-amber-50 px-4 py-4 select-none">
+          <p className="text-sm font-semibold text-amber-800">No base location set yet</p>
           <p className="mt-1 text-sm text-amber-700">
-            Click anywhere on the map to drop a pin on your depot or base
-            location. Set your service radius and save — customers searching
-            nearby will then see your equipment in results.
+            Tap the map to drop a pin on your depot or base location. Set your service radius and save
+            — customers searching nearby will then see your equipment in results.
           </p>
         </div>
       )}
 
-      {/* Map panel */}
-      <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-        <div className="border-b border-border px-6 py-4">
-          <h2 className="font-semibold text-charcoal">{partnerName}</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Click the map to set your base · drag the pin to fine-tune ·
-            adjust the slider to change coverage radius
+      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm select-none">
+        <div className="border-b border-border px-4 py-4 lg:px-6">
+          <h2 className="text-xs font-medium uppercase tracking-widest text-zinc-400">Coverage</h2>
+          <p className="mt-1 font-semibold text-charcoal">{partnerName}</p>
+          <p className="mt-0.5 text-sm text-zinc-600 lg:text-muted-foreground">
+            Tap the map to set your base · drag the pin to fine-tune · adjust the slider to change coverage
+            radius
           </p>
         </div>
-        <div className="p-6">
+        <div className="p-4 lg:p-6">
           <ServiceAreaMap
+            mapContainerStyle={mobileMapStyle}
             initialLocation={initialLocation}
             initialRadius={initialRadius}
             initialBaseAddress={initialBaseAddress}

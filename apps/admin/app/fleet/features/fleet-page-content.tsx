@@ -74,7 +74,7 @@ export function FleetPageContent({ initialData, partnerKycStatus }: FleetPageCon
           </p>
           <Link
             href="/settings/kyc"
-            className="inline-flex shrink-0 items-center justify-center rounded-md border border-amber-700 bg-white px-4 py-2 text-sm font-semibold text-amber-950 shadow-sm transition-colors hover:bg-amber-100"
+            className="inline-flex h-12 min-w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-xl border border-amber-700 bg-white px-4 text-sm font-semibold text-amber-950 shadow-sm active:bg-amber-100 lg:rounded-md lg:hover:bg-amber-100"
           >
             Go to Trust Center
           </Link>
@@ -83,14 +83,14 @@ export function FleetPageContent({ initialData, partnerKycStatus }: FleetPageCon
 
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal">My Fleet</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="select-none text-2xl font-semibold tracking-tight text-charcoal">My Fleet</h1>
+          <p className="mt-1 text-sm text-zinc-600 lg:text-muted-foreground">
             Manage the equipment you offer for rent.
           </p>
         </div>
         <Link
           href="/fleet/new"
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-brand-orange px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600"
+          className="inline-flex h-12 min-w-11 shrink-0 touch-manipulation select-none items-center justify-center gap-2 rounded-xl bg-brand-orange px-4 text-sm font-semibold text-white shadow-sm active:bg-amber-600 lg:rounded-lg lg:hover:bg-amber-600"
         >
           + Add Equipment
         </Link>

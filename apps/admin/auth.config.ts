@@ -4,6 +4,7 @@ import { enterpriseAuthSecurity } from "@repo/auth";
 const PARTNER_ONLY = ["/fleet", "/my-bookings", "/service-area", "/earnings"];
 
 function isPartnerBlockedFromPath(pathname: string): boolean {
+  if (pathname.startsWith("/platform-admin")) return true;
   if (["/equipment", "/bookings", "/partners"].some((p) => pathname.startsWith(p))) {
     return true;
   }

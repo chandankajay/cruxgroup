@@ -102,8 +102,8 @@ export function EarningsContent({ bookings }: EarningsContentProps) {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-charcoal">Earnings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="select-none text-2xl font-semibold tracking-tight text-charcoal">Earnings</h1>
+        <p className="mt-1 text-sm text-zinc-600 lg:text-muted-foreground">
           Revenue summary from completed bookings.
         </p>
       </div>

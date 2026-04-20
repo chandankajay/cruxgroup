@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
 import { Clock, MapPin, Shield } from "lucide-react";
+import { CruxLoginShell } from "@repo/ui/crux-login-shell";
 import { useLabels } from "@repo/ui/dictionary-provider";
 import { sendOtpAction, signInWithCredentialsAction } from "./actions";
 import { PhoneStep } from "./features/phone-step";
@@ -46,6 +47,9 @@ function TrustFooter() {
   );
 }
 
+const BOOKINGS_SUBHEAD =
+  "The largest heavy machinery fleet in Telangana, at your fingertips.";
+
 export default function LoginPage() {
   const t = useLabels();
   const [step, setStep] = useState<Step>("phone");
@@ -82,15 +86,35 @@ export default function LoginPage() {
     setError(undefined);
   }
 
+  const logo = (
+    <Link href="/" className="inline-block outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-amber-500/80" aria-label="Crux Group home">
+      <Image
+        src="/logo.png"
+        alt="Crux Group"
+        width={400}
+        height={140}
+        unoptimized
+        className="h-24 w-auto max-w-[min(92vw,400px)] drop-shadow-[0_12px_40px_rgba(0,0,0,0.5)] sm:h-28 lg:h-32 xl:h-[8.5rem]"
+        priority
+      />
+    </Link>
+  );
+
+  const headline = (
+    <>
+      <span className="text-amber-500">Powering</span> Your Projects
+    </>
+  );
+
   if (success) {
     return (
-      <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4">
+      <main className="relative flex h-[100dvh] max-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4">
         <div
           className="absolute inset-0 z-0 bg-zinc-950 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/loginbg.jpg')" }}
         />
-        <div className="absolute inset-0 z-[1] bg-black/40 backdrop-blur-[2px]" />
-        <div className="relative z-10 flex flex-col items-center gap-4 rounded-3xl border border-white/10 bg-black/60 px-10 py-12 shadow-2xl backdrop-blur-xl">
+        <div className="absolute inset-0 z-[1] bg-black/50 backdrop-blur-[2px]" />
+        <div className="relative z-10 flex max-w-md flex-col items-center gap-4 rounded-3xl border border-white/10 bg-black/60 px-10 py-12 shadow-2xl backdrop-blur-xl">
           <div
             className="h-12 w-12 animate-spin rounded-full border-[3px] border-amber-500/30 border-t-amber-500"
             aria-hidden
@@ -103,81 +127,42 @@ export default function LoginPage() {
     );
   }
 
+  const card = (
+    <div className="rounded-2xl border border-white/10 bg-black/55 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-3xl sm:p-8">
+      <AnimatePresence mode="wait">
+        {step === "phone" ? (
+          <PhoneStep key="phone" onSubmit={handleSendOtp} isLoading={isLoading} />
+        ) : (
+          <OtpStep
+            key="otp"
+            phone={phone}
+            onSubmit={handleVerifyOtp}
+            onBack={handleBack}
+            isLoading={isLoading}
+            error={error}
+          />
+        )}
+      </AnimatePresence>
+      <TrustFooter />
+    </div>
+  );
+
+  const belowFold =
+    process.env["NEXT_PUBLIC_NODE_ENV"] === "development" ? (
+      <p className="text-center text-xs text-gray-500">
+        Dev OTP{" "}
+        <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-amber-400/90">112233</code>
+      </p>
+    ) : null;
+
   return (
-    <main className="relative flex min-h-screen flex-col overflow-hidden">
-      {/* Cinematic background — add `public/loginbg.jpg` for full effect */}
-      <div
-        className="absolute inset-0 z-0 bg-zinc-950 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/loginbg.jpg')" }}
-      />
-      <div className="absolute inset-0 z-[1] bg-black/40 backdrop-blur-[2px]" />
-
-      {/* Logo */}
-      <Link
-        href="/"
-        className="absolute left-4 top-4 z-20 sm:left-6 sm:top-6"
-        aria-label="Crux Group home"
-      >
-        <Image
-          src="/logo.png"
-          alt="Crux Group"
-          width={160}
-          height={56}
-          className="h-10 w-auto drop-shadow-lg sm:h-12"
-          priority
-        />
-      </Link>
-
-      {/* Centered column: hook + card */}
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-16 sm:px-6 sm:py-20">
-        <div className="flex w-full max-w-md flex-col items-center">
-          {/* Heading */}
-          <div className="mb-8 w-full text-center sm:mb-10">
-            <h1 className="text-balance font-extrabold tracking-tight text-white drop-shadow-md [text-shadow:0_2px_24px_rgba(0,0,0,0.45)] sm:text-4xl text-3xl">
-              <span className="text-amber-500" style={{ color: "#F59E0B" }}>
-                Powering
-              </span>{" "}
-              Your Projects
-            </h1>
-            <p className="mt-3 text-pretty text-sm font-medium tracking-wide text-gray-300 sm:text-base">
-              The largest heavy machinery fleet in Telangana, at your
-              fingertips.
-            </p>
-          </div>
-
-          {/* Glass card */}
-          <div className="w-full rounded-3xl border border-white/10 bg-black/60 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
-            <AnimatePresence mode="wait">
-              {step === "phone" ? (
-                <PhoneStep
-                  key="phone"
-                  onSubmit={handleSendOtp}
-                  isLoading={isLoading}
-                />
-              ) : (
-                <OtpStep
-                  key="otp"
-                  phone={phone}
-                  onSubmit={handleVerifyOtp}
-                  onBack={handleBack}
-                  isLoading={isLoading}
-                  error={error}
-                />
-              )}
-            </AnimatePresence>
-            <TrustFooter />
-          </div>
-
-          {process.env["NEXT_PUBLIC_NODE_ENV"] === "development" && (
-            <p className="mt-4 text-center text-xs text-gray-500">
-              Dev OTP{" "}
-              <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-amber-400/90">
-                112233
-              </code>
-            </p>
-          )}
-        </div>
-      </div>
-    </main>
+    <CruxLoginShell
+      logo={logo}
+      headline={headline}
+      subheadline={BOOKINGS_SUBHEAD}
+      belowFold={belowFold}
+    >
+      {card}
+    </CruxLoginShell>
   );
 }

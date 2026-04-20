@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@repo/ui/lib/utils";
+import type { HTMLAttributes } from "react";
 
 interface NavItem {
   href: string;
@@ -49,6 +50,13 @@ const ADMIN_NAV: NavItem[] = [
     ),
   },
   {
+    href: "/platform-admin/kyc",
+    label: "KYC Approvals",
+    icon: (
+      <Icon d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    ),
+  },
+  {
     href: "/equipment",
     label: "All Equipment",
     icon: (
@@ -72,6 +80,13 @@ const ADMIN_NAV: NavItem[] = [
 ];
 
 const PARTNER_NAV: NavItem[] = [
+  {
+    href: "/dashboard",
+    label: "Home",
+    icon: (
+      <Icon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    ),
+  },
   {
     href: "/fleet",
     label: "My Fleet",
@@ -154,7 +169,7 @@ function UserAvatar({
   );
 }
 
-interface AdminSidebarProps {
+interface AdminSidebarProps extends Pick<HTMLAttributes<HTMLElement>, "className"> {
   readonly userName: string | null;
   readonly userEmail: string | null;
   readonly userImage: string | null;
@@ -166,19 +181,27 @@ export function AdminSidebar({
   userEmail,
   userImage,
   role,
+  className,
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const navItems = role === "PARTNER" ? PARTNER_NAV : ADMIN_NAV;
 
   return (
-    <aside className="flex h-screen w-64 flex-col bg-charcoal text-white">
+    <aside
+      className={cn(
+        "flex h-screen w-64 shrink-0 flex-col bg-charcoal text-white",
+        className
+      )}
+    >
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
         <Image
           src="/logo.png"
           alt="Crux Group"
-          width={110}
-          height={32}
+          width={200}
+          height={70}
+          unoptimized
+          className="h-10 w-auto max-w-[9.5rem] object-contain object-left"
           priority
         />
         <RoleBadge role={role} />
@@ -197,10 +220,10 @@ export function AdminSidebar({
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                "flex min-h-11 touch-manipulation select-none items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all lg:min-h-0",
                 isActive
                   ? "bg-brand-orange text-white shadow-sm"
-                  : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  : "text-gray-400 active:bg-white/10 active:text-white lg:hover:bg-white/5 lg:hover:text-white"
               )}
             >
               <span className="shrink-0 opacity-80">{item.icon}</span>
@@ -224,8 +247,9 @@ export function AdminSidebar({
           </div>
         </div>
         <button
+          type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
+          className="mt-1 flex min-h-11 w-full touch-manipulation select-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors active:bg-white/10 active:text-white lg:hover:bg-white/5 lg:hover:text-white"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

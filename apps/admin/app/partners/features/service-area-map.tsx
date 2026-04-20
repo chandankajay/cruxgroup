@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useState, useRef, useCallback, useEffect } from "react";
 import {
   useJsApiLoader,
@@ -12,7 +13,7 @@ import type { Libraries } from "@react-google-maps/api";
 
 const LIBRARIES: Libraries = ["places"];
 const INDIA_CENTER = { lat: 20.5937, lng: 78.9629 };
-const MAP_CONTAINER_STYLE = { width: "100%", height: "480px" };
+const DEFAULT_MAP_CONTAINER_STYLE: CSSProperties = { width: "100%", height: "480px" };
 
 const MAP_OPTIONS: google.maps.MapOptions = {
   disableDefaultUI: false,
@@ -47,6 +48,8 @@ const INPUT_CLASS =
 type LatLng = { lat: number; lng: number };
 
 interface ServiceAreaMapProps {
+  /** Overrides default `480px` map height (e.g. mobile viewport minus chrome). */
+  readonly mapContainerStyle?: CSSProperties;
   initialLocation: LatLng | null;
   initialRadius: number;
   initialBaseAddress: string;
@@ -74,12 +77,17 @@ function fitMapToCircle(map: google.maps.Map, center: LatLng, radiusKm: number) 
 }
 
 export function ServiceAreaMap({
+  mapContainerStyle,
   initialLocation,
   initialRadius,
   initialBaseAddress,
   onSave,
   isSaving,
 }: ServiceAreaMapProps) {
+  const resolvedMapContainerStyle: CSSProperties = {
+    ...DEFAULT_MAP_CONTAINER_STYLE,
+    ...mapContainerStyle,
+  };
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -245,7 +253,10 @@ export function ServiceAreaMap({
     return (
       <div className="space-y-4">
         <div className="h-10 animate-pulse rounded-md bg-muted" />
-        <div className="h-[480px] animate-pulse rounded-xl bg-muted" />
+        <div
+          className="animate-pulse rounded-xl bg-muted"
+          style={{ height: resolvedMapContainerStyle.height ?? "480px" }}
+        />
       </div>
     );
   }
@@ -276,7 +287,7 @@ export function ServiceAreaMap({
           type="button"
           onClick={handleLocateMe}
           title="Use my current location"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 active:bg-amber-200"
+          className="inline-flex h-12 min-w-11 shrink-0 touch-manipulation select-none items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 text-sm font-medium text-amber-800 active:bg-amber-200 lg:h-10 lg:rounded-md lg:hover:bg-amber-100"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -307,7 +318,7 @@ export function ServiceAreaMap({
       {/* Map */}
       <div className="overflow-hidden rounded-xl border border-border shadow-sm">
         <GoogleMap
-          mapContainerStyle={MAP_CONTAINER_STYLE}
+          mapContainerStyle={resolvedMapContainerStyle}
           center={pinLocation ?? INDIA_CENTER}
           zoom={pinLocation ? 10 : 5}
           options={MAP_OPTIONS}

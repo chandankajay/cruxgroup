@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
-
 function GoogleIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
         fill="#4285F4"
@@ -30,30 +28,11 @@ interface GoogleSignInButtonProps {
 }
 
 export function GoogleSignInButton({ action }: GoogleSignInButtonProps) {
-  const [hovered, setHovered] = useState(false);
-
   return (
     <form action={action}>
       <button
         type="submit"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          width: "100%",
-          padding: "12px 16px",
-          backgroundColor: hovered ? "#1d4ed8" : "#1e3a8a",
-          color: "#fff",
-          border: "none",
-          borderRadius: 10,
-          fontSize: "0.9375rem",
-          fontWeight: 600,
-          cursor: "pointer",
-          transition: "background-color 0.2s",
-        }}
+        className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-white/10 bg-white py-3.5 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-100 active:scale-[0.99]"
       >
         <GoogleIcon />
         Continue with Google
