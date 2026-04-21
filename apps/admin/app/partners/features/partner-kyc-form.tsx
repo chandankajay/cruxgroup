@@ -2,10 +2,8 @@
 
 import { useCallback, useState, useTransition } from "react";
 import { toast } from "sonner";
-import {
-  submitPartnerKycForm,
-  type KycSubmissionErrorCode,
-} from "../kyc-actions";
+import { submitPartnerKycForm } from "../kyc-actions";
+import type { KycSubmissionErrorCode } from "../kyc-shared";
 
 const DUPLICATE_CODES = new Set<KycSubmissionErrorCode>([
   "DUPLICATE_PAN",

@@ -5,15 +5,28 @@ import { prisma } from "@repo/db";
 import { revalidatePath } from "next/cache";
 import { auth } from "../../../lib/auth";
 import { normalizeAadhaar, normalizeGst, normalizePan } from "../../../lib/formatters";
-import { findPartnerKycIdentifierConflict, type KycSubmissionErrorCode } from "../../partners/kyc-actions";
-import { GST_REGEX, IFSC_REGEX, KYC_ACCEPT_MIME, MAX_KYC_FILE_BYTES, PAN_REGEX } from "./schema";
+import { findPartnerKycIdentifierConflict } from "../../partners/kyc-actions";
+import type { KycSubmissionErrorCode } from "../../partners/kyc-shared";
+import {
+  GST_REGEX,
+  IFSC_REGEX,
+  MAX_KYC_FILE_BYTES,
+  PAN_REGEX,
+  isAllowedKycMime,
+} from "./schema";
 
 export type TrustCenterSubmitResult =
   | { success: true }
   | {
       success: false;
       error: string;
-      code: KycSubmissionErrorCode | "VALIDATION" | "UNAUTHORIZED" | "NO_PARTNER" | "FORBIDDEN";
+      code:
+        | KycSubmissionErrorCode
+        | "VALIDATION"
+        | "UNAUTHORIZED"
+        | "NO_PARTNER"
+        | "FORBIDDEN"
+        | "SERVER_ERROR";
     };
 
 function requirePartnerSession() {
@@ -41,7 +54,7 @@ function assertKycFile(file: unknown, label: string): string | null {
   if (file.size > MAX_KYC_FILE_BYTES) {
     return `${label} must be 5MB or smaller.`;
   }
-  if (!(KYC_ACCEPT_MIME as readonly string[]).includes(file.type)) {
+  if (!isAllowedKycMime(file)) {
     return `${label}: only JPEG, PNG, WebP, or PDF allowed.`;
   }
   return null;
@@ -60,13 +73,13 @@ async function putKycFile(
       addRandomSuffix: true,
     });
     return { ok: true, url: blob.url };
-  } catch (e) {
+  } catch (error) {
+    console.error(error);
     console.error("[KYC] Vercel Blob upload failed", {
       kind,
       pathname,
       fileName: file.name,
       fileSize: file.size,
-      error: e,
     });
     return { ok: false };
   }

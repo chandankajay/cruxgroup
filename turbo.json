@@ -1,7 +1,13 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
-  "globalEnv": ["NEXTAUTH_SECRET", "AUTH_SECRET"],
+  "globalEnv": [
+    "NEXTAUTH_SECRET",
+    "AUTH_SECRET",
+    "DATABASE_URL",
+    "BLOB_READ_WRITE_TOKEN",
+    "AISENSY_API_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

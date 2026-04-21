@@ -18,13 +18,23 @@ export const KYC_ACCEPT_MIME = [
 
 export const MAX_KYC_FILE_BYTES = 5 * 1024 * 1024;
 
+/** Some browsers report PDFs/uploads as empty type or application/octet-stream. */
+export function isAllowedKycMime(file: File): boolean {
+  if ((KYC_ACCEPT_MIME as readonly string[]).includes(file.type)) return true;
+  if (file.type === "" || file.type === "application/octet-stream") {
+    const n = file.name.toLowerCase();
+    return /\.(jpe?g|png|webp|pdf)$/.test(n);
+  }
+  return false;
+}
+
 const kycDocumentFileSchema = z
   .instanceof(File, { message: "Please choose a file." })
   .refine((f) => f.size > 0, { message: "Please choose a file." })
   .refine((f) => f.size <= MAX_KYC_FILE_BYTES, {
     message: "File must be 5MB or smaller.",
   })
-  .refine((f) => (KYC_ACCEPT_MIME as readonly string[]).includes(f.type), {
+  .refine((f) => isAllowedKycMime(f), {
     message: "Only JPEG, PNG, WebP, or PDF files are allowed.",
   });
 
