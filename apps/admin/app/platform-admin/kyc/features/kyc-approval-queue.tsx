@@ -17,6 +17,7 @@ import { Textarea } from "@repo/ui/textarea";
 import { Label } from "@repo/ui/label";
 import { rejectPartnerKyc, verifyPartnerKyc } from "../actions";
 import type { KycQueuePartnerRow } from "../types";
+import { viewerUrlForStoredKycBlob } from "../../../lib/kyc-blob-view-url";
 
 interface KycApprovalQueueProps {
   readonly initialRows: KycQueuePartnerRow[];
@@ -42,23 +43,24 @@ function DocBlock({
   number: string | null;
   docUrl: string | null;
 }) {
+  const viewUrl = viewerUrlForStoredKycBlob(docUrl);
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
       <p className="mt-1 font-mono text-sm text-foreground">{number ?? "—"}</p>
-      {docUrl ? (
+      {viewUrl ? (
         <div className="mt-2 space-y-2">
           <a
-            href={docUrl}
+            href={viewUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-primary underline underline-offset-2 hover:text-primary/80"
           >
             Open full size in new tab
           </a>
-          {/* eslint-disable-next-line @next/next/no-img-element -- Vercel Blob URLs */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- proxied or public Blob URLs */}
           <img
-            src={docUrl}
+            src={viewUrl}
             alt={`${title} document`}
             className="max-h-44 w-full rounded-md border border-border bg-background object-contain"
           />
@@ -229,7 +231,7 @@ export function KycApprovalQueue({ initialRows }: KycApprovalQueueProps) {
                       <dt className="text-xs text-muted-foreground">Cancelled cheque</dt>
                       <dd>
                         <a
-                          href={review.cancelledChequeUrl}
+                          href={viewerUrlForStoredKycBlob(review.cancelledChequeUrl) ?? "#"}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary underline"

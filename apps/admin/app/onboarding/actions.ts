@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { prisma, Prisma } from "@repo/db";
+import { parseLatLngFromPartnerBaseLocation, prisma, Prisma } from "@repo/db";
 import { auth } from "../../lib/auth";
 import { partnerOnboardingSchema, type PartnerOnboardingValues } from "./schema";
 
@@ -109,6 +109,7 @@ export async function createPartnerProfileAction(
   const nameTrim = companyName.trim();
   const addressTrim = address.trim();
   const baseLocationTrim = baseLocation.trim();
+  const parsedBase = parseLatLngFromPartnerBaseLocation(baseLocationTrim);
 
   try {
     await prisma.partner.create({
@@ -118,6 +119,10 @@ export async function createPartnerProfileAction(
         address: addressTrim,
         baseLocation: baseLocationTrim,
         maxRadius: 25,
+        maxServiceRadiusKm: 25,
+        ...(parsedBase
+          ? { baseCoordinates: { lat: parsedBase.lat, lng: parsedBase.lng } }
+          : {}),
         kycStatus: "PENDING",
       },
     });

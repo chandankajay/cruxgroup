@@ -5,14 +5,14 @@ import type { KycStatus } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/alert";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@repo/ui/card";
@@ -24,13 +24,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@repo/ui/form";
-import { kycTrustFormSchema, type KycTrustFormValues } from "./schema";
+import { buildKycTrustFormSchema, type KycTrustFormValues } from "./schema";
 import { KycFileDropzone } from "./kyc-file-dropzone";
 import { uploadKycAction, type TrustCenterSubmitResult } from "./actions";
 
 export type TrustCenterKycSnapshot = {
   kycStatus: KycStatus;
   kycRejectionReason: string | null;
+  /** Bumps the form key when Prisma data changes. */
+  updatedAtIso: string;
   panNumber: string | null;
   panDocUrl: string | null;
   aadhaarNumber: string | null;
@@ -52,25 +54,59 @@ function duplicateCodeMessage(result: TrustCenterSubmitResult): string | null {
 
 export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnapshot }) {
   const { kycStatus } = snapshot;
-  const locked = kycStatus === "VERIFIED" || kycStatus === "SUBMITTED";
-  const showForm = useMemo(
-    () => kycStatus === "PENDING" || kycStatus === "REJECTED",
-    [kycStatus]
+  /**
+   * Prisma: `PENDING` = not yet submitted; `SUBMITTED` = under review; `VERIFIED` = approved;
+   * `REJECTED` = resubmit path.
+   */
+  const isReadOnlyKyc = kycStatus === "SUBMITTED" || kycStatus === "VERIFIED";
+  const canEdit = kycStatus === "PENDING" || kycStatus === "REJECTED";
+  const showSubmit = canEdit;
+
+  const formSchema = useMemo(
+    () =>
+      buildKycTrustFormSchema({
+        isReadOnly: isReadOnlyKyc,
+        isRejectedResubmit: kycStatus === "REJECTED",
+        existingPanDocUrl: snapshot.panDocUrl,
+        existingAadhaarDocUrl: snapshot.aadhaarDocUrl,
+        existingChequeUrl: snapshot.cancelledChequeUrl,
+      }),
+    [isReadOnlyKyc, kycStatus, snapshot.panDocUrl, snapshot.aadhaarDocUrl, snapshot.cancelledChequeUrl]
   );
 
-  const form = useForm<KycTrustFormValues>({
-    resolver: zodResolver(kycTrustFormSchema),
-    defaultValues: {
+  const defaultValues: KycTrustFormValues = useMemo(
+    () => ({
       panNumber: snapshot.panNumber ?? "",
       aadhaarNumber: snapshot.aadhaarNumber ?? "",
       gstNumber: snapshot.gstNumber ?? "",
       bankAccountNumber: snapshot.bankAccountNumber ?? "",
       bankIfscCode: snapshot.bankIfscCode ?? "",
-    },
+      panDoc: undefined,
+      aadhaarDoc: undefined,
+      chequeDoc: undefined,
+    }),
+    [
+      snapshot.panNumber,
+      snapshot.aadhaarNumber,
+      snapshot.gstNumber,
+      snapshot.bankAccountNumber,
+      snapshot.bankIfscCode,
+    ]
+  );
+
+  const form = useForm<KycTrustFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues,
     mode: "onSubmit",
   });
 
   const [pending, startTransition] = useTransition();
+
+  const aadhaarDisplayValue = (raw: string) => {
+    if (!isReadOnlyKyc) return raw;
+    if (!raw || raw.length < 4) return raw;
+    return "•".repeat(8) + raw.slice(-4);
+  };
 
   const onSubmit = form.handleSubmit((values) => {
     form.clearErrors("root");
@@ -81,9 +117,9 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
       fd.append("gstNumber", values.gstNumber);
       fd.append("bankAccountNumber", values.bankAccountNumber);
       fd.append("bankIfscCode", values.bankIfscCode);
-      fd.append("panDoc", values.panDoc);
-      fd.append("aadhaarDoc", values.aadhaarDoc);
-      fd.append("chequeDoc", values.chequeDoc);
+      if (values.panDoc instanceof File) fd.append("panDoc", values.panDoc);
+      if (values.aadhaarDoc instanceof File) fd.append("aadhaarDoc", values.aadhaarDoc);
+      if (values.chequeDoc instanceof File) fd.append("chequeDoc", values.chequeDoc);
 
       let result: TrustCenterSubmitResult;
       try {
@@ -110,55 +146,42 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
     });
   });
 
-  if (kycStatus === "VERIFIED") {
-    return (
-      <Card className="border-emerald-200 bg-emerald-50/80">
-        <CardHeader>
-          <CardTitle className="text-emerald-900">Account fully verified</CardTitle>
-          <CardDescription className="text-emerald-800">
-            Your KYC is complete. Fleet and payout features use this verified profile.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-emerald-900">
-          <p>
-            <span className="font-semibold">PAN:</span> {snapshot.panNumber ?? "—"}
-          </p>
-          <p>
-            <span className="font-semibold">Aadhaar:</span>{" "}
-            {snapshot.aadhaarNumber ? "••••••••" + snapshot.aadhaarNumber.slice(-4) : "—"}
-          </p>
-          <p>
-            <span className="font-semibold">GST:</span> {snapshot.gstNumber ?? "—"}
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Form {...form}>
       <form onSubmit={onSubmit} className="flex flex-col space-y-6">
         {kycStatus === "SUBMITTED" ? (
-          <div
+          <Alert variant="amber" className="border-amber-500/60">
+            <Clock className="h-4 w-4" />
+            <AlertTitle>Documents under review</AlertTitle>
+            <AlertDescription>
+              Your KYC is being reviewed. You cannot change these details until verification
+              is complete. The summary below shows what you submitted.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {kycStatus === "VERIFIED" ? (
+          <Alert
+            className="border-emerald-500/60 bg-emerald-50/90 text-emerald-950 dark:border-emerald-500/50 dark:bg-emerald-950/30 dark:text-emerald-50 [&>svg]:text-emerald-700 dark:[&>svg]:text-emerald-200"
             role="status"
-            className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900"
           >
-            Documents under review. You cannot change details until the team finishes
-            verification.
-          </div>
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertTitle>KYC approved</AlertTitle>
+            <AlertDescription>
+              Your KYC is complete. Fleet and payout features use this verified profile.
+            </AlertDescription>
+          </Alert>
         ) : null}
 
         {kycStatus === "REJECTED" ? (
-          <div
-            role="alert"
-            className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-950"
-          >
-            <p className="font-semibold text-red-900">Submission rejected</p>
-            <p className="mt-1 text-red-800">
+          <Alert variant="destructive" className="border-red-500/50">
+            <XCircle className="h-4 w-4" />
+            <AlertTitle>KYC rejected — please update your details</AlertTitle>
+            <AlertDescription>
               {snapshot.kycRejectionReason?.trim() ||
-                "Please correct your details and upload clear documents, then submit again."}
-            </p>
-          </div>
+                "Please correct your details and upload clear documents, then resubmit."}
+            </AlertDescription>
+          </Alert>
         ) : null}
 
         {form.formState.errors.root ? (
@@ -186,7 +209,7 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
                         placeholder="ABCDE1234F"
                         autoComplete="off"
                         maxLength={10}
-                        disabled={locked || !showForm}
+                        disabled={isReadOnlyKyc}
                         {...field}
                         onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                       />
@@ -199,7 +222,8 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
                 control={form.control}
                 name="panDoc"
                 label="PAN document"
-                disabled={locked || !showForm}
+                disabled={isReadOnlyKyc}
+                existingFileUrl={snapshot.panDocUrl}
               />
             </div>
             <div className="flex flex-col gap-4">
@@ -214,9 +238,10 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
                         placeholder="12 digits"
                         inputMode="numeric"
                         autoComplete="off"
-                        maxLength={12}
-                        disabled={locked || !showForm}
+                        maxLength={isReadOnlyKyc ? 20 : 12}
+                        disabled={isReadOnlyKyc}
                         {...field}
+                        value={aadhaarDisplayValue(field.value)}
                         onChange={(e) =>
                           field.onChange(e.target.value.replace(/\D/g, "").slice(0, 12))
                         }
@@ -230,7 +255,8 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
                 control={form.control}
                 name="aadhaarDoc"
                 label="Aadhaar document"
-                disabled={locked || !showForm}
+                disabled={isReadOnlyKyc}
+                existingFileUrl={snapshot.aadhaarDocUrl}
               />
             </div>
           </CardContent>
@@ -254,7 +280,7 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
                       placeholder="15-character GSTIN"
                       autoComplete="off"
                       maxLength={15}
-                      disabled={locked || !showForm}
+                      disabled={isReadOnlyKyc}
                       {...field}
                       onChange={(e) =>
                         field.onChange(e.target.value.toUpperCase().replace(/\s/g, ""))
@@ -286,7 +312,7 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
                       <Input
                         inputMode="numeric"
                         autoComplete="off"
-                        disabled={locked || !showForm}
+                        disabled={isReadOnlyKyc}
                         {...field}
                         onChange={(e) => field.onChange(e.target.value.replace(/\s/g, ""))}
                       />
@@ -306,7 +332,7 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
                         placeholder="HDFC0001234"
                         autoComplete="off"
                         maxLength={11}
-                        disabled={locked || !showForm}
+                        disabled={isReadOnlyKyc}
                         {...field}
                         onChange={(e) =>
                           field.onChange(e.target.value.toUpperCase().replace(/\s/g, ""))
@@ -322,22 +348,30 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
               control={form.control}
               name="chequeDoc"
               label="Cancelled cheque"
-              disabled={locked || !showForm}
+              disabled={isReadOnlyKyc}
+              existingFileUrl={snapshot.cancelledChequeUrl}
             />
           </CardContent>
-          {showForm ? (
-            <CardFooter>
-              <Button
-                type="submit"
-                disabled={pending}
-                className="inline-flex w-full items-center justify-center gap-2 sm:w-auto"
-              >
-                {pending ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
-                <span>{pending ? "Uploading Documents..." : "Submit for verification"}</span>
-              </Button>
-            </CardFooter>
-          ) : null}
         </Card>
+
+        {showSubmit ? (
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={pending}
+              className="inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+            >
+              {pending ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+              <span>
+                {pending
+                  ? "Uploading documents…"
+                  : kycStatus === "REJECTED"
+                    ? "Resubmit KYC"
+                    : "Submit for verification"}
+              </span>
+            </Button>
+          </div>
+        ) : null}
       </form>
     </Form>
   );

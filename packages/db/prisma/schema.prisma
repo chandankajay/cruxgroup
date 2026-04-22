@@ -135,7 +135,13 @@ model Partner {
   /// City label or coordinates text from onboarding (e.g. "Kothur" or "17.4, 78.4")
   baseLocation String?
 
-  /// Service radius in kilometres
+  /// WGS84 yard centroid for B2B routing (JSON: { "lat": number, "lng": number })
+  baseCoordinates Json?
+
+  /// Maximum crow‑flies service distance (km) from `baseCoordinates` (or legacy `baseLocation`); preferred over `maxRadius` when set
+  maxServiceRadiusKm Int?
+
+  /// Service radius in kilometres (legacy; use `maxServiceRadiusKm` when available)
   maxRadius Int
 
   kycStatus          KycStatus @default(PENDING)
@@ -271,6 +277,9 @@ model Booking {
   pricing     BookingPricingType
   startDate   DateTime?
   endDate     DateTime?
+  /// Denormalized job site point for B2B geo (mirrors `location.coordinates`); use for routing that avoids composite-type plumbing
+  siteCoordinates Json?
+
   /// Site address line as agreed for dispatch (may mirror or override `location.address`)
   siteAddress    String?
   /// Expected shift label or window (app-defined, e.g. "DAY", "NIGHT", ISO range)

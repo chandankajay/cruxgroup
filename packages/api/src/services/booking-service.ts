@@ -1,4 +1,10 @@
-import { prisma, calculateDistance, calculateTransportFee } from "@repo/db";
+import { calculateTransportFee, prisma } from "@repo/db";
+import { calculateDistanceKm } from "@repo/lib";
+import {
+  getPartnerServiceBase,
+  isJobSiteWithinPartnerServiceArea,
+  OUT_OF_SERVICE_AREA_MESSAGE,
+} from "./partner-geo";
 
 // Valid 24-hex-char ObjectId used as the dev/guest user until real auth is wired up.
 const DEV_GUEST_USER_ID = "65f1a2b3c4d5e6f7a8b9c0d1";
@@ -60,22 +66,39 @@ export async function createBooking(input: CreateBookingInput) {
 
   if (!equipment) throw new Error("Equipment not found");
 
-  // Look up partner base location for distance-based transport fee.
-  const partner = equipment.partnerId
-    ? await prisma.user.findUnique({
+  const jobSite = { lat: input.lat, lng: input.lng };
+  const jobSiteHasCoords = input.lat !== 0 || input.lng !== 0;
+
+  const partnerForGeo = equipment.partnerId
+    ? await prisma.partner.findUnique({
         where: { id: equipment.partnerId },
-        select: { location: true },
+        select: {
+          id: true,
+          baseLocation: true,
+          baseCoordinates: true,
+          maxRadius: true,
+          maxServiceRadiusKm: true,
+        },
       })
     : null;
 
-  const partnerCoords = partner?.location?.coordinates;
-  const jobSiteHasCoords = input.lat !== 0 || input.lng !== 0;
+  if (partnerForGeo) {
+    if (!jobSiteHasCoords) {
+      throw new Error(OUT_OF_SERVICE_AREA_MESSAGE);
+    }
+    const within = isJobSiteWithinPartnerServiceArea(partnerForGeo, jobSite);
+    if (!within.ok) {
+      throw new Error(OUT_OF_SERVICE_AREA_MESSAGE);
+    }
+  }
+
+  const partnerLatLng = partnerForGeo ? getPartnerServiceBase(partnerForGeo) : null;
 
   const distanceKm =
-    partnerCoords && partnerCoords.length === 2 && jobSiteHasCoords
-      ? calculateDistance(
-          { lat: input.lat, lng: input.lng },
-          { lat: partnerCoords[1], lng: partnerCoords[0] }
+    partnerLatLng && jobSiteHasCoords
+      ? calculateDistanceKm(
+          { lat: partnerLatLng.lat, lng: partnerLatLng.lng },
+          { lat: input.lat, lng: input.lng }
         )
       : 0;
 
@@ -97,6 +120,7 @@ export async function createBooking(input: CreateBookingInput) {
       status: "PENDING",
       startDate,
       endDate,
+      siteCoordinates: { lat: input.lat, lng: input.lng },
       location: {
         address: input.address,
         pincode: input.pincode,
@@ -122,7 +146,18 @@ export async function listBookings() {
 }
 
 export async function listBookingsByPartner(partnerId: string) {
-  return prisma.booking.findMany({
+  const partner = await prisma.partner.findUnique({
+    where: { id: partnerId },
+    select: {
+      id: true,
+      baseLocation: true,
+      baseCoordinates: true,
+      maxRadius: true,
+      maxServiceRadiusKm: true,
+    },
+  });
+
+  const rows = await prisma.booking.findMany({
     where: {
       equipment: { partnerId },
     },
@@ -133,12 +168,45 @@ export async function listBookingsByPartner(partnerId: string) {
       endDate: true,
       createdAt: true,
       location: true,
+      siteCoordinates: true,
       pricing: true,
       user: { select: { id: true, name: true, phoneNumber: true } },
       equipment: { select: { id: true, name: true, category: true } },
     },
     orderBy: { createdAt: "desc" },
   });
+
+  if (!partner) {
+    return [];
+  }
+
+  return rows.filter((b) => {
+    if (b.status !== "PENDING") {
+      return true;
+    }
+    const site = siteLatLngFromBooking(b);
+    if (!site) {
+      return false;
+    }
+    return isJobSiteWithinPartnerServiceArea(partner, site).ok;
+  });
+}
+
+function siteLatLngFromBooking(b: {
+  siteCoordinates: unknown;
+  location: { coordinates: { lat: number; lng: number } };
+}): { lat: number; lng: number } | null {
+  if (b.siteCoordinates != null && typeof b.siteCoordinates === "object" && !Array.isArray(b.siteCoordinates)) {
+    const o = b.siteCoordinates as Record<string, unknown>;
+    if (typeof o.lat === "number" && typeof o.lng === "number") {
+      return { lat: o.lat, lng: o.lng };
+    }
+  }
+  const c = b.location?.coordinates;
+  if (c && typeof c.lat === "number" && typeof c.lng === "number") {
+    return { lat: c.lat, lng: c.lng };
+  }
+  return null;
 }
 
 export async function updateBookingStatus(id: string, status: BookingStatus) {

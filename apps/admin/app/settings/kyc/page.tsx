@@ -29,6 +29,7 @@ export default async function PartnerTrustCenterKycPage() {
     select: {
       kycStatus: true,
       kycRejectionReason: true,
+      updatedAt: true,
       panNumber: true,
       panDocUrl: true,
       aadhaarNumber: true,
@@ -55,6 +56,7 @@ export default async function PartnerTrustCenterKycPage() {
   const snapshot: TrustCenterKycSnapshot = {
     kycStatus: partner.kycStatus,
     kycRejectionReason: partner.kycRejectionReason,
+    updatedAtIso: partner.updatedAt.toISOString(),
     panNumber: partner.panNumber,
     panDocUrl: partner.panDocUrl,
     aadhaarNumber: partner.aadhaarNumber,
@@ -75,7 +77,10 @@ export default async function PartnerTrustCenterKycPage() {
         </p>
       </div>
 
-      <KycTrustCenterForm snapshot={snapshot} />
+      <KycTrustCenterForm
+        key={`kyc-trust-${snapshot.kycStatus}-${snapshot.updatedAtIso}`}
+        snapshot={snapshot}
+      />
     </div>
   );
 }

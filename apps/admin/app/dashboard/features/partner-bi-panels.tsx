@@ -48,14 +48,14 @@ export function IdleMachineBanner({
 
 export function TopCustomersCard({ bi }: { readonly bi: PartnerBusinessDashboard }) {
   return (
-    <Card className="select-none border-zinc-800 bg-zinc-800 shadow-md lg:bg-zinc-900/80">
-      <CardHeader className="border-b border-zinc-800 pb-4">
-        <CardTitle className="text-lg text-zinc-50">Top customers (this month)</CardTitle>
-        <CardDescription className="text-sm text-zinc-300">
+    <Card className="h-full w-full min-w-0 max-w-full select-none border-zinc-800 bg-zinc-800 shadow-md lg:bg-zinc-900/80">
+      <CardHeader className="min-w-0 border-b border-zinc-800 pb-4">
+        <CardTitle className="text-lg break-words text-zinc-50">Top customers (this month)</CardTitle>
+        <CardDescription className="text-sm break-words text-zinc-300">
           By collected revenue (paid invoices)
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="min-w-0 overflow-hidden pt-4">
         {bi.topCustomers.length === 0 ? (
           <p className="text-sm text-zinc-400">No payments recorded this month yet.</p>
         ) : (
@@ -63,13 +63,13 @@ export function TopCustomersCard({ bi }: { readonly bi: PartnerBusinessDashboard
             {bi.topCustomers.map((c, i) => (
               <li
                 key={`${c.label}-${i}`}
-                className="flex items-center justify-between gap-3 border-b border-zinc-800/80 pb-3 last:border-0 last:pb-0"
+                className="flex min-w-0 flex-col gap-1 border-b border-zinc-800/80 pb-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3 last:border-0 last:pb-0"
               >
-                <span className="text-sm text-zinc-200">
+                <span className="min-w-0 text-sm break-words text-zinc-200">
                   <span className="mr-2 font-mono text-zinc-500">{i + 1}.</span>
                   {c.label}
                 </span>
-                <span className="shrink-0 font-mono text-sm font-semibold text-amber-400">
+                <span className="shrink-0 self-start font-mono text-sm font-semibold text-amber-400 sm:self-auto sm:text-right">
                   {formatPartnerInrPaise(c.revenuePaise)}
                 </span>
               </li>
@@ -84,7 +84,7 @@ export function TopCustomersCard({ bi }: { readonly bi: PartnerBusinessDashboard
 export function UtilizationHeatmap({ bi }: { readonly bi: PartnerBusinessDashboard }) {
   if (bi.heatmap.length === 0) {
     return (
-      <Card className="select-none border-zinc-800 bg-zinc-800 shadow-md lg:bg-zinc-900/80">
+      <Card className="h-full w-full min-w-0 max-w-full select-none border-zinc-800 bg-zinc-800 shadow-md lg:bg-zinc-900/80">
         <CardHeader>
           <CardTitle className="text-lg text-zinc-50">Utilisation heatmap</CardTitle>
           <CardDescription className="text-sm text-zinc-300">
@@ -102,14 +102,14 @@ export function UtilizationHeatmap({ bi }: { readonly bi: PartnerBusinessDashboa
   const dayNums = Array.from({ length: dim }, (_, i) => i + 1);
 
   return (
-    <Card className="select-none border-zinc-800 bg-zinc-800 shadow-md lg:bg-zinc-900/80">
-      <CardHeader className="border-b border-zinc-800 pb-4">
-        <CardTitle className="text-lg text-zinc-50">Utilisation heatmap</CardTitle>
-        <CardDescription className="text-sm text-zinc-300">
+    <Card className="h-full w-full min-w-0 max-w-full select-none border-zinc-800 bg-zinc-800 shadow-md lg:bg-zinc-900/80">
+      <CardHeader className="min-w-0 border-b border-zinc-800 pb-4">
+        <CardTitle className="text-lg break-words text-zinc-50">Utilisation heatmap</CardTitle>
+        <CardDescription className="text-sm break-words text-zinc-300">
           Each cell is one calendar day (IST). Darker = at least one scheduled trip that day.
         </CardDescription>
       </CardHeader>
-      <CardContent className="overflow-x-auto pt-4">
+      <CardContent className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain pt-4 touch-pan-x">
         <div className="min-w-[720px]">
           <div
             className="mb-2 grid gap-px"
@@ -123,7 +123,7 @@ export function UtilizationHeatmap({ bi }: { readonly bi: PartnerBusinessDashboa
             {dayNums.map((d) => (
               <div
                 key={d}
-                className="text-center text-[10px] font-mono text-zinc-500"
+                className="min-w-0 text-center text-[9px] font-mono leading-none text-zinc-500 sm:text-[10px]"
               >
                 {d}
               </div>
@@ -144,7 +144,7 @@ export function UtilizationHeatmap({ bi }: { readonly bi: PartnerBusinessDashboa
                 <div
                   key={i}
                   className={cn(
-                    "aspect-square max-h-7 min-h-4 rounded-sm",
+                    "aspect-square max-h-7 min-h-4 w-full min-w-0 rounded-sm",
                     on ? "bg-amber-500/90" : "bg-zinc-800/90"
                   )}
                   title={`Day ${i + 1}: ${on ? "booked" : "idle"}`}
@@ -152,7 +152,7 @@ export function UtilizationHeatmap({ bi }: { readonly bi: PartnerBusinessDashboa
               ))}
             </div>
           ))}
-          <p className="mt-3 text-xs text-zinc-500">
+          <p className="mt-3 break-words text-xs text-zinc-500">
             Fleet average utilisation this month:{" "}
             <span className="font-mono text-zinc-300">{bi.fleetUtilizationPct}%</span> of days
             booked (average across machines).

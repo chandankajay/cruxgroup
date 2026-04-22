@@ -5,12 +5,27 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@repo/ui/lib/utils";
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
-interface NavItem {
+export interface NavItem {
   href: string;
   label: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
+}
+
+export function isAdminNavItemActive(pathname: string, item: NavItem): boolean {
+  if (item.href === "/dashboard") return pathname === "/dashboard" || pathname === "/";
+  if (item.href === "/bookings") return pathname === "/bookings";
+  if (item.href === "/bookings/new") return pathname === "/bookings/new";
+  if (item.href === "/jobs") return pathname === "/jobs";
+  if (item.href === "/customers") return pathname === "/customers" || pathname.startsWith("/customers/");
+  if (item.href === "/payroll") return pathname === "/payroll";
+  return pathname.startsWith(item.href);
+}
+
+export function isPartnerNavItemActive(pathname: string, item: NavItem): boolean {
+  if (item.href === "/dashboard") return pathname === "/dashboard" || pathname === "/";
+  return pathname.startsWith(item.href);
 }
 
 // ── Icon helpers (inline SVG, no extra dep) ──────────────────────────────────
@@ -34,7 +49,7 @@ function Icon({ d, ...rest }: { d: string } & React.SVGProps<SVGSVGElement>) {
   );
 }
 
-const ADMIN_NAV: NavItem[] = [
+export const ADMIN_NAV: NavItem[] = [
   {
     href: "/dashboard",
     label: "Dashboard",
@@ -107,7 +122,7 @@ const ADMIN_NAV: NavItem[] = [
   },
 ];
 
-const PARTNER_NAV: NavItem[] = [
+export const PARTNER_NAV: NavItem[] = [
   {
     href: "/dashboard",
     label: "Home",
@@ -239,19 +254,9 @@ export function AdminSidebar({
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
         {navItems.map((item) => {
           const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard" || pathname === "/"
-              : item.href === "/bookings"
-                ? pathname === "/bookings"
-                : item.href === "/bookings/new"
-                  ? pathname === "/bookings/new"
-                  : item.href === "/jobs"
-                    ? pathname === "/jobs"
-                    : item.href === "/customers"
-                      ? pathname === "/customers" || pathname.startsWith("/customers/")
-                      : item.href === "/payroll"
-                        ? pathname === "/payroll"
-                        : pathname.startsWith(item.href);
+            role === "PARTNER"
+              ? isPartnerNavItemActive(pathname, item)
+              : isAdminNavItemActive(pathname, item);
 
           return (
             <Link

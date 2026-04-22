@@ -71,7 +71,7 @@ export function PartnerCommandCenter({
   return (
     <motion.div
       className={cn(
-        "dark min-h-full w-full rounded-none border-0 bg-zinc-950 py-4 text-zinc-100 lg:rounded-2xl lg:border lg:border-zinc-800 lg:p-6",
+        "dark min-h-full w-full min-w-0 max-w-full rounded-none border-0 bg-zinc-950 py-4 text-zinc-100 lg:rounded-2xl lg:border lg:border-zinc-800 lg:p-6",
         "selection:bg-amber-500/30 selection:text-amber-50"
       )}
       variants={containerVariants}
@@ -161,11 +161,14 @@ export function PartnerCommandCenter({
         </motion.div>
       </motion.div>
 
-      <motion.div className="mb-8 grid gap-6 lg:grid-cols-12" variants={containerVariants}>
-        <motion.div className="lg:col-span-8" variants={cardVariants}>
+      <motion.div
+        className="mb-8 grid min-w-0 max-w-full gap-6 lg:grid-cols-12"
+        variants={containerVariants}
+      >
+        <motion.div className="min-w-0 lg:col-span-8" variants={cardVariants}>
           <UtilizationHeatmap bi={bi} />
         </motion.div>
-        <motion.div className="lg:col-span-4" variants={cardVariants}>
+        <motion.div className="min-w-0 lg:col-span-4" variants={cardVariants}>
           <TopCustomersCard bi={bi} />
         </motion.div>
       </motion.div>

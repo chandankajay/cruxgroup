@@ -77,8 +77,10 @@ export function HomeContent({ equipment }: HomeContentProps) {
           setSelectedId(null);
           setShowSuccess(true);
         } else {
-          toast.error("Booking Failed", {
-            description: result.error ?? "Something went wrong. Please try again.",
+          const err = result.error ?? "Something went wrong. Please try again.";
+          const isOutOfArea = /service area|outside the partner/i.test(err);
+          toast.error(isOutOfArea ? "Out of service area" : "Booking failed", {
+            description: err,
           });
         }
       } catch {

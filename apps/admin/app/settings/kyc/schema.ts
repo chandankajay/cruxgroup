@@ -38,7 +38,28 @@ const kycDocumentFileSchema = z
     message: "Only JPEG, PNG, WebP, or PDF files are allowed.",
   });
 
-export const kycTrustFormSchema = z.object({
+function fileFieldForContext(existingUrl: string | null, allowOmitForReuse: boolean) {
+  if (!allowOmitForReuse || !existingUrl) {
+    return kycDocumentFileSchema;
+  }
+  return z
+    .union([kycDocumentFileSchema, z.undefined()])
+    .superRefine((f, ctx) => {
+      if (f === undefined) return;
+      if (f instanceof File) {
+        const r = kycDocumentFileSchema.safeParse(f);
+        if (!r.success) {
+          r.error.issues.forEach((issue) => ctx.addIssue(issue));
+        }
+        return;
+      }
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Please choose a file." });
+    });
+}
+
+const optionalFileValueForDisplay = z.custom<File | undefined>().optional();
+
+const sharedKycTextFields = {
   panNumber: z
     .string()
     .trim()
@@ -74,9 +95,40 @@ export const kycTrustFormSchema = z.object({
     .refine((s) => IFSC_REGEX.test(s), {
       message: "Invalid IFSC format",
     }),
-  panDoc: kycDocumentFileSchema,
-  aadhaarDoc: kycDocumentFileSchema,
-  chequeDoc: kycDocumentFileSchema,
-});
+};
 
-export type KycTrustFormValues = z.infer<typeof kycTrustFormSchema>;
+export function buildKycTrustFormSchema(opts: {
+  /** Submitted/verified: no file required (read-only form). */
+  readonly isReadOnly: boolean;
+  readonly isRejectedResubmit: boolean;
+  readonly existingPanDocUrl: string | null;
+  readonly existingAadhaarDocUrl: string | null;
+  readonly existingChequeUrl: string | null;
+}) {
+  if (opts.isReadOnly) {
+    return z.object({
+      ...sharedKycTextFields,
+      panDoc: optionalFileValueForDisplay,
+      aadhaarDoc: optionalFileValueForDisplay,
+      chequeDoc: optionalFileValueForDisplay,
+    });
+  }
+  const { isRejectedResubmit } = opts;
+  return z.object({
+    ...sharedKycTextFields,
+    panDoc: fileFieldForContext(
+      opts.existingPanDocUrl,
+      isRejectedResubmit && Boolean(opts.existingPanDocUrl)
+    ),
+    aadhaarDoc: fileFieldForContext(
+      opts.existingAadhaarDocUrl,
+      isRejectedResubmit && Boolean(opts.existingAadhaarDocUrl)
+    ),
+    chequeDoc: fileFieldForContext(
+      opts.existingChequeUrl,
+      isRejectedResubmit && Boolean(opts.existingChequeUrl)
+    ),
+  });
+}
+
+export type KycTrustFormValues = z.infer<ReturnType<typeof buildKycTrustFormSchema>>;

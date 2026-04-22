@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { Control, ControllerRenderProps, FieldPath, FieldValues } from "react-hook-form";
-import { FileText, ImageIcon, Upload } from "lucide-react";
+import { ExternalLink, FileText, ImageIcon, Upload } from "lucide-react";
 import {
   FormControl,
   FormDescription,
@@ -13,24 +13,37 @@ import {
 } from "@repo/ui/form";
 import { Button } from "@repo/ui/button";
 import { cn } from "@repo/ui/lib/utils";
+import { viewerUrlForStoredKycBlob } from "../../lib/kyc-blob-view-url";
 import { MAX_KYC_FILE_BYTES, KYC_ACCEPT_MIME } from "./schema";
 
 /** Widen RHF field props from generic `FormField` render to a file `File` value. */
 type FileFieldRenderProps = ControllerRenderProps<FieldValues, FieldPath<FieldValues>>;
 
+function fileLabelFromBlobUrl(url: string): string {
+  try {
+    const last = new URL(url).pathname.split("/").filter(Boolean).pop() ?? "document";
+    return decodeURIComponent(last) || "Uploaded document";
+  } catch {
+    return "Uploaded document";
+  }
+}
+
 interface KycFileDropzoneInnerProps {
   readonly field: FileFieldRenderProps;
   readonly disabled?: boolean;
   readonly inputId: string;
+  /** When set and no new `File` is chosen, show a link to the stored Vercel Blob. */
+  readonly existingFileUrl?: string | null;
 }
 
-function KycFileDropzoneInner({ field, disabled, inputId }: KycFileDropzoneInnerProps) {
+function KycFileDropzoneInner({ field, disabled, inputId, existingFileUrl }: KycFileDropzoneInnerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const raw: unknown = field.value;
   const file = raw instanceof File ? raw : undefined;
+  const hasExistingOnServer = Boolean(existingFileUrl) && !file;
 
   useEffect(() => {
     if (!file || !file.type.startsWith("image/")) {
@@ -60,12 +73,28 @@ function KycFileDropzoneInner({ field, disabled, inputId }: KycFileDropzoneInner
     [disabled, pickFiles]
   );
 
+  const readOnlyWithExisting = Boolean(disabled && hasExistingOnServer);
+  const showDefaultDrop = !file && !hasExistingOnServer;
+  const showReplaceTarget = hasExistingOnServer && !file && !disabled;
+  const openDocumentHref = existingFileUrl
+    ? viewerUrlForStoredKycBlob(existingFileUrl)
+    : null;
+
   return (
     <div
       className={cn(
-        "flex min-h-[140px] flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 transition-colors",
-        dragActive ? "border-brand-orange bg-orange-50/50" : "border-muted-foreground/40",
-        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-brand-orange/60"
+        "flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 transition-colors",
+        readOnlyWithExisting ? "min-h-0 py-4" : "min-h-[140px]",
+        dragActive && !disabled
+          ? "border-brand-orange bg-orange-50/50"
+          : "border-muted-foreground/40",
+        hasExistingOnServer ? "bg-muted/20" : undefined,
+        disabled
+          ? cn(
+              "cursor-not-allowed",
+              readOnlyWithExisting ? "opacity-100" : "opacity-60"
+            )
+          : "cursor-pointer hover:border-brand-orange/60"
       )}
       onDragEnter={(e) => {
         e.preventDefault();
@@ -77,14 +106,16 @@ function KycFileDropzoneInner({ field, disabled, inputId }: KycFileDropzoneInner
       }}
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDrop}
-      onClick={() => !disabled && inputRef.current?.click()}
+      onClick={() => {
+        if (!disabled) inputRef.current?.click();
+      }}
       onKeyDown={(e) => {
         if (!disabled && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           inputRef.current?.click();
         }
       }}
-      role="button"
+      role={readOnlyWithExisting ? "group" : "button"}
       tabIndex={disabled ? -1 : 0}
     >
       <input
@@ -99,12 +130,42 @@ function KycFileDropzoneInner({ field, disabled, inputId }: KycFileDropzoneInner
           e.target.value = "";
         }}
       />
-      <Upload className="mb-2 h-8 w-8 text-muted-foreground" aria-hidden />
-      <p className="text-center text-sm text-muted-foreground">
-        Drag and drop or click to upload
-      </p>
+      {hasExistingOnServer && existingFileUrl ? (
+        <div
+          className="mb-3 w-full max-w-full rounded-md border border-border bg-white/80 px-3 py-2.5 text-left text-sm text-charcoal dark:bg-background/50"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <FileText className="h-4 w-4 shrink-0 text-charcoal" aria-hidden />
+              <div className="min-w-0">
+                <p className="font-medium leading-tight">Document on file</p>
+                <p
+                  className="mt-0.5 truncate text-xs text-muted-foreground"
+                  title={fileLabelFromBlobUrl(existingFileUrl)}
+                >
+                  {fileLabelFromBlobUrl(existingFileUrl)}
+                </p>
+              </div>
+            </div>
+            {openDocumentHref ? (
+            <a
+              href={openDocumentHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-brand-orange underline-offset-2 hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Open
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {file ? (
-        <div className="mt-4 flex w-full max-w-full flex-col items-center gap-2">
+        <div className="mt-0 flex w-full max-w-full flex-col items-center gap-2">
           {previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -137,6 +198,16 @@ function KycFileDropzoneInner({ field, disabled, inputId }: KycFileDropzoneInner
           </Button>
         </div>
       ) : null}
+      {showDefaultDrop || showReplaceTarget ? (
+        <div className={cn("flex flex-col items-center", hasExistingOnServer && !file ? "mt-1" : "mt-0")}>
+          <Upload className="mb-2 h-8 w-8 text-muted-foreground" aria-hidden />
+          <p className="text-center text-sm text-muted-foreground">
+            {showDefaultDrop
+              ? "Drag and drop or click to upload"
+              : "Drag, drop, or click to replace this file"}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -146,6 +217,8 @@ interface KycFileDropzoneProps<T extends FieldValues> {
   readonly name: FieldPath<T>;
   readonly label: string;
   readonly disabled?: boolean;
+  /** Stored Blob URL to show when no new file is selected (e.g. after a previous submit). */
+  readonly existingFileUrl?: string | null;
 }
 
 export function KycFileDropzone<T extends FieldValues>({
@@ -153,6 +226,7 @@ export function KycFileDropzone<T extends FieldValues>({
   name,
   label,
   disabled,
+  existingFileUrl,
 }: KycFileDropzoneProps<T>) {
   const reactId = useId();
 
@@ -168,6 +242,7 @@ export function KycFileDropzone<T extends FieldValues>({
               field={field as FileFieldRenderProps}
               disabled={disabled}
               inputId={`${reactId}-${String(name)}`}
+              existingFileUrl={existingFileUrl}
             />
           </FormControl>
           <FormDescription>

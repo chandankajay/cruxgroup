@@ -42,9 +42,10 @@ export async function createBookingAction(
 
     return { success: true, bookingId: booking.id };
   } catch (error) {
+    const fromTrpc = error as { message?: string; data?: { zodError?: unknown } };
     const message =
-      error instanceof Error
-        ? error.message
+      fromTrpc?.message && typeof fromTrpc.message === "string" && fromTrpc.message.length > 0
+        ? fromTrpc.message
         : "Could not save your booking. Please try again.";
     return { success: false, error: message };
   }

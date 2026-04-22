@@ -2,6 +2,7 @@
 
 import { createCaller } from "@repo/api";
 import type { BookingStatus } from "@repo/api";
+import { prisma } from "@repo/db";
 
 const caller = createCaller({});
 
@@ -9,9 +10,21 @@ export type PartnerBookingRow = Awaited<
   ReturnType<typeof fetchPartnerBookings>
 >[number];
 
-export async function fetchPartnerBookings(partnerId: string) {
+/**
+ * Resolves the signed-in user to their {@link Partner} row, then returns inbound
+ * rental requests (PENDING within service radius, plus any non-pending history)
+ * for that partner’s equipment.
+ */
+export async function fetchPartnerBookings(userId: string) {
   try {
-    return await caller.booking.getByPartner({ partnerId });
+    const partner = await prisma.partner.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!partner) {
+      return [];
+    }
+    return await caller.booking.getByPartner({ partnerId: partner.id });
   } catch {
     return [];
   }

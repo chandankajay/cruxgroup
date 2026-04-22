@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { calculateDistance, prisma } from "@repo/db";
+import {
+  calculateDistance,
+  parseLatLngFromPartnerBaseLocation,
+  prisma,
+} from "@repo/db";
 
 type GeoPoint = {
   type: "Point";
@@ -7,14 +11,15 @@ type GeoPoint = {
 };
 
 type PartnerRecord = {
-  _id: { $oid?: string } | string;
+  /** Partner row id (matches `Equipment.partnerId`) */
+  _id: string;
   name?: string;
   phone?: string;
   email?: string;
   role: "PARTNER";
-  location?: GeoPoint;
-  maxServiceRadius?: number | null;
-  baseAddress?: string | null;
+  location: GeoPoint;
+  maxServiceRadius: number;
+  baseAddress: string | null;
 };
 
 type PartnerSearchResult = {
@@ -41,93 +46,62 @@ const TIERS: TierConfig[] = [
   { label: "TIER_3", radiusKm: 50 },
 ];
 
-function asObjectIdString(value: { $oid?: string } | string): string {
-  if (typeof value === "string") return value;
-  return value.$oid ?? "";
-}
-
 function parseNumber(input: string | null): number | null {
   if (!input) return null;
   const parsed = Number(input);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-async function queryPartnersByNear(
-  lat: number,
-  lng: number,
-  radiusKm: number
-): Promise<PartnerRecord[]> {
-  const maxDistanceMeters = radiusKm * 1000;
-  const result = (await prisma.$runCommandRaw({
-    find: "users",
-    filter: {
-      role: "PARTNER",
-      location: {
-        $near: {
-          $geometry: { type: "Point", coordinates: [lng, lat] },
-          $maxDistance: maxDistanceMeters,
-        },
-      },
-    },
-    projection: {
-      _id: 1,
-      name: 1,
-      phone: 1,
-      email: 1,
-      baseAddress: 1,
-      maxServiceRadius: 1,
-      location: 1,
-    },
-    limit: 100,
-  })) as {
-    cursor?: { firstBatch?: PartnerRecord[] };
-  };
-
-  return result.cursor?.firstBatch ?? [];
+function partnerBaseLatLng(p: {
+  baseLocation: string | null;
+  baseCoordinates: unknown;
+}): { lat: number; lng: number } | null {
+  if (p.baseCoordinates != null && typeof p.baseCoordinates === "object" && !Array.isArray(p.baseCoordinates)) {
+    const o = p.baseCoordinates as { lat?: unknown; lng?: unknown };
+    if (typeof o.lat === "number" && typeof o.lng === "number" && Number.isFinite(o.lat) && Number.isFinite(o.lng)) {
+      if (Math.abs(o.lat) <= 90 && Math.abs(o.lng) <= 180) {
+        return { lat: o.lat, lng: o.lng };
+      }
+    }
+  }
+  return parseLatLngFromPartnerBaseLocation(p.baseLocation);
 }
 
-async function queryPartnersByRadiusFallback(
+/**
+ * Partners with parseable `baseLocation` within `radiusKm` of (lat, lng).
+ * Uses the `partners` collection (User no longer stores GeoJSON `location`).
+ */
+async function queryPartnersInRadius(
   lat: number,
   lng: number,
   radiusKm: number
 ): Promise<PartnerRecord[]> {
-  const partners = await prisma.user.findMany({
-    where: { role: "PARTNER" },
-    select: {
-      id: true,
-      name: true,
-      phoneNumber: true,
-      email: true,
-      location: true,
-      maxServiceRadius: true,
-      baseAddress: true,
+  const partners = await prisma.partner.findMany({
+    where: { isActive: true },
+    include: {
+      user: { select: { name: true, phoneNumber: true, email: true } },
     },
   });
 
-  return partners
-    .filter((p) => p.location?.coordinates?.length === 2)
-    .map(
-      (p) =>
-        ({
-          _id: p.id,
-          role: "PARTNER",
-          name: p.name,
-          phone: p.phoneNumber ?? undefined,
-          email: p.email ?? undefined,
-          location: p.location as GeoPoint,
-          maxServiceRadius: p.maxServiceRadius ?? null,
-          baseAddress: p.baseAddress ?? null,
-        }) as PartnerRecord
-    )
-    .filter((p) => {
-      if (!p.location) return false;
-      const [partnerLng, partnerLat] = p.location.coordinates;
-      const distanceKm = calculateDistance(
-        { lat, lng },
-        { lat: partnerLat, lng: partnerLng }
-      );
-      return distanceKm <= radiusKm;
+  const out: PartnerRecord[] = [];
+  for (const p of partners) {
+    const xy = partnerBaseLatLng(p);
+    if (!xy) continue;
+    const distanceKm = calculateDistance({ lat, lng }, xy);
+    if (distanceKm > radiusKm) continue;
+    const limitKm = p.maxServiceRadiusKm ?? p.maxRadius;
+    out.push({
+      _id: p.id,
+      role: "PARTNER",
+      name: p.user.name,
+      phone: p.user.phoneNumber ?? undefined,
+      email: p.user.email ?? undefined,
+      location: { type: "Point", coordinates: [xy.lng, xy.lat] },
+      maxServiceRadius: limitKm,
+      baseAddress: p.address,
     });
+  }
+  return out;
 }
 
 async function queryPartnersTier(
@@ -135,12 +109,7 @@ async function queryPartnersTier(
   lng: number,
   radiusKm: number
 ): Promise<PartnerRecord[]> {
-  try {
-    return await queryPartnersByNear(lat, lng, radiusKm);
-  } catch {
-    // Fallback for environments where $runCommandRaw is unavailable.
-    return queryPartnersByRadiusFallback(lat, lng, radiusKm);
-  }
+  return queryPartnersInRadius(lat, lng, radiusKm);
 }
 
 async function getEquipmentMinDurationMap(
@@ -188,13 +157,13 @@ export async function GET(request: Request) {
   const uniqueById = new Map<string, { partner: PartnerRecord; tier: TierConfig["label"] }>();
 
   for (const partner of tier1) {
-    uniqueById.set(asObjectIdString(partner._id), { partner, tier: TIERS[0].label });
+    uniqueById.set(partner._id, { partner, tier: TIERS[0].label });
   }
 
   if (tier1.length < 3) {
     const tier2 = await queryPartnersTier(lat, lng, TIERS[1].radiusKm);
     for (const partner of tier2) {
-      const id = asObjectIdString(partner._id);
+      const id = partner._id;
       if (!uniqueById.has(id)) {
         uniqueById.set(id, { partner, tier: TIERS[1].label });
       }
@@ -203,7 +172,7 @@ export async function GET(request: Request) {
     if (tier2.length === 0) {
       const tier3 = await queryPartnersTier(lat, lng, TIERS[2].radiusKm);
       for (const partner of tier3) {
-        const id = asObjectIdString(partner._id);
+        const id = partner._id;
         if (!uniqueById.has(id)) {
           uniqueById.set(id, { partner, tier: TIERS[2].label });
         }
@@ -233,10 +202,7 @@ export async function GET(request: Request) {
     let available = true;
     let reason: string | null = null;
 
-    if (
-      typeof partner.maxServiceRadius === "number" &&
-      distanceKm > partner.maxServiceRadius
-    ) {
+    if (distanceKm > partner.maxServiceRadius) {
       available = false;
       reason = "Outside partner max service radius";
     } else if (distanceKm > 20) {

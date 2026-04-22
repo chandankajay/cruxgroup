@@ -5,7 +5,8 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
-    "./aisensy": "./src/aisensy.ts"
+    "./aisensy": "./src/aisensy.ts",
+    "./geo": "./src/geo.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
