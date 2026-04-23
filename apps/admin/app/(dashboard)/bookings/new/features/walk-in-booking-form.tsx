@@ -14,7 +14,9 @@ import {
   checkEquipmentAvailabilityAction,
   createQuickCustomerAction,
   createWalkInBookingAction,
+  updateWalkInBookingScheduleAction,
   type WalkInEquipmentOption,
+  type WalkInReschedulePayloadOk,
 } from "../actions";
 import { computeWalkInQuote, distanceJobToPartnerKm, partnerBaseCoords } from "../lib/walk-in-pricing";
 import type { WalkInPrefill } from "../lib/parse-walk-in-prefill";
@@ -34,12 +36,17 @@ interface WalkInBookingFormProps {
   }[];
   readonly equipment: WalkInEquipmentOption[];
   readonly prefill?: WalkInPrefill | null;
+  /** When set, form is in reschedule mode: only schedule (start/end IST) and expected shift are submitted. */
+  readonly reschedule?: WalkInReschedulePayloadOk | null;
+  readonly rescheduleLoadError?: string | null;
 }
 
 export function WalkInBookingForm({
   customers: initialCustomers,
   equipment,
   prefill,
+  reschedule,
+  rescheduleLoadError,
 }: WalkInBookingFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -52,15 +59,9 @@ export function WalkInBookingForm({
   const [quickCompany, setQuickCompany] = useState("");
   const [quickBusy, setQuickBusy] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<WalkInBookingValues>({
-    resolver: zodResolver(walkInBookingSchema),
-    defaultValues: {
+  const defaultValues = useMemo((): WalkInBookingValues => {
+    if (reschedule) return reschedule.formDefaults;
+    return {
       mode:
         prefill?.customerId && initialCustomers.some((c) => c.id === prefill.customerId)
           ? "existing"
@@ -88,7 +89,18 @@ export function WalkInBookingForm({
       startLocal: "",
       endLocal: "",
       expectedShift: prefill?.expectedShift ?? "DAY",
-    },
+    };
+  }, [reschedule, prefill, initialCustomers, equipment]);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<WalkInBookingValues>({
+    resolver: zodResolver(walkInBookingSchema),
+    defaultValues,
   });
 
   const mode = watch("mode");
@@ -132,15 +144,36 @@ export function WalkInBookingForm({
       equipmentId,
       startLocal,
       endLocal,
+      ...(reschedule
+        ? { ignoreBookingId: reschedule.bookingId, ignoreTripId: reschedule.tripId }
+        : {}),
     });
     setAvailability(res.available ? "ok" : "bad");
     if (!res.available && res.error) {
       toast.error(res.error);
     }
-  }, [equipmentId, startLocal, endLocal]);
+  }, [equipmentId, startLocal, endLocal, reschedule]);
 
   const onSubmit = (values: WalkInBookingValues) => {
     startTransition(async () => {
+      if (reschedule) {
+        const res = await updateWalkInBookingScheduleAction({
+          bookingId: reschedule.bookingId,
+          tripId: reschedule.tripId,
+          startLocal: values.startLocal,
+          endLocal: values.endLocal,
+          expectedShift: values.expectedShift,
+        });
+        if (res.ok) {
+          toast.success("Schedule updated. Trip start/end and booking dates are aligned.");
+          router.push("/bookings");
+          router.refresh();
+        } else {
+          toast.error(res.error);
+        }
+        return;
+      }
+
       const res = await createWalkInBookingAction(values);
       if (res.ok) {
         if (res.notifyFailed) {
@@ -202,9 +235,13 @@ export function WalkInBookingForm({
     <div className="mx-auto w-full max-w-3xl pb-16">
       <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-charcoal">Walk-in booking desk</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-charcoal">
+            {reschedule ? "Reschedule walk-in job" : "Walk-in booking desk"}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Dates/times are entered in IST; stored in UTC. Instant quote uses catalog min/max guardrails when linked.
+            {reschedule
+              ? "Update job start (maps to trip scheduledDate) and end (expected end time) in IST. Other fields are locked; use this if the job was preponed so operators can complete it."
+              : "Dates/times are entered in IST; stored in UTC. Instant quote uses catalog min/max guardrails when linked."}
           </p>
         </div>
         <Link
@@ -215,8 +252,21 @@ export function WalkInBookingForm({
         </Link>
       </div>
 
+      {rescheduleLoadError ? (
+        <div
+          className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          role="alert"
+        >
+          {rescheduleLoadError}
+        </div>
+      ) : null}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-        <section className="space-y-4 rounded-xl border border-border bg-white p-6 shadow-sm">
+        <fieldset
+          disabled={!!reschedule}
+          className="m-0 space-y-10 border-0 p-0 disabled:opacity-60"
+        >
+        <section className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-charcoal">Customer</h2>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 text-sm">
@@ -343,7 +393,7 @@ export function WalkInBookingForm({
           )}
         </section>
 
-        <section className="space-y-4 rounded-xl border border-border bg-white p-6 shadow-sm">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-charcoal">Machine & site</h2>
           <div className="space-y-1.5">
             <Label htmlFor="equipmentId">Equipment</Label>
@@ -388,8 +438,9 @@ export function WalkInBookingForm({
             </div>
           </div>
         </section>
+        </fieldset>
 
-        <section className="space-y-4 rounded-xl border border-border bg-white p-6 shadow-sm">
+        <section className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-charcoal">Schedule (IST)</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -427,7 +478,8 @@ export function WalkInBookingForm({
           ) : null}
         </section>
 
-        <section className="space-y-4 rounded-xl border border-border bg-white p-6 shadow-sm">
+        {!reschedule ? (
+        <section className="space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-charcoal">Pricing</h2>
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 text-sm">
@@ -481,9 +533,20 @@ export function WalkInBookingForm({
             </div>
           ) : null}
         </section>
+        ) : null}
 
-        <Button type="submit" className="min-h-12 w-full sm:w-auto" disabled={pending || equipment.length === 0}>
-          {pending ? "Creating…" : "Create booking & trip"}
+        <Button
+          type="submit"
+          className="min-h-12 w-full sm:w-auto"
+          disabled={pending || equipment.length === 0 || !!rescheduleLoadError}
+        >
+          {pending
+            ? reschedule
+              ? "Saving…"
+              : "Creating…"
+            : reschedule
+              ? "Save schedule"
+              : "Create booking & trip"}
         </Button>
       </form>
     </div>

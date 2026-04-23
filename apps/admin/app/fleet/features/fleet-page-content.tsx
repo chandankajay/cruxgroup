@@ -119,7 +119,6 @@ export function FleetPageContent({ initialData, partnerKycStatus }: FleetPageCon
           items={items}
           partnerKycVerified={partnerKycVerified}
           onToggleActive={handleToggleActive}
-          onEdit={() => {}}
           onDelete={setDeleteId}
         />
       </div>

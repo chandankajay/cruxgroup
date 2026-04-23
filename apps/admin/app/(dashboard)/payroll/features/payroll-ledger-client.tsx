@@ -220,7 +220,7 @@ export function PayrollLedgerClient({
             type="button"
             disabled={pending || !operatorId}
             onClick={runPreview}
-            className="rounded-lg bg-brand-orange px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
             Compute preview
           </button>
@@ -321,7 +321,7 @@ export function PayrollLedgerClient({
               type="button"
               disabled={pending}
               onClick={finalize}
-              className="rounded-lg bg-charcoal px-4 py-2 text-sm font-medium text-white"
+              className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background"
             >
               Generate PDF, upload & WhatsApp
             </button>

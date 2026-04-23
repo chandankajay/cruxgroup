@@ -61,8 +61,16 @@ export default function LoginPage() {
   async function handleSendOtp(phoneNumber: string) {
     setIsLoading(true);
     setError(undefined);
-    await sendOtpAction(phoneNumber);
+    const sent = await sendOtpAction(phoneNumber);
     setIsLoading(false);
+    if (!sent.success) {
+      setError(
+        sent.error === "ACCOUNT_LOCKED"
+          ? "Too many failed attempts. Please wait 15 minutes before requesting a new code."
+          : t("LOGIN_ERROR_SEND"),
+      );
+      return;
+    }
     setPhone(phoneNumber);
     setStep("otp");
   }

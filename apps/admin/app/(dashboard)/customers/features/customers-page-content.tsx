@@ -25,7 +25,7 @@ interface CustomersPageContentProps {
 export function CustomersPageContent({ rows }: CustomersPageContentProps) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-border bg-white p-12 text-center text-muted-foreground">
+      <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center text-muted-foreground">
         No customers yet. Add one from the walk-in booking desk or seed data.
       </div>
     );

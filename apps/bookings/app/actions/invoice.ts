@@ -1,6 +1,6 @@
 "use server";
 
-import { generateInvoiceForCompletedTrip } from "../../lib/invoice/generate-invoice-for-trip";
+import { generateInvoiceForCompletedTrip } from "@repo/lib/invoice";
 
 /**
  * Idempotent: generates invoice + payment link + notifications if missing for a completed trip.

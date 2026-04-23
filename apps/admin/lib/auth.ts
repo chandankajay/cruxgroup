@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { DEV_MASTER_OTP } from "@repo/api";
+import { verifyOtp } from "@repo/api";
 import { prisma } from "@repo/db";
 import { authConfig } from "../auth.config";
 import { ADMIN_PHONE_E164, normalizeAdminPhone } from "./phone";
@@ -55,10 +55,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!rawPhone || !otp) return null;
 
-        const otpDigits = otp.replace(/\D/g, "");
-        if (otpDigits !== DEV_MASTER_OTP) return null;
-
         const phoneNumber = normalizeAdminPhone(rawPhone);
+        const otpResult = await verifyOtp(phoneNumber, otp);
+        if (otpResult.lockedOut || !otpResult.verified) return null;
+
         if (!ADMIN_PHONE_E164.test(phoneNumber)) return null;
 
         let user = await prisma.user.findUnique({

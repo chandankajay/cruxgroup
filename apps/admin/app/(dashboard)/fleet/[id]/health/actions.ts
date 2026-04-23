@@ -7,17 +7,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "../../../../../lib/auth";
 import {
+  getAuthorizedWhereClause,
+  getResourceAuthzContext,
+  type ResourceAuthzContext,
+} from "../../../../../lib/resource-authz";
+import {
   computeMachineHealthScore,
   nextServiceDueHours,
 } from "../../../../../lib/fleet-health/health-score";
-
-async function requireAdmin(): Promise<{ userId: string; name: string | null } | null> {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role;
-  if (role !== "ADMIN" || !session?.user?.id) return null;
-  const name = (session.user as { name?: string | null }).name ?? null;
-  return { userId: session.user.id, name };
-}
 
 const MAX_BREAKDOWN_BYTES = 5 * 1024 * 1024;
 const BREAKDOWN_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -31,12 +28,14 @@ async function sumHourMeter(machineId: string): Promise<number> {
 }
 
 async function maybeSendServiceApproachAlert(
+  ctx: ResourceAuthzContext,
   equipmentId: string,
   prevTotalHours: number,
   newTotalHours: number
 ): Promise<void> {
-  const eq = await prisma.equipment.findUnique({
-    where: { id: equipmentId },
+  const where = getAuthorizedWhereClause(ctx, { resource: "Equipment", targetId: equipmentId });
+  const eq = await prisma.equipment.findFirst({
+    where,
     include: {
       partner: {
         include: { user: { select: { phoneNumber: true } } },
@@ -68,8 +67,8 @@ async function maybeSendServiceApproachAlert(
     hoursUntilDueLabel: `${fmt(hoursUntil)} h`,
   });
 
-  await prisma.equipment.update({
-    where: { id: equipmentId },
+  await prisma.equipment.updateMany({
+    where,
     data: { lastMaintenanceAlertSentAt: new Date() },
   });
 }
@@ -183,17 +182,23 @@ const settingsSchema = z.object({
 export async function updateMachineServiceSettingsAction(
   raw: z.infer<typeof settingsSchema>
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const ctx = await getResourceAuthzContext();
+  if (!ctx) return { ok: false, error: "Forbidden" };
   const parsed = settingsSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
 
-  await prisma.equipment.update({
-    where: { id: parsed.data.equipmentId },
+  const where = getAuthorizedWhereClause(ctx, {
+    resource: "Equipment",
+    targetId: parsed.data.equipmentId,
+  });
+  const updated = await prisma.equipment.updateMany({
+    where,
     data: {
       serviceIntervalHours: parsed.data.serviceIntervalHours,
       serviceAlertBeforeHours: parsed.data.serviceAlertBeforeHours,
     },
   });
+  if (updated.count === 0) return { ok: false, error: "Not found" };
   revalidatePath(`/fleet/${parsed.data.equipmentId}/health`);
   return { ok: true };
 }
@@ -206,10 +211,25 @@ const hourMeterSchema = z.object({
 export async function addHourMeterEntryAction(
   raw: z.infer<typeof hourMeterSchema>
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const gate = await requireAdmin();
-  if (!gate) return { ok: false, error: "Forbidden" };
+  const ctx = await getResourceAuthzContext();
+  if (!ctx) return { ok: false, error: "Forbidden" };
   const parsed = hourMeterSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const equipmentWhere = getAuthorizedWhereClause(ctx, {
+    resource: "Equipment",
+    targetId: parsed.data.equipmentId,
+  });
+  const allowed = await prisma.equipment.findFirst({
+    where: equipmentWhere,
+    select: { id: true },
+  });
+  if (!allowed) return { ok: false, error: "Forbidden" };
+
+  const session = await auth();
+  const reporterName =
+    session?.user?.name?.trim() ||
+    (ctx.role === "ADMIN" ? "Admin" : "Partner");
 
   const prevTotal = await sumHourMeter(parsed.data.equipmentId);
 
@@ -217,12 +237,12 @@ export async function addHourMeterEntryAction(
     data: {
       machineId: parsed.data.equipmentId,
       recordedHours: parsed.data.recordedHours,
-      reportedBy: gate.name?.trim() || "Admin",
+      reportedBy: reporterName,
     },
   });
 
   const newTotal = prevTotal + parsed.data.recordedHours;
-  await maybeSendServiceApproachAlert(parsed.data.equipmentId, prevTotal, newTotal);
+  await maybeSendServiceApproachAlert(ctx, parsed.data.equipmentId, prevTotal, newTotal);
 
   revalidatePath(`/fleet/${parsed.data.equipmentId}/health`);
   return { ok: true };
@@ -250,6 +270,16 @@ export async function addBreakdownReportAction(
   if (!BREAKDOWN_MIME.includes(file.type as (typeof BREAKDOWN_MIME)[number])) {
     return { ok: false, error: "Photo must be JPEG, PNG, or WebP." };
   }
+
+  const equipmentWhere = getAuthorizedWhereClause(ctx, {
+    resource: "Equipment",
+    targetId: equipmentId,
+  });
+  const owned = await prisma.equipment.findFirst({
+    where: equipmentWhere,
+    select: { id: true },
+  });
+  if (!owned) return { ok: false, error: "Forbidden" };
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
   const pathname = `breakdowns/${equipmentId}/${Date.now()}-${safeName}`;
@@ -290,9 +320,20 @@ const serviceLogSchema = z.object({
 export async function addMachineServiceLogAction(
   raw: z.infer<typeof serviceLogSchema>
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const ctx = await getResourceAuthzContext();
+  if (!ctx) return { ok: false, error: "Forbidden" };
   const parsed = serviceLogSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const equipmentWhere = getAuthorizedWhereClause(ctx, {
+    resource: "Equipment",
+    targetId: parsed.data.equipmentId,
+  });
+  const equipmentRow = await prisma.equipment.findFirst({
+    where: equipmentWhere,
+    select: { id: true },
+  });
+  if (!equipmentRow) return { ok: false, error: "Forbidden" };
 
   const date = new Date(parsed.data.dateIso);
   if (Number.isNaN(date.getTime())) return { ok: false, error: "Invalid date" };
@@ -315,8 +356,8 @@ export async function addMachineServiceLogAction(
     });
 
     if (hourMeter != null) {
-      await tx.equipment.update({
-        where: { id: parsed.data.equipmentId },
+      await tx.equipment.updateMany({
+        where: equipmentWhere,
         data: { lastServiceHourReading: hourMeter },
       });
     }
@@ -334,9 +375,20 @@ const resolveBreakdownSchema = z.object({
 export async function resolveBreakdownAction(
   raw: z.infer<typeof resolveBreakdownSchema>
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const ctx = await getResourceAuthzContext();
+  if (!ctx) return { ok: false, error: "Forbidden" };
   const parsed = resolveBreakdownSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const equipmentWhere = getAuthorizedWhereClause(ctx, {
+    resource: "Equipment",
+    targetId: parsed.data.equipmentId,
+  });
+  const ownsMachine = await prisma.equipment.findFirst({
+    where: equipmentWhere,
+    select: { id: true },
+  });
+  if (!ownsMachine) return { ok: false, error: "Forbidden" };
 
   const r = await prisma.breakdownReport.updateMany({
     where: { id: parsed.data.breakdownId, machineId: parsed.data.equipmentId },

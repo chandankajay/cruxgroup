@@ -17,7 +17,6 @@ import { Textarea } from "@repo/ui/textarea";
 import { Label } from "@repo/ui/label";
 import { rejectPartnerKyc, verifyPartnerKyc } from "../actions";
 import type { KycQueuePartnerRow } from "../types";
-import { viewerUrlForStoredKycBlob } from "../../../lib/kyc-blob-view-url";
 
 interface KycApprovalQueueProps {
   readonly initialRows: KycQueuePartnerRow[];
@@ -37,13 +36,13 @@ function formatSubmitted(iso: string): string {
 function DocBlock({
   title,
   number,
-  docUrl,
+  docViewPath,
 }: {
   title: string;
   number: string | null;
-  docUrl: string | null;
+  docViewPath: string | null;
 }) {
-  const viewUrl = viewerUrlForStoredKycBlob(docUrl);
+  const viewUrl = docViewPath;
   return (
     <div className="rounded-lg border border-border bg-muted/30 p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
@@ -226,12 +225,12 @@ export function KycApprovalQueue({ initialRows }: KycApprovalQueueProps) {
                     <dt className="text-xs text-muted-foreground">IFSC</dt>
                     <dd className="font-mono">{review.bankIfscCode ?? "—"}</dd>
                   </div>
-                  {review.cancelledChequeUrl ? (
+                  {review.cancelledChequeViewPath ? (
                     <div>
                       <dt className="text-xs text-muted-foreground">Cancelled cheque</dt>
                       <dd>
                         <a
-                          href={viewerUrlForStoredKycBlob(review.cancelledChequeUrl) ?? "#"}
+                          href={review.cancelledChequeViewPath}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary underline"
@@ -246,8 +245,12 @@ export function KycApprovalQueue({ initialRows }: KycApprovalQueueProps) {
 
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-foreground">Uploaded documents</h3>
-                <DocBlock title="PAN" number={review.panNumber} docUrl={review.panDocUrl} />
-                <DocBlock title="Aadhaar" number={review.aadhaarNumber} docUrl={review.aadhaarDocUrl} />
+                <DocBlock title="PAN" number={review.panNumber} docViewPath={review.panDocViewPath} />
+                <DocBlock
+                  title="Aadhaar"
+                  number={review.aadhaarNumber}
+                  docViewPath={review.aadhaarDocViewPath}
+                />
               </div>
             </div>
 

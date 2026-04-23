@@ -1,8 +1,9 @@
 import "server-only";
 
+import { Buffer } from "node:buffer";
 import { put } from "@vercel/blob";
 import { prisma } from "@repo/db";
-import { sendInvoiceWithPaymentLinkWhatsApp } from "@repo/lib/aisensy";
+import { sendInvoiceWithPaymentLinkWhatsApp } from "../aisensy";
 import { buildInvoicePdfBytes } from "./build-invoice-pdf";
 import { formatInvoiceNumber, indianFyKeyUtc } from "./invoice-number";
 import { createRazorpayPaymentLink } from "./razorpay-payment-link";
@@ -79,7 +80,7 @@ export async function generateInvoiceForCompletedTrip(tripId: string): Promise<v
   const blobPath = `invoices/${tripId}/invoice.pdf`;
   let pdfUrl: string | null = null;
   try {
-    const blob = await put(blobPath, pdfBytes, {
+    const blob = await put(blobPath, Buffer.from(pdfBytes), {
       access: "public",
       contentType: "application/pdf",
     });

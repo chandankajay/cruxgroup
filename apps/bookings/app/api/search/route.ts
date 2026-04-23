@@ -13,26 +13,16 @@ type GeoPoint = {
 type PartnerRecord = {
   /** Partner row id (matches `Equipment.partnerId`) */
   _id: string;
-  name?: string;
-  phone?: string;
-  email?: string;
+  companyName: string;
   role: "PARTNER";
   location: GeoPoint;
   maxServiceRadius: number;
   baseAddress: string | null;
 };
 
+/** B2C-safe payload: no partner PII, no stable ids for enumeration. */
 type PartnerSearchResult = {
-  id: string;
-  name: string | null;
-  phoneNumber: string | null;
-  email: string | null;
-  baseAddress: string | null;
   distanceKm: number;
-  maxServiceRadiusKm: number | null;
-  available: boolean;
-  reason: string | null;
-  tier: "TIER_1" | "TIER_2" | "TIER_3";
 };
 
 type TierConfig = {
@@ -40,11 +30,11 @@ type TierConfig = {
   radiusKm: number;
 };
 
-const TIERS: TierConfig[] = [
-  { label: "TIER_1", radiusKm: 10 },
-  { label: "TIER_2", radiusKm: 25 },
-  { label: "TIER_3", radiusKm: 50 },
-];
+const TIERS = [
+  { label: "TIER_1" as const, radiusKm: 10 },
+  { label: "TIER_2" as const, radiusKm: 25 },
+  { label: "TIER_3" as const, radiusKm: 50 },
+] as const satisfies readonly TierConfig[];
 
 function parseNumber(input: string | null): number | null {
   if (!input) return null;
@@ -68,8 +58,8 @@ function partnerBaseLatLng(p: {
 }
 
 /**
- * Partners with parseable `baseLocation` within `radiusKm` of (lat, lng).
- * Uses the `partners` collection (User no longer stores GeoJSON `location`).
+ * KYC-verified, active partners with parseable base within `radiusKm` of (lat, lng).
+ * Excludes unverified / ghost / pending partners from public search.
  */
 async function queryPartnersInRadius(
   lat: number,
@@ -77,9 +67,18 @@ async function queryPartnersInRadius(
   radiusKm: number
 ): Promise<PartnerRecord[]> {
   const partners = await prisma.partner.findMany({
-    where: { isActive: true },
-    include: {
-      user: { select: { name: true, phoneNumber: true, email: true } },
+    where: {
+      isActive: true,
+      kycStatus: "VERIFIED",
+    },
+    select: {
+      id: true,
+      companyName: true,
+      address: true,
+      baseLocation: true,
+      baseCoordinates: true,
+      maxServiceRadiusKm: true,
+      maxRadius: true,
     },
   });
 
@@ -93,9 +92,7 @@ async function queryPartnersInRadius(
     out.push({
       _id: p.id,
       role: "PARTNER",
-      name: p.user.name,
-      phone: p.user.phoneNumber ?? undefined,
-      email: p.user.email ?? undefined,
+      companyName: p.companyName,
       location: { type: "Point", coordinates: [xy.lng, xy.lat] },
       maxServiceRadius: limitKm,
       baseAddress: p.address,
@@ -112,40 +109,10 @@ async function queryPartnersTier(
   return queryPartnersInRadius(lat, lng, radiusKm);
 }
 
-async function getEquipmentMinDurationMap(
-  partnerIds: string[],
-  equipmentId: string | null
-): Promise<Map<string, number>> {
-  if (partnerIds.length === 0) return new Map();
-
-  const map = new Map<string, number>();
-  const equipmentList = await prisma.equipment.findMany({
-    where: {
-      partnerId: { in: partnerIds },
-      ...(equipmentId ? { id: equipmentId } : {}),
-    },
-    select: { partnerId: true, minDaysForExtendedRadius: true },
-    take: 500,
-  });
-
-  for (const equipment of equipmentList) {
-    const key = equipment.partnerId ?? "";
-    if (!key) continue;
-    const minDays = equipment.minDaysForExtendedRadius ?? 0;
-    const current = map.get(key) ?? 0;
-    map.set(key, Math.max(current, minDays));
-  }
-  return map;
-}
-
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const lat = parseNumber(url.searchParams.get("lat"));
   const lng = parseNumber(url.searchParams.get("lng"));
-  const equipmentId = url.searchParams.get("equipmentId");
-  const bookingDurationDays =
-    parseNumber(url.searchParams.get("bookingDurationDays")) ?? 1;
-
   if (lat === null || lng === null) {
     return NextResponse.json(
       { error: "lat and lng query params are required." },
@@ -180,16 +147,11 @@ export async function GET(request: Request) {
     }
   }
 
-  const partnerIds = Array.from(uniqueById.keys());
-  const equipmentMinDurationMap = await getEquipmentMinDurationMap(
-    partnerIds,
-    equipmentId
-  );
+  type InternalResult = PartnerSearchResult & { _sortDistance: number };
+  const internal: InternalResult[] = [];
 
-  const results: PartnerSearchResult[] = [];
-
-  for (const [id, payload] of uniqueById.entries()) {
-    const { partner, tier } = payload;
+  for (const [, payload] of uniqueById.entries()) {
+    const { partner } = payload;
     const coordinates = partner.location?.coordinates ?? [];
     if (coordinates.length !== 2) continue;
 
@@ -199,40 +161,19 @@ export async function GET(request: Request) {
       { lat: partnerLat, lng: partnerLng }
     );
 
-    let available = true;
-    let reason: string | null = null;
-
-    if (distanceKm > partner.maxServiceRadius) {
-      available = false;
-      reason = "Outside partner max service radius";
-    } else if (distanceKm > 20) {
-      const minDays = equipmentMinDurationMap.get(id) ?? 0;
-      if (bookingDurationDays < minDays) {
-        available = false;
-        reason = `Requires minimum ${minDays}-day booking for extended travel`;
-      }
-    }
-
-    results.push({
-      id,
-      name: partner.name ?? null,
-      phoneNumber: partner.phone ?? null,
-      email: partner.email ?? null,
-      baseAddress: partner.baseAddress ?? null,
+    internal.push({
+      _sortDistance: distanceKm,
       distanceKm: Number(distanceKm.toFixed(2)),
-      maxServiceRadiusKm: partner.maxServiceRadius ?? null,
-      available,
-      reason,
-      tier,
     });
   }
 
-  results.sort((a, b) => a.distanceKm - b.distanceKm);
+  internal.sort((a, b) => a._sortDistance - b._sortDistance);
+
+  const nearest = internal[0];
+  const results: PartnerSearchResult[] =
+    nearest !== undefined ? [{ distanceKm: nearest.distanceKm }] : [];
 
   return NextResponse.json({
-    input: { lat, lng, bookingDurationDays, equipmentId },
-    count: results.length,
     results,
   });
 }
-

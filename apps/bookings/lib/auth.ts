@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { DEV_MASTER_OTP } from "@repo/api";
+import { verifyOtp } from "@repo/api";
 import { enterpriseAuthSecurity } from "@repo/auth";
 import { prisma } from "@repo/db";
 import { normalizeBookingsPhone } from "./phone";
@@ -50,13 +50,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null;
           }
 
-          const otpDigits = otp.replace(/\D/g, "");
-          if (otpDigits !== DEV_MASTER_OTP) {
-            console.warn("[auth.authorize] invalid otp (not master bypass)");
+          const phoneNumber = normalizeBookingsPhone(rawPhone);
+          const otpResult = await verifyOtp(phoneNumber, otp);
+          if (otpResult.lockedOut) {
+            console.warn("[auth.authorize] OTP account locked");
+            return null;
+          }
+          if (!otpResult.verified) {
+            console.warn("[auth.authorize] invalid or expired OTP");
             return null;
           }
 
-          const phoneNumber = normalizeBookingsPhone(rawPhone);
           if (!E164_LIKE.test(phoneNumber)) {
             console.warn("[auth.authorize] phone failed E.164 check", {
               rawPhone,

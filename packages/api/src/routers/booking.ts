@@ -1,12 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createRouter, publicProcedure } from "../trpc";
-import {
-  createBooking,
-  listBookings,
-  listBookingsByPartner,
-  updateBookingStatus,
-} from "../services/booking-service";
+import { createBooking, listBookings, listBookingsByPartner } from "../services/booking-service";
 
 const BookingStatusEnum = z.enum([
   "PENDING",
@@ -48,6 +43,10 @@ export const bookingRouter = createRouter({
     .input(z.object({ partnerId: z.string().min(1) }))
     .query(({ input }) => listBookingsByPartner(input.partnerId)),
 
+  /**
+   * @deprecated Unsafe with `publicProcedure` (no session). Use authenticated server actions
+   * in `apps/admin` that scope updates with `getAuthorizedWhereClause`.
+   */
   updateStatus: publicProcedure
     .input(
       z.object({
@@ -55,5 +54,10 @@ export const bookingRouter = createRouter({
         status: BookingStatusEnum,
       })
     )
-    .mutation(({ input }) => updateBookingStatus(input.id, input.status)),
+    .mutation(() => {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Booking status updates must go through authenticated server actions.",
+      });
+    }),
 });

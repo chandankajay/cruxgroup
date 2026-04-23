@@ -4,12 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "@repo/ui/lib/utils";
-import { ADMIN_NAV, isAdminNavItemActive } from "./admin-sidebar";
+import { getNavItemsForShellRole, isAdminNavItemActive } from "./admin-sidebar";
 
 const springTap = { type: "spring" as const, stiffness: 500, damping: 30 };
 
-export function AdminBottomNav({ className }: { readonly className?: string }) {
+export function AdminBottomNav({
+  role,
+  className,
+}: {
+  readonly role: string;
+  readonly className?: string;
+}) {
   const pathname = usePathname();
+  const navItems = getNavItemsForShellRole(role);
 
   return (
     <nav
@@ -21,11 +28,11 @@ export function AdminBottomNav({ className }: { readonly className?: string }) {
       )}
     >
       <div className="flex gap-0.5 overflow-x-auto px-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {ADMIN_NAV.map((item) => {
+        {navItems.map((item) => {
           const active = isAdminNavItemActive(pathname, item);
           return (
             <motion.div
-              key={item.href}
+              key={item.navId}
               className="flex min-h-[48px] w-[4.75rem] shrink-0 touch-manipulation select-none flex-col"
               whileTap={{ scale: 0.85 }}
               transition={springTap}

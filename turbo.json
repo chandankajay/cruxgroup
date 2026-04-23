@@ -39,7 +39,8 @@
         "CRON_SECRET",
         "NEXT_PUBLIC_BOOKINGS_URL",
         "NEXT_PUBLIC_NODE_ENV",
-        "BOOKINGS_APP_ORIGIN"
+        "BOOKINGS_APP_ORIGIN",
+        "KYC_DOC_VIEW_SECRET"
       ]
     },
     "lint": {

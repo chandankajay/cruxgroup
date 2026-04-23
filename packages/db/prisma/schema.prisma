@@ -25,6 +25,10 @@ model User {
   emailVerified DateTime?
   image         String?
   role          UserRole  @default(USER)
+  /// Failed phone-OTP verification attempts (reset on success or when lockout is applied).
+  otpAttempts   Int       @default(0)
+  /// When set and in the future, `sendOtp` / non-bypass OTP verify are rejected for this user.
+  lockoutUntil  DateTime?
 
   accounts         Account[]
   sessions         Session[]

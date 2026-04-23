@@ -30,3 +30,15 @@ export function formatUtcToIstLabel(d: Date): string {
     timeStyle: "short",
   }).format(d);
 }
+
+/** Inverse of {@link naiveIstLocalToUtc} for `<input type="datetime-local">` (naive IST wall components). */
+export function utcToNaiveIstLocalForInput(d: Date): string {
+  const ms = d.getTime() + IST_OFFSET_MS;
+  const x = new Date(ms);
+  const y = x.getUTCFullYear();
+  const mo = String(x.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(x.getUTCDate()).padStart(2, "0");
+  const hh = String(x.getUTCHours()).padStart(2, "0");
+  const mm = String(x.getUTCMinutes()).padStart(2, "0");
+  return `${y}-${mo}-${day}T${hh}:${mm}`;
+}

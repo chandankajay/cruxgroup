@@ -24,7 +24,7 @@ const isProduction = process.env["NODE_ENV"] === "production";
 
 const sessionCookieOptions = {
   httpOnly: true,
-  sameSite: "lax" as const,
+  sameSite: "strict" as const,
   path: "/",
   secure: isProduction,
 };
@@ -35,6 +35,7 @@ const sessionCookieOptions = {
  *
  * - `NEXTAUTH_SECRET` is the canonical signing key; `AUTH_SECRET` is accepted for compatibility.
  * - In production: `useSecureCookies: true` and `Secure` session cookies.
+ * - `sameSite: "strict"` on session-related cookies to reduce CSRF risk.
  */
 export const enterpriseAuthSecurity: Pick<
   NextAuthConfig,

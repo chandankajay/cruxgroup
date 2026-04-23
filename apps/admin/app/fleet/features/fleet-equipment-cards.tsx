@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { Badge } from "@repo/ui/badge";
-import { Button } from "@repo/ui/button";
+import { Button, buttonVariants } from "@repo/ui/button";
 import { Card, CardContent, CardFooter } from "@repo/ui/card";
 import { Switch } from "@repo/ui/switch";
 import {
@@ -20,7 +21,6 @@ interface FleetEquipmentCardsProps {
   readonly items: FleetEquipmentItem[];
   readonly partnerKycVerified: boolean;
   readonly onToggleActive: (id: string, isActive: boolean) => Promise<void>;
-  readonly onEdit: (id: string) => void;
   readonly onDelete: (id: string) => void;
 }
 
@@ -28,7 +28,6 @@ export function FleetEquipmentCards({
   items,
   partnerKycVerified,
   onToggleActive,
-  onEdit,
   onDelete,
 }: FleetEquipmentCardsProps) {
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -133,15 +132,18 @@ export function FleetEquipmentCards({
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end gap-2 border-t border-border bg-muted/30 py-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  type="button"
-                  className="h-12 min-w-11 touch-manipulation rounded-xl sm:h-9 sm:rounded-md"
-                  onClick={() => onEdit(item.id)}
+                <Link
+                  href={`/fleet/${item.id}/edit`}
+                  className={cn(
+                    buttonVariants({
+                      size: "sm",
+                      variant: "outline",
+                    }),
+                    "inline-flex h-12 min-w-11 touch-manipulation rounded-xl sm:h-9 sm:rounded-md"
+                  )}
                 >
                   Edit
-                </Button>
+                </Link>
                 <Button
                   size="sm"
                   variant="destructive"

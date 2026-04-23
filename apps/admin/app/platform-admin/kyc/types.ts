@@ -7,13 +7,14 @@ export interface KycQueuePartnerRow {
   maxRadius: number;
   updatedAt: string;
   panNumber: string | null;
-  panDocUrl: string | null;
   aadhaarNumber: string | null;
-  aadhaarDocUrl: string | null;
   gstNumber: string | null;
   bankAccountNumber: string | null;
   bankIfscCode: string | null;
-  cancelledChequeUrl: string | null;
+  /** Signed proxy paths — never raw Vercel Blob URLs in the browser. */
+  panDocViewPath: string | null;
+  aadhaarDocViewPath: string | null;
+  cancelledChequeViewPath: string | null;
   user: {
     phoneNumber: string | null;
     name: string;

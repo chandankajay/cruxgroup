@@ -5,6 +5,7 @@ import { prisma } from "@repo/db";
 import { sendOperatorSalarySlipWhatsApp } from "@repo/lib/aisensy";
 import { z } from "zod";
 import { auth } from "../../../lib/auth";
+import { normalizeAdminPhone } from "../../../lib/phone";
 import {
   clampAdvanceRecoveryPaise,
   completedTripsForMonthWhere,
@@ -16,11 +17,49 @@ import {
 import { buildMusterRollCsv } from "../../../lib/payroll/muster-csv";
 import { buildSalarySlipPdfBytes } from "../../../lib/payroll/salary-slip-pdf";
 
-async function requireAdmin(): Promise<{ userId: string } | null> {
+type PayrollActor =
+  | { readonly kind: "ADMIN"; readonly userId: string }
+  | { readonly kind: "PARTNER"; readonly userId: string; readonly partnerId: string };
+
+async function requirePayrollActor(): Promise<PayrollActor | null> {
   const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return null;
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (role !== "ADMIN" || !session?.user?.id) return null;
-  return { userId: session.user.id };
+  if (role === "ADMIN") {
+    return { kind: "ADMIN", userId };
+  }
+  if (role === "PARTNER") {
+    const partner = await prisma.partner.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!partner) return null;
+    return { kind: "PARTNER", userId, partnerId: partner.id };
+  }
+  return null;
+}
+
+async function operatorAssignedToPartnerFleet(
+  partnerId: string,
+  operatorUserId: string
+): Promise<boolean> {
+  const profile = await prisma.operatorProfile.findUnique({
+    where: { userId: operatorUserId },
+    include: { user: { select: { phoneNumber: true } } },
+  });
+  const phone = profile?.user.phoneNumber;
+  if (!phone?.trim()) return false;
+  const target = normalizeAdminPhone(phone);
+  const fleetPhones = await prisma.equipment.findMany({
+    where: { partnerId, isActive: true },
+    select: { operatorPhone: true },
+  });
+  for (const row of fleetPhones) {
+    if (!row.operatorPhone?.trim()) continue;
+    if (normalizeAdminPhone(row.operatorPhone) === target) return true;
+  }
+  return false;
 }
 
 const monthParams = z.object({
@@ -65,7 +104,8 @@ export type PayrollOperatorRow = {
 };
 
 export async function listPayrollOperators(): Promise<PayrollOperatorRow[] | null> {
-  if (!(await requireAdmin())) return null;
+  const actor = await requirePayrollActor();
+  if (!actor) return null;
 
   const profiles = await prisma.operatorProfile.findMany({
     include: {
@@ -74,7 +114,25 @@ export async function listPayrollOperators(): Promise<PayrollOperatorRow[] | nul
     orderBy: { user: { name: "asc" } },
   });
 
-  return profiles.map((p) => ({
+  let rows = profiles;
+  if (actor.kind === "PARTNER") {
+    const fleetPhones = await prisma.equipment.findMany({
+      where: { partnerId: actor.partnerId, isActive: true },
+      select: { operatorPhone: true },
+    });
+    const allowed = new Set(
+      fleetPhones
+        .map((f) => (f.operatorPhone?.trim() ? normalizeAdminPhone(f.operatorPhone) : ""))
+        .filter(Boolean)
+    );
+    rows = profiles.filter((p) => {
+      const ph = p.user.phoneNumber;
+      if (!ph?.trim()) return false;
+      return allowed.has(normalizeAdminPhone(ph));
+    });
+  }
+
+  return rows.map((p) => ({
     userId: p.user.id,
     name: p.user.name || "Operator",
     phone: p.user.phoneNumber ?? null,
@@ -103,7 +161,8 @@ export type PayrollPreviewResult = {
 export async function previewPayrollAction(
   raw: z.infer<typeof previewSchema>
 ): Promise<{ ok: true; data: PayrollPreviewResult } | { ok: false; error: string }> {
-  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const actor = await requirePayrollActor();
+  if (!actor) return { ok: false, error: "Forbidden" };
 
   const parsed = previewSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -115,6 +174,11 @@ export async function previewPayrollAction(
     include: { user: { select: { name: true, phoneNumber: true } } },
   });
   if (!profile) return { ok: false, error: "Operator not found" };
+
+  if (actor.kind === "PARTNER") {
+    const allowed = await operatorAssignedToPartnerFleet(actor.partnerId, operatorId);
+    if (!allowed) return { ok: false, error: "Forbidden" };
+  }
 
   const trips = await loadTripsForPayrollMonth(year, month);
   const { dayKeys, tripIds } = computeOperatorWorkingDayKeys(
@@ -162,8 +226,8 @@ export async function finalizePayrollAction(
   | { ok: true; pdfUrl: string | null; netPayablePaise: number; notifyFailed?: boolean }
   | { ok: false; error: string }
 > {
-  const gate = await requireAdmin();
-  if (!gate) return { ok: false, error: "Forbidden" };
+  const actor = await requirePayrollActor();
+  if (!actor) return { ok: false, error: "Forbidden" };
 
   const parsed = finalizeSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -176,6 +240,11 @@ export async function finalizePayrollAction(
     include: { user: { select: { name: true, phoneNumber: true } } },
   });
   if (!profile) return { ok: false, error: "Operator not found" };
+
+  if (actor.kind === "PARTNER") {
+    const allowed = await operatorAssignedToPartnerFleet(actor.partnerId, operatorId);
+    if (!allowed) return { ok: false, error: "Forbidden" };
+  }
 
   const phone = profile.user.phoneNumber;
   if (!phone?.trim()) return { ok: false, error: "Operator has no phone on file" };
@@ -299,7 +368,8 @@ export async function finalizePayrollAction(
 export async function savePayrollDraftAction(
   raw: z.infer<typeof finalizeSchema>
 ): Promise<{ ok: true; netPayablePaise: number } | { ok: false; error: string }> {
-  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const actor = await requirePayrollActor();
+  if (!actor) return { ok: false, error: "Forbidden" };
 
   const parsed = finalizeSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -312,6 +382,11 @@ export async function savePayrollDraftAction(
     include: { user: { select: { phoneNumber: true } } },
   });
   if (!profile) return { ok: false, error: "Operator not found" };
+
+  if (actor.kind === "PARTNER") {
+    const allowed = await operatorAssignedToPartnerFleet(actor.partnerId, operatorId);
+    if (!allowed) return { ok: false, error: "Forbidden" };
+  }
 
   const beforeRow = await prisma.payrollEntry.findUnique({
     where: { operatorId_year_month: { operatorId, year, month } },
@@ -385,7 +460,8 @@ export async function savePayrollDraftAction(
 export async function exportMusterRollCsvAction(
   raw: z.infer<typeof monthParams>
 ): Promise<{ ok: true; csv: string; filename: string } | { ok: false; error: string }> {
-  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const actor = await requirePayrollActor();
+  if (!actor || actor.kind !== "ADMIN") return { ok: false, error: "Forbidden" };
 
   const parsed = monthParams.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid input" };

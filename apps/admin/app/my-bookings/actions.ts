@@ -3,6 +3,10 @@
 import { createCaller } from "@repo/api";
 import type { BookingStatus } from "@repo/api";
 import { prisma } from "@repo/db";
+import {
+  getAuthorizedWhereClause,
+  getResourceAuthzContext,
+} from "../../lib/resource-authz";
 
 const caller = createCaller({});
 
@@ -35,7 +39,19 @@ export async function updatePartnerBookingStatusAction(
   status: BookingStatus
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await caller.booking.updateStatus({ id, status });
+    const ctx = await getResourceAuthzContext();
+    if (!ctx || ctx.role !== "PARTNER") {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const where = getAuthorizedWhereClause(ctx, { resource: "Booking", targetId: id });
+    const result = await prisma.booking.updateMany({
+      where,
+      data: { status },
+    });
+    if (result.count === 0) {
+      return { success: false, error: "Booking not found or access denied." };
+    }
     return { success: true };
   } catch (error) {
     const message =

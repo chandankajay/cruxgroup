@@ -1,6 +1,11 @@
 "use server";
 
 import { createCaller } from "@repo/api";
+import { prisma } from "@repo/db";
+import {
+  getAuthorizedWhereClause,
+  requireAdminResourceAuthz,
+} from "../../lib/resource-authz";
 
 const caller = createCaller({});
 
@@ -25,6 +30,10 @@ interface CreateInput {
 export async function createEquipmentAction(
   input: CreateInput
 ): Promise<{ success: boolean; error?: string }> {
+  const adminCtx = await requireAdminResourceAuthz();
+  if (!adminCtx) {
+    return { success: false, error: "Forbidden" };
+  }
   try {
     await caller.equipment.create(input);
     return { success: true };
@@ -40,6 +49,10 @@ interface UpdateInput extends CreateInput {
 export async function updateEquipmentAction(
   input: UpdateInput
 ): Promise<{ success: boolean; error?: string }> {
+  const adminCtx = await requireAdminResourceAuthz();
+  if (!adminCtx) {
+    return { success: false, error: "Forbidden" };
+  }
   try {
     await caller.equipment.update(input);
     return { success: true };
@@ -51,8 +64,17 @@ export async function updateEquipmentAction(
 export async function deleteEquipmentAction(
   id: string
 ): Promise<{ success: boolean; error?: string }> {
+  const adminCtx = await requireAdminResourceAuthz();
+  if (!adminCtx) {
+    return { success: false, error: "Forbidden" };
+  }
   try {
-    await caller.equipment.delete({ id });
+    const where = getAuthorizedWhereClause(adminCtx, { resource: "Equipment", targetId: id });
+    const row = await prisma.equipment.findFirst({ where, select: { id: true } });
+    if (!row) {
+      return { success: false, error: "DELETE_FAILED" };
+    }
+    await prisma.equipment.delete({ where: { id: row.id } });
     return { success: true };
   } catch {
     return { success: false, error: "DELETE_FAILED" };

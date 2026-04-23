@@ -1,7 +1,15 @@
 "use client";
 
+import Link from "next/link";
+import { useCallback, useTransition } from "react";
 import useSWR from "swr";
-import type { LiveJobsPayload, LiveTripJobDto } from "../../../../lib/job-board-types";
+import { toast } from "sonner";
+import { Button } from "@repo/ui/button";
+import type { LiveJobsPayload, LiveTripInvoiceDto, LiveTripJobDto } from "../../../../lib/job-board-types";
+import {
+  generateTripInvoiceManualAction,
+  resendTripInvoicePaymentLinkAction,
+} from "../trip-invoice-actions";
 
 const fetcher = async (url: string): Promise<LiveJobsPayload> => {
   const res = await fetch(url, { credentials: "include" });
@@ -41,7 +49,96 @@ function statusLabel(status: string): string {
   return status.replace(/_/g, " ");
 }
 
-function TripJobCard({ job }: { readonly job: LiveTripJobDto }) {
+function CompletedTripInvoiceActions({
+  tripId,
+  invoice,
+  onRefresh,
+}: {
+  readonly tripId: string;
+  readonly invoice: LiveTripInvoiceDto | null;
+  readonly onRefresh: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+
+  const run = useCallback(
+    (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, okMsg: string) => {
+      startTransition(async () => {
+        const res = await fn();
+        if (res.ok) {
+          toast.success(okMsg);
+          onRefresh();
+        } else {
+          toast.error(res.error);
+        }
+      });
+    },
+    [onRefresh]
+  );
+
+  return (
+    <div className="sm:col-span-2 space-y-2 rounded-lg border border-emerald-800/20 bg-card/80 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900/80">Invoice</p>
+      {invoice ? (
+        <div className="flex flex-wrap gap-2">
+          <p className="w-full font-mono text-xs text-foreground/70">{invoice.invoiceNumber}</p>
+          {invoice.pdfUrl ? (
+            <a
+              href={invoice.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+            >
+              View invoice PDF
+            </a>
+          ) : null}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={pending || !invoice.pdfUrl || !invoice.paymentLinkUrl}
+            onClick={() =>
+              run(
+                () => resendTripInvoicePaymentLinkAction(tripId),
+                "Payment link sent to the customer on WhatsApp."
+              )
+            }
+          >
+            {pending ? "Sending…" : "Resend payment link"}
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            className="bg-emerald-800 text-primary-foreground hover:bg-emerald-900"
+            disabled={pending}
+            onClick={() =>
+              run(
+                () => generateTripInvoiceManualAction(tripId),
+                "Invoice generated. Customer may receive WhatsApp if templates are configured."
+              )
+            }
+          >
+            {pending ? "Generating…" : "Generate invoice"}
+          </Button>
+          <p className="w-full text-xs text-muted-foreground">
+            Use this if completion succeeded but automatic invoice creation failed earlier.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TripJobCard({
+  job,
+  onRefresh,
+}: {
+  readonly job: LiveTripJobDto;
+  readonly onRefresh?: () => void;
+}) {
   return (
     <article
       className={`rounded-xl border-2 p-4 shadow-sm transition-shadow ${statusStyles(job.status)}`}
@@ -52,7 +149,7 @@ function TripJobCard({ job }: { readonly job: LiveTripJobDto }) {
           <p className="text-lg font-semibold leading-tight">
             {job.machine.category} · {job.machine.name}
           </p>
-          <p className="mt-1 text-xs text-black/60">{job.partnerCompany}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{job.partnerCompany}</p>
         </div>
         <span className="shrink-0 rounded-full border border-current px-3 py-1 text-xs font-bold uppercase">
           {statusLabel(job.status)}
@@ -61,7 +158,7 @@ function TripJobCard({ job }: { readonly job: LiveTripJobDto }) {
 
       <dl className="grid gap-2 text-sm sm:grid-cols-2">
         <div>
-          <dt className="font-medium text-black/60">Operator</dt>
+          <dt className="font-medium text-muted-foreground">Operator</dt>
           <dd>
             {job.operator.name}
             <br />
@@ -69,7 +166,7 @@ function TripJobCard({ job }: { readonly job: LiveTripJobDto }) {
           </dd>
         </div>
         <div>
-          <dt className="font-medium text-black/60">Customer</dt>
+          <dt className="font-medium text-muted-foreground">Customer</dt>
           <dd>
             {job.customer.name}
             <br />
@@ -77,25 +174,41 @@ function TripJobCard({ job }: { readonly job: LiveTripJobDto }) {
           </dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className="font-medium text-black/60">Location</dt>
+          <dt className="font-medium text-muted-foreground">Location</dt>
           <dd className="break-words">{job.locationLabel}</dd>
         </div>
         <div>
-          <dt className="font-medium text-black/60">Scheduled start (IST)</dt>
+          <dt className="font-medium text-muted-foreground">Scheduled start (IST)</dt>
           <dd className="font-mono text-xs">{formatIso(job.scheduledDate)}</dd>
         </div>
         <div>
-          <dt className="font-medium text-black/60">Expected end (IST)</dt>
+          <dt className="font-medium text-muted-foreground">Expected end (IST)</dt>
           <dd className="font-mono text-xs">{formatIso(job.expectedEndTime)}</dd>
         </div>
+        {job.bookingId ? (
+          <div className="sm:col-span-2">
+            <dt className="font-medium text-muted-foreground">Reschedule</dt>
+            <dd>
+              <Link
+                href={`/bookings/new?bookingId=${encodeURIComponent(job.bookingId)}`}
+                className="text-sm font-semibold text-sky-800 underline underline-offset-2 hover:text-sky-950"
+              >
+                Change job start / end (walk-in desk)
+              </Link>
+            </dd>
+          </div>
+        ) : null}
         <div>
-          <dt className="font-medium text-black/60">Actual start (IST)</dt>
+          <dt className="font-medium text-muted-foreground">Actual start (IST)</dt>
           <dd className="font-mono text-xs">{formatIso(job.actualStartTime)}</dd>
         </div>
         <div>
-          <dt className="font-medium text-black/60">Actual end (IST)</dt>
+          <dt className="font-medium text-muted-foreground">Actual end (IST)</dt>
           <dd className="font-mono text-xs">{formatIso(job.actualEndTime)}</dd>
         </div>
+        {job.status === "COMPLETED" ? (
+          <CompletedTripInvoiceActions tripId={job.id} invoice={job.invoice} onRefresh={onRefresh} />
+        ) : null}
       </dl>
     </article>
   );
@@ -130,7 +243,7 @@ export function LiveJobBoard() {
         <p className="font-medium">Could not load live jobs.</p>
         <button
           type="button"
-          className="mt-3 rounded-md bg-charcoal px-4 py-2 text-sm text-white"
+          className="mt-3 rounded-md bg-secondary px-4 py-2 text-sm text-secondary-foreground"
           onClick={() => void mutate()}
         >
           Retry
@@ -154,7 +267,7 @@ export function LiveJobBoard() {
       <section>
         <h2 className="mb-4 text-lg font-semibold text-charcoal">Active jobs</h2>
         {data.live.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border bg-white p-8 text-center text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-muted-foreground">
             No active trips in SCHEDULED / ENROUTE / ON_SITE / OVERRUN.
           </p>
         ) : (
@@ -173,7 +286,7 @@ export function LiveJobBoard() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {data.recentCompleted.map((job) => (
-              <TripJobCard key={job.id} job={job} />
+              <TripJobCard key={job.id} job={job} onRefresh={() => void mutate()} />
             ))}
           </div>
         )}

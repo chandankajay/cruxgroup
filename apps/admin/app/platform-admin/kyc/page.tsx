@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@repo/db";
 import type { KycQueuePartnerRow } from "./types";
 import { KycApprovalQueue } from "./features/kyc-approval-queue";
+import {
+  createKycDocViewToken,
+  type KycDocKind,
+} from "../../../lib/kyc-doc-view-token";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +29,12 @@ export default async function PlatformAdminKycPage() {
     orderBy: { updatedAt: "asc" },
   });
 
+  function docViewPath(partnerId: string, kind: KycDocKind, stored: string | null): string | null {
+    if (!stored) return null;
+    const token = createKycDocViewToken(partnerId, kind);
+    return `/api/kyc/view/${encodeURIComponent(token)}`;
+  }
+
   const initialRows: KycQueuePartnerRow[] = rows.map((p) => ({
     id: p.id,
     companyName: p.companyName,
@@ -33,13 +43,13 @@ export default async function PlatformAdminKycPage() {
     maxRadius: p.maxRadius,
     updatedAt: p.updatedAt.toISOString(),
     panNumber: p.panNumber,
-    panDocUrl: p.panDocUrl,
     aadhaarNumber: p.aadhaarNumber,
-    aadhaarDocUrl: p.aadhaarDocUrl,
     gstNumber: p.gstNumber,
     bankAccountNumber: p.bankAccountNumber,
     bankIfscCode: p.bankIfscCode,
-    cancelledChequeUrl: p.cancelledChequeUrl,
+    panDocViewPath: docViewPath(p.id, "pan", p.panDocUrl),
+    aadhaarDocViewPath: docViewPath(p.id, "aadhaar", p.aadhaarDocUrl),
+    cancelledChequeViewPath: docViewPath(p.id, "cheque", p.cancelledChequeUrl),
     user: p.user,
     equipmentCount: p._count.equipment,
   }));

@@ -74,7 +74,7 @@ export function CustomerDetailContent({ data }: CustomerDetailContentProps) {
         </div>
       </div>
 
-      <section className="grid gap-4 rounded-xl border border-border bg-white p-6 shadow-sm sm:grid-cols-3">
+      <section className="grid gap-4 rounded-xl border border-border bg-card p-6 shadow-sm sm:grid-cols-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Outstanding
@@ -114,8 +114,8 @@ export function CustomerDetailContent({ data }: CustomerDetailContentProps) {
           <ol className="relative space-y-6 border-l-2 border-border pl-6">
             {data.bookings.map((b) => (
               <li key={b.id} className="relative">
-                <span className="absolute -left-[calc(0.5rem+5px)] top-1.5 h-3 w-3 rounded-full border-2 border-brand-orange bg-white" />
-                <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+                <span className="absolute -left-[calc(0.5rem+5px)] top-1.5 h-3 w-3 rounded-full border-2 border-brand-orange bg-background" />
+                <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-charcoal">

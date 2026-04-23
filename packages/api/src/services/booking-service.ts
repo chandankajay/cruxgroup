@@ -208,10 +208,3 @@ function siteLatLngFromBooking(b: {
   }
   return null;
 }
-
-export async function updateBookingStatus(id: string, status: BookingStatus) {
-  return prisma.booking.update({
-    where: { id },
-    data: { status },
-  });
-}

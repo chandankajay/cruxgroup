@@ -47,3 +47,14 @@ export const walkInBookingSchema = z
   });
 
 export type WalkInBookingValues = z.infer<typeof walkInBookingSchema>;
+
+/** Reschedule walk-in / linked job: only schedule fields are mutable on update. */
+export const walkInRescheduleSchema = z.object({
+  bookingId: z.string().min(1, "Booking is required"),
+  tripId: z.string().min(1, "Trip is required"),
+  startLocal: z.string().min(1, "Start date/time (IST) is required"),
+  endLocal: z.string().min(1, "End date/time (IST) is required"),
+  expectedShift: z.string().optional(),
+});
+
+export type WalkInRescheduleValues = z.infer<typeof walkInRescheduleSchema>;

@@ -8,6 +8,20 @@ export const OVERRUN_GRACE_MS = 60 * 60 * 1000;
 
 const LIVE_STATUSES = ["SCHEDULED", "ENROUTE", "ON_SITE", "OVERRUN"] as const;
 
+const invoiceInclude = {
+  take: 1,
+  select: {
+    id: true,
+    invoiceNumber: true,
+    pdfUrl: true,
+    payments: {
+      orderBy: { createdAt: "desc" as const },
+      take: 1,
+      select: { paymentLinkUrl: true },
+    },
+  },
+} as const;
+
 export type { LiveJobsPayload, LiveTripJobDto };
 
 function jobLocationLabel(jobLocation: Prisma.JsonValue): string {
@@ -25,6 +39,7 @@ function jobLocationLabel(jobLocation: Prisma.JsonValue): string {
 function toDto(
   trip: {
     id: string;
+    bookingId: string | null;
     status: string;
     scheduledDate: Date;
     expectedEndTime: Date | null;
@@ -34,10 +49,28 @@ function toDto(
     equipment: { name: string; category: string; operatorName: string; operatorPhone: string };
     user: { name: string; phoneNumber: string | null };
     partner: { companyName: string };
+    invoices?: {
+      id: string;
+      invoiceNumber: string;
+      pdfUrl: string | null;
+      payments: { paymentLinkUrl: string | null }[];
+    }[];
   }
 ): LiveTripJobDto {
+  const inv = trip.invoices?.[0];
+  const invoice =
+    inv != null
+      ? {
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          pdfUrl: inv.pdfUrl,
+          paymentLinkUrl: inv.payments[0]?.paymentLinkUrl ?? null,
+        }
+      : null;
+
   return {
     id: trip.id,
+    bookingId: trip.bookingId,
     status: trip.status,
     scheduledDate: trip.scheduledDate.toISOString(),
     expectedEndTime: trip.expectedEndTime?.toISOString() ?? null,
@@ -54,6 +87,7 @@ function toDto(
     },
     partnerCompany: trip.partner.companyName || "Partner",
     locationLabel: jobLocationLabel(trip.jobLocation),
+    invoice,
   };
 }
 
@@ -124,10 +158,12 @@ export async function syncTripOverruns(): Promise<void> {
   }
 }
 
-export async function getLiveJobsPayload(): Promise<LiveJobsPayload> {
+export async function getLiveJobsPayload(partnerId?: string): Promise<LiveJobsPayload> {
+  const partnerFilter = partnerId ? { equipment: { partnerId } } : {};
+
   const [liveRows, recentRows] = await Promise.all([
     prisma.trip.findMany({
-      where: { status: { in: [...LIVE_STATUSES] } },
+      where: { status: { in: [...LIVE_STATUSES] }, ...partnerFilter },
       orderBy: { scheduledDate: "desc" },
       take: 80,
       include: {
@@ -141,10 +177,11 @@ export async function getLiveJobsPayload(): Promise<LiveJobsPayload> {
         },
         user: { select: { name: true, phoneNumber: true } },
         partner: { select: { companyName: true } },
+        invoices: invoiceInclude,
       },
     }),
     prisma.trip.findMany({
-      where: { status: "COMPLETED" },
+      where: { status: "COMPLETED", ...partnerFilter },
       orderBy: { actualEndTime: "desc" },
       take: 25,
       include: {
@@ -158,6 +195,7 @@ export async function getLiveJobsPayload(): Promise<LiveJobsPayload> {
         },
         user: { select: { name: true, phoneNumber: true } },
         partner: { select: { companyName: true } },
+        invoices: invoiceInclude,
       },
     }),
   ]);

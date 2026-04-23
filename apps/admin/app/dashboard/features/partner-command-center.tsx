@@ -71,7 +71,7 @@ export function PartnerCommandCenter({
   return (
     <motion.div
       className={cn(
-        "dark min-h-full w-full min-w-0 max-w-full rounded-none border-0 bg-zinc-950 py-4 text-zinc-100 lg:rounded-2xl lg:border lg:border-zinc-800 lg:p-6",
+        "dark min-h-full w-full p-2 min-w-0 max-w-full rounded-none border-0 bg-zinc-950 py-4 text-zinc-100 lg:rounded-2xl lg:border lg:border-zinc-800 lg:p-6",
         "selection:bg-amber-500/30 selection:text-amber-50"
       )}
       variants={containerVariants}

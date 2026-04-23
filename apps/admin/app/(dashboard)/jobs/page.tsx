@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function LiveJobsPage() {
   const session = await auth();
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (role !== "ADMIN") {
+  if (role !== "ADMIN" && role !== "PARTNER") {
     redirect("/dashboard");
   }
 

@@ -4,7 +4,11 @@ import { randomUUID, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@repo/db";
 import { revalidatePath } from "next/cache";
-import { generateInvoiceForCompletedTrip } from "../../lib/invoice/generate-invoice-for-trip";
+import { generateInvoiceForCompletedTrip } from "@repo/lib/invoice";
+import {
+  FUTURE_BOOKING_COMPLETION_MESSAGE,
+  isTripScheduleBlockingCompletion,
+} from "../../lib/trip-completion-schedule";
 
 function billedHoursFromRange(start: Date, end: Date): number {
   const ms = Math.max(0, end.getTime() - start.getTime());
@@ -28,7 +32,14 @@ export type OperatorEndJobResult =
     }
   | {
       ok: false;
-      error: "NOT_FOUND" | "BAD_STATE" | "BAD_OTP" | "INVALID_INPUT" | "UNIQUE_VIOLATION" | "SERVER_ERROR";
+      error:
+        | "NOT_FOUND"
+        | "BAD_STATE"
+        | "BAD_OTP"
+        | "FUTURE_BOOKING"
+        | "INVALID_INPUT"
+        | "UNIQUE_VIOLATION"
+        | "SERVER_ERROR";
       userMessage: string;
     };
 
@@ -124,6 +135,11 @@ export async function operatorEndJobAction(
         include: { booking: true },
       });
       if (!trip) return { type: "NOT_FOUND" as const };
+
+      if (isTripScheduleBlockingCompletion(trip.scheduledDate)) {
+        return { type: "FUTURE_BOOKING" as const };
+      }
+
       const canEndWithEndOtp =
         (trip.status === "ON_SITE" || trip.status === "OVERRUN") && trip.actualStartTime;
       if (!canEndWithEndOtp) {
@@ -184,14 +200,26 @@ export async function operatorEndJobAction(
         userMessage: "That code does not match. Check the end code and try again.",
       };
     }
+    if (result.type === "FUTURE_BOOKING") {
+      return {
+        ok: false,
+        error: "FUTURE_BOOKING",
+        userMessage: FUTURE_BOOKING_COMPLETION_MESSAGE,
+      };
+    }
 
     const { totalBilledHours, completedAtIso, reviewToken, tripId } = result;
     const reviewLinkForWhatsApp = `https://bookings.cruxgroup.in/review/${reviewToken}`;
     void reviewLinkForWhatsApp;
 
-    void generateInvoiceForCompletedTrip(tripId).catch((err) => {
-      console.error("[operatorEndJobAction] invoice generation failed", err);
-    });
+    try {
+      await generateInvoiceForCompletedTrip(tripId);
+    } catch (err) {
+      console.error("[operatorEndJobAction] invoice_generation_failed", {
+        tripId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     revalidatePath(`/operator/${operatorToken}`);
 

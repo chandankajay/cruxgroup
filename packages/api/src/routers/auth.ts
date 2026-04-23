@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createRouter, publicProcedure } from "../trpc";
-import { createOtp, verifyOtp, DEV_MASTER_OTP } from "../services/otp-service";
+import { createOtp, verifyOtp } from "../services/otp-service";
 
 /** Accepts +91…, 91…, or 10-digit local (stored as +91…). */
 const phoneSchema = z
@@ -19,29 +20,38 @@ export const authRouter = createRouter({
   sendOtp: publicProcedure
     .input(z.object({ phone: phoneSchema }))
     .mutation(async ({ input }) => {
-      const code = await createOtp(input.phone);
+      try {
+        const code = await createOtp(input.phone);
 
-      // Temporary simulated OTP flow: no live WhatsApp integration for now.
-      // eslint-disable-next-line no-console
-      console.log(`[SIMULATED OTP] ${input.phone}: ${code}`);
+        // Temporary simulated OTP flow: no live WhatsApp integration for now.
+        // eslint-disable-next-line no-console
+        console.log(`[SIMULATED OTP] ${input.phone}: ${code}`);
 
-      return { success: true };
+        return { success: true };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "";
+        if (msg === "OTP_ACCOUNT_LOCKED") {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Too many failed attempts. Try again after 15 minutes.",
+          });
+        }
+        throw e;
+      }
     }),
 
   verifyOtp: publicProcedure
     .input(
       z.object({
         phone: phoneSchema,
-        code: z.string().length(6),
+        code: z.string().min(4).max(12),
       })
     )
     .mutation(async ({ input }) => {
-      const codeDigits = input.code.replace(/\D/g, "");
-      if (codeDigits === DEV_MASTER_OTP) {
-        return { verified: true };
-      }
-
-      const valid = await verifyOtp(input.phone, input.code);
-      return { verified: valid };
+      const result = await verifyOtp(input.phone, input.code);
+      return {
+        verified: result.verified,
+        lockedOut: result.lockedOut,
+      };
     }),
 });

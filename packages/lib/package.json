@@ -6,11 +6,18 @@
   "exports": {
     ".": "./src/index.ts",
     "./aisensy": "./src/aisensy.ts",
-    "./geo": "./src/geo.ts"
+    "./geo": "./src/geo.ts",
+    "./invoice": "./src/invoice/index.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
     "lint": "eslint src --max-warnings 0"
+  },
+  "dependencies": {
+    "@repo/db": "workspace:*",
+    "@vercel/blob": "^2.3.3",
+    "pdf-lib": "^1.17.1",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

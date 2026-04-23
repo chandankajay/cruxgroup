@@ -21,7 +21,15 @@ export async function sendOtpAction(phone: string): Promise<{ success: boolean; 
     });
     await caller.auth.sendOtp({ phone: phoneNumber });
     return { success: true };
-  } catch {
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (
+      msg.includes("Too many failed") ||
+      msg.includes("OTP_ACCOUNT_LOCKED") ||
+      msg.includes("TOO_MANY_REQUESTS")
+    ) {
+      return { success: false, error: "ACCOUNT_LOCKED" };
+    }
     return { success: false, error: "FAILED_TO_SEND" };
   }
 }
@@ -36,6 +44,9 @@ export async function verifyOtpAction(
       phone: normalizedPhone,
       code,
     });
+    if (result.lockedOut) {
+      return { verified: false, error: "ACCOUNT_LOCKED" };
+    }
     if (!result.verified) {
       return { verified: false, error: "INVALID_OTP" };
     }

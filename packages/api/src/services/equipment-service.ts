@@ -210,6 +210,133 @@ export async function createPartnerFleetEquipment(
   });
 }
 
+export interface UpdatePartnerFleetEquipmentInput {
+  userId: string;
+  equipmentId: string;
+  hp: number;
+  hourlyRate: number;
+  dailyRate: number;
+  freeRadiusKm: number;
+  transportRatePerKm: number;
+  /** Max distance (km) this unit will travel — same semantics as add flow / `maxRadiusKm` in DB */
+  maxRadiusKm: number;
+  minBookingHours: number;
+  registrationNumber: string;
+  operatorName: string;
+  operatorPhone: string;
+  manufacturingYear: number;
+  isActive: boolean;
+}
+
+export async function updatePartnerFleetEquipment(
+  input: UpdatePartnerFleetEquipmentInput
+) {
+  const partner = await prisma.partner.findUnique({
+    where: { userId: input.userId },
+  });
+  if (!partner) {
+    throw new Error("PARTNER_NOT_FOUND");
+  }
+
+  const existing = await prisma.equipment.findFirst({
+    where: { id: input.equipmentId, partnerId: partner.id },
+  });
+  if (!existing) {
+    throw new Error("EQUIPMENT_NOT_FOUND");
+  }
+
+  let catalog: Awaited<ReturnType<typeof prisma.masterCatalog.findUnique>> = null;
+  if (existing.catalogId) {
+    catalog = await prisma.masterCatalog.findUnique({
+      where: { id: existing.catalogId },
+    });
+    if (!catalog) {
+      throw new Error("CATALOG_NOT_FOUND");
+    }
+  }
+
+  const hourlyPaise = rupeesToPaise(input.hourlyRate);
+  const dailyPaise = rupeesToPaise(input.dailyRate);
+  if (catalog) {
+    if (
+      hourlyPaise < catalog.minHourlyRate ||
+      hourlyPaise > catalog.maxHourlyRate ||
+      dailyPaise < catalog.minDailyRate ||
+      dailyPaise > catalog.maxDailyRate
+    ) {
+      throw new Error("RATES_OUT_OF_RANGE");
+    }
+  }
+
+  if (input.freeRadiusKm > input.maxRadiusKm) {
+    throw new Error("RADIUS_INVALID");
+  }
+
+  const reg = input.registrationNumber.trim();
+  if (reg.length > 0) {
+    const dup = await prisma.equipment.findFirst({
+      where: {
+        partnerId: partner.id,
+        registrationNumber: reg,
+        NOT: { id: existing.id },
+      },
+    });
+    if (dup) {
+      throw new Error("REGISTRATION_DUPLICATE");
+    }
+  }
+
+  const prevSpecs =
+    existing.specifications !== null &&
+    typeof existing.specifications === "object" &&
+    !Array.isArray(existing.specifications)
+      ? (existing.specifications as Record<string, unknown>)
+      : {};
+
+  const catalogSpecs =
+    catalog &&
+    catalog.specifications !== null &&
+    typeof catalog.specifications === "object" &&
+    !Array.isArray(catalog.specifications)
+      ? (catalog.specifications as Record<string, unknown>)
+      : {};
+
+  const mergedSpecs = {
+    ...catalogSpecs,
+    ...prevSpecs,
+    hp: input.hp,
+    freeRadiusKm: input.freeRadiusKm,
+    transportRatePerKm: input.transportRatePerKm,
+    maxRadiusKm: input.maxRadiusKm,
+    minBookingHours: input.minBookingHours,
+    registrationNumber: reg,
+    operatorName: input.operatorName.trim(),
+    operatorPhone: input.operatorPhone.trim(),
+    manufacturingYear: input.manufacturingYear,
+    isActive: input.isActive,
+    ...(catalog ? { catalogName: catalog.name } : {}),
+  } as Prisma.InputJsonValue;
+
+  return prisma.equipment.update({
+    where: { id: existing.id },
+    data: {
+      hp: input.hp,
+      hourlyRate: hourlyPaise,
+      freeRadiusKm: input.freeRadiusKm,
+      transportRatePerKm: rupeesToPaise(input.transportRatePerKm),
+      maxRadiusKm: input.maxRadiusKm,
+      minBookingHours: input.minBookingHours,
+      registrationNumber: reg.length > 0 ? reg : null,
+      operatorName: input.operatorName.trim(),
+      operatorPhone: input.operatorPhone.trim(),
+      manufacturingYear: input.manufacturingYear,
+      isActive: input.isActive,
+      pricing: { hourly: hourlyPaise, daily: dailyPaise },
+      specifications: mergedSpecs,
+    },
+  });
+}
+
 interface UpdateEquipmentInput {
   id: string;
   name?: string;
@@ -258,6 +385,3 @@ export async function updateEquipment(input: UpdateEquipmentInput) {
   });
 }
 
-export async function deleteEquipment(id: string) {
-  return prisma.equipment.delete({ where: { id } });
-}

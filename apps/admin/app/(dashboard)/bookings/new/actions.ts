@@ -1,30 +1,56 @@
 "use server";
 
+import { randomInt } from "node:crypto";
 import { prisma } from "@repo/db";
 import {
   sendBookingConfirmationWhatsApp,
   sendOperatorMagicLink,
 } from "@repo/lib/aisensy";
 import { auth } from "../../../../lib/auth";
+import {
+  getAuthorizedWhereClause,
+  toResourceAuthzContext,
+} from "../../../../lib/resource-authz";
 import { normalizeAdminPhone } from "../../../../lib/phone";
-import { naiveIstLocalToUtc } from "./lib/ist-datetime";
+import { naiveIstLocalToUtc, utcToNaiveIstLocalForInput } from "./lib/ist-datetime";
 import {
   computeWalkInQuote,
   distanceJobToPartnerKm,
   partnerBaseCoords,
   type CatalogGuards,
 } from "./lib/walk-in-pricing";
-import { walkInBookingSchema, type WalkInBookingValues } from "./schema";
+import {
+  walkInBookingSchema,
+  walkInRescheduleSchema,
+  type WalkInBookingValues,
+  type WalkInRescheduleValues,
+} from "./schema";
 
-async function requireAdmin(): Promise<{ userId: string } | null> {
+type WalkInDeskActor =
+  | { readonly kind: "ADMIN"; readonly userId: string }
+  | { readonly kind: "PARTNER"; readonly userId: string; readonly partnerId: string };
+
+async function requireWalkInDesk(): Promise<WalkInDeskActor | null> {
   const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return null;
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (role !== "ADMIN" || !session?.user?.id) return null;
-  return { userId: session.user.id };
+  if (role === "ADMIN") {
+    return { kind: "ADMIN", userId };
+  }
+  if (role === "PARTNER") {
+    const partner = await prisma.partner.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!partner) return null;
+    return { kind: "PARTNER", userId, partnerId: partner.id };
+  }
+  return null;
 }
 
 function randomOtp4(): string {
-  return String(Math.floor(1000 + Math.random() * 9000));
+  return String(randomInt(1000, 10000));
 }
 
 function bookingsAppOrigin(): string {
@@ -53,30 +79,36 @@ export async function fetchWalkInDeskData(): Promise<{
   customers: { id: string; name: string; company: string; phone: string; gstin: string | null }[];
   equipment: WalkInEquipmentOption[];
 }> {
-  const admin = await requireAdmin();
-  if (!admin) return { ok: false, customers: [], equipment: [] };
+  const actor = await requireWalkInDesk();
+  if (!actor) return { ok: false, customers: [], equipment: [] };
 
-  const [customers, equipmentRows] = await Promise.all([
-    prisma.customer.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, company: true, phone: true, gstin: true },
-    }),
-    prisma.equipment.findMany({
-      where: { partnerId: { not: null }, isActive: true },
-      include: {
-        catalog: {
-          select: {
-            minHourlyRate: true,
-            maxHourlyRate: true,
-            minDailyRate: true,
-            maxDailyRate: true,
-          },
+  const customersPromise = prisma.customer.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, company: true, phone: true, gstin: true },
+  });
+
+  const equipmentWhere =
+    actor.kind === "ADMIN"
+      ? { partnerId: { not: null }, isActive: true }
+      : { partnerId: actor.partnerId, isActive: true };
+
+  const equipmentRows = await prisma.equipment.findMany({
+    where: equipmentWhere,
+    include: {
+      catalog: {
+        select: {
+          minHourlyRate: true,
+          maxHourlyRate: true,
+          minDailyRate: true,
+          maxDailyRate: true,
         },
-        partner: { select: { baseLocation: true } },
       },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+      partner: { select: { baseLocation: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  const customers = await customersPromise;
 
   const equipment: WalkInEquipmentOption[] = equipmentRows.map((e) => {
     const hourlyBase =
@@ -111,9 +143,21 @@ export async function checkEquipmentAvailabilityAction(input: {
   equipmentId: string;
   startLocal: string;
   endLocal: string;
+  /** When rescheduling, ignore overlap with this booking row. */
+  ignoreBookingId?: string;
+  /** When rescheduling, ignore overlap with this trip row. */
+  ignoreTripId?: string;
 }): Promise<{ available: boolean; error?: string }> {
-  const admin = await requireAdmin();
-  if (!admin) return { available: false, error: "Unauthorized" };
+  const actor = await requireWalkInDesk();
+  if (!actor) return { available: false, error: "Unauthorized" };
+
+  if (actor.kind === "PARTNER") {
+    const owned = await prisma.equipment.findFirst({
+      where: { id: input.equipmentId, partnerId: actor.partnerId },
+      select: { id: true },
+    });
+    if (!owned) return { available: false, error: "Unauthorized" };
+  }
 
   let start: Date;
   let end: Date;
@@ -134,6 +178,7 @@ export async function checkEquipmentAvailabilityAction(input: {
       startDate: { not: null },
       endDate: { not: null },
       AND: [{ startDate: { lt: end } }, { endDate: { gt: start } }],
+      ...(input.ignoreBookingId ? { id: { not: input.ignoreBookingId } } : {}),
     },
   });
 
@@ -142,6 +187,7 @@ export async function checkEquipmentAvailabilityAction(input: {
     where: {
       equipmentId: input.equipmentId,
       status: { notIn: ["COMPLETED", "CANCELLED"] },
+      ...(input.ignoreTripId ? { id: { not: input.ignoreTripId } } : {}),
       OR: [
         {
           expectedEndTime: { not: null },
@@ -164,8 +210,8 @@ export async function createQuickCustomerAction(input: {
   company?: string;
   gstin?: string;
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  const admin = await requireAdmin();
-  if (!admin) return { ok: false, error: "Unauthorized" };
+  const actor = await requireWalkInDesk();
+  if (!actor) return { ok: false, error: "Unauthorized" };
 
   const phone = normalizeAdminPhone(input.phone);
   const digits = phone.replace(/\D/g, "");
@@ -196,8 +242,8 @@ export async function createWalkInBookingAction(
   | { ok: true; bookingId: string; tripId: string; notifyFailed?: boolean }
   | { ok: false; error: string }
 > {
-  const admin = await requireAdmin();
-  if (!admin) return { ok: false, error: "Unauthorized" };
+  const actor = await requireWalkInDesk();
+  if (!actor) return { ok: false, error: "Unauthorized" };
 
   const parsed = walkInBookingSchema.safeParse(raw);
   if (!parsed.success) {
@@ -227,8 +273,12 @@ export async function createWalkInBookingAction(
     return { ok: false, error: availability.error ?? "Machine is not available in this window" };
   }
 
-  const equipment = await prisma.equipment.findUnique({
-    where: { id: data.equipmentId },
+  const equipmentWhere = getAuthorizedWhereClause(toResourceAuthzContext(actor), {
+    resource: "Equipment",
+    targetId: data.equipmentId,
+  });
+  const equipment = await prisma.equipment.findFirst({
+    where: equipmentWhere,
     include: {
       catalog: {
         select: {
@@ -421,4 +471,164 @@ export async function createWalkInBookingAction(
     tripId: result.trip.id,
     ...(notifyFailed ? { notifyFailed: true } : {}),
   };
+}
+
+export type WalkInReschedulePayloadOk = {
+  bookingId: string;
+  tripId: string;
+  formDefaults: WalkInBookingValues;
+};
+
+export async function loadWalkInReschedulePayload(
+  bookingId: string
+): Promise<{ ok: true; data: WalkInReschedulePayloadOk } | { ok: false; error: string }> {
+  const actor = await requireWalkInDesk();
+  if (!actor) return { ok: false, error: "Unauthorized" };
+
+  const ctx = toResourceAuthzContext(actor);
+  const bookingWhere = getAuthorizedWhereClause(ctx, {
+    resource: "Booking",
+    targetId: bookingId,
+  });
+
+  const booking = await prisma.booking.findFirst({
+    where: bookingWhere,
+    include: {
+      trips: {
+        where: { status: { in: ["SCHEDULED", "ENROUTE", "ON_SITE", "OVERRUN"] } },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!booking) return { ok: false, error: "Booking not found" };
+  const trip = booking.trips[0];
+  if (!trip) {
+    return { ok: false, error: "No active trip to reschedule (job may already be finished)." };
+  }
+
+  const endInstant = trip.expectedEndTime ?? booking.endDate;
+  if (!endInstant) {
+    return { ok: false, error: "Booking is missing an end time; contact support." };
+  }
+  if (!booking.customerId) {
+    return {
+      ok: false,
+      error: "Reschedule from this desk requires a CRM customer on the booking.",
+    };
+  }
+
+  const startLocal = utcToNaiveIstLocalForInput(trip.scheduledDate);
+  const endLocal = utcToNaiveIstLocalForInput(endInstant);
+  const unit = booking.pricing.unit === "daily" ? "daily" : "hourly";
+
+  const formDefaults: WalkInBookingValues = {
+    mode: "existing",
+    customerId: booking.customerId,
+    newName: "",
+    newPhone: "",
+    newCompany: "",
+    newGstin: "",
+    equipmentId: booking.equipmentId,
+    siteAddress: booking.siteAddress ?? booking.location.address,
+    pincode: booking.location.pincode,
+    lat: booking.location.coordinates.lat,
+    lng: booking.location.coordinates.lng,
+    pricingUnit: unit,
+    duration: booking.pricing.duration,
+    startLocal,
+    endLocal,
+    expectedShift: booking.expectedShift ?? "DAY",
+  };
+
+  return {
+    ok: true,
+    data: { bookingId: booking.id, tripId: trip.id, formDefaults },
+  };
+}
+
+export async function updateWalkInBookingScheduleAction(
+  raw: WalkInRescheduleValues
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const actor = await requireWalkInDesk();
+  if (!actor) return { ok: false, error: "Unauthorized" };
+
+  const parsed = walkInRescheduleSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.flatten().formErrors[0] ?? "Invalid input" };
+  }
+  const data = parsed.data;
+
+  let start: Date;
+  let end: Date;
+  try {
+    start = naiveIstLocalToUtc(data.startLocal);
+    end = naiveIstLocalToUtc(data.endLocal);
+  } catch {
+    return { ok: false, error: "Invalid date/time" };
+  }
+  if (end.getTime() <= start.getTime()) {
+    return { ok: false, error: "End must be after start" };
+  }
+
+  const ctx = toResourceAuthzContext(actor);
+  const bookingWhere = getAuthorizedWhereClause(ctx, {
+    resource: "Booking",
+    targetId: data.bookingId,
+  });
+  const tripAuthz = getAuthorizedWhereClause(ctx, { resource: "Trip", targetId: data.tripId });
+
+  const booking = await prisma.booking.findFirst({
+    where: bookingWhere,
+    select: { id: true, equipmentId: true },
+  });
+  if (!booking) return { ok: false, error: "Booking not found" };
+
+  const trip = await prisma.trip.findFirst({
+    where: {
+      AND: [tripAuthz, { bookingId: booking.id }],
+    },
+    select: { id: true, status: true },
+  });
+  if (!trip || trip.id !== data.tripId) return { ok: false, error: "Trip not found" };
+  if (trip.status === "COMPLETED" || trip.status === "CANCELLED" || trip.status === "DISPUTED") {
+    return { ok: false, error: "This trip can no longer be rescheduled." };
+  }
+
+  const availability = await checkEquipmentAvailabilityAction({
+    equipmentId: booking.equipmentId,
+    startLocal: data.startLocal,
+    endLocal: data.endLocal,
+    ignoreBookingId: booking.id,
+    ignoreTripId: trip.id,
+  });
+  if (!availability.available) {
+    return { ok: false, error: availability.error ?? "Machine is not available in this window" };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          startDate: start,
+          endDate: end,
+          expectedShift: data.expectedShift?.trim() || null,
+        },
+      });
+      await tx.trip.update({
+        where: { id: trip.id },
+        data: {
+          scheduledDate: start,
+          expectedEndTime: end,
+        },
+      });
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Failed to update";
+    return { ok: false, error: message };
+  }
+
+  return { ok: true };
 }
