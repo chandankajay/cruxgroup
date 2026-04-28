@@ -30,7 +30,7 @@ function StatCard({
   return (
     <div
       className={`rounded-xl border px-5 py-5 shadow-sm ${
-        accent ? "border-amber-200 bg-amber-50" : "border-border bg-white"
+        accent ? "border-amber-200 bg-amber-50" : "border-border bg-card"
       }`}
     >
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -134,7 +134,7 @@ export function EarningsContent({ bookings }: EarningsContentProps) {
       </div>
 
       {/* Monthly bar chart */}
-      <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
         <h2 className="mb-5 text-base font-semibold text-charcoal">
           Monthly Earnings (Last 6 Months)
         </h2>
@@ -179,7 +179,7 @@ export function EarningsContent({ bookings }: EarningsContentProps) {
 
       {/* Recent completed bookings */}
       {bookings.filter((b) => b.status === "COMPLETED").length > 0 && (
-        <div className="mt-6 rounded-xl border border-border bg-white shadow-sm">
+        <div className="mt-6 rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border px-6 py-4">
             <h2 className="font-semibold text-charcoal">Recent Completed Jobs</h2>
           </div>

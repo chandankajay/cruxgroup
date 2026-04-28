@@ -18,6 +18,13 @@ export type AuthorizedResourceSpec =
   | { readonly resource: "Invoice"; readonly targetId: string }
   | { readonly resource: "MachineServiceLog"; readonly targetId: string };
 
+type AuthorizedWhereUnion =
+  | Prisma.EquipmentWhereInput
+  | Prisma.BookingWhereInput
+  | Prisma.TripWhereInput
+  | Prisma.InvoiceWhereInput
+  | Prisma.MachineServiceLogWhereInput;
+
 /**
  * Builds a Prisma `where` fragment so that:
  * - PARTNER: row must belong to the signed-in partner (`partnerId` on the model, or via relations).
@@ -25,16 +32,39 @@ export type AuthorizedResourceSpec =
  *
  * Use with `findFirst`, `updateMany`, `deleteMany`, or `count` — not with `findUnique`/`delete`/`update`
  * unless you have a compound unique on (id, partnerId).
+ *
+ * Overloads tie `spec.resource` to the correct Prisma `WhereInput`. If `spec` is only typed as
+ * {@link AuthorizedResourceSpec} (widened), use `getAuthorizedWhereClause<Prisma.EquipmentWhereInput>(...)`
+ * or pass a satisfies-typed spec so the matching overload applies.
  */
 export function getAuthorizedWhereClause(
   ctx: ResourceAuthzContext,
+  spec: { readonly resource: "Equipment"; readonly targetId: string }
+): Prisma.EquipmentWhereInput;
+export function getAuthorizedWhereClause(
+  ctx: ResourceAuthzContext,
+  spec: { readonly resource: "Booking"; readonly targetId: string }
+): Prisma.BookingWhereInput;
+export function getAuthorizedWhereClause(
+  ctx: ResourceAuthzContext,
+  spec: { readonly resource: "Trip"; readonly targetId: string }
+): Prisma.TripWhereInput;
+export function getAuthorizedWhereClause(
+  ctx: ResourceAuthzContext,
+  spec: { readonly resource: "Invoice"; readonly targetId: string }
+): Prisma.InvoiceWhereInput;
+export function getAuthorizedWhereClause(
+  ctx: ResourceAuthzContext,
+  spec: { readonly resource: "MachineServiceLog"; readonly targetId: string }
+): Prisma.MachineServiceLogWhereInput;
+export function getAuthorizedWhereClause(
+  ctx: ResourceAuthzContext,
   spec: AuthorizedResourceSpec
-):
-  | Prisma.EquipmentWhereInput
-  | Prisma.BookingWhereInput
-  | Prisma.TripWhereInput
-  | Prisma.InvoiceWhereInput
-  | Prisma.MachineServiceLogWhereInput {
+): AuthorizedWhereUnion;
+export function getAuthorizedWhereClause(
+  ctx: ResourceAuthzContext,
+  spec: AuthorizedResourceSpec
+): AuthorizedWhereUnion {
   const { resource, targetId } = spec;
 
   if (ctx.role === "ADMIN") {

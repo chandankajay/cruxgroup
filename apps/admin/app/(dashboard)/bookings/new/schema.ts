@@ -11,8 +11,12 @@ export const walkInBookingSchema = z
     equipmentId: z.string().min(1, "Select a machine"),
     siteAddress: z.string().min(3, "Site address is required"),
     pincode: z.string().min(3, "Pincode is required"),
-    lat: z.coerce.number(),
-    lng: z.coerce.number(),
+    lat: z.coerce
+      .number()
+      .refine((n) => Number.isFinite(n) && Math.abs(n) <= 90, "Invalid latitude"),
+    lng: z.coerce
+      .number()
+      .refine((n) => Number.isFinite(n) && Math.abs(n) <= 180, "Invalid longitude"),
     pricingUnit: z.enum(["hourly", "daily"]),
     duration: z.coerce.number().positive(),
     startLocal: z.string().min(1, "Start date/time (IST) is required"),

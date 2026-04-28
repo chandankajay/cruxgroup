@@ -54,7 +54,7 @@ export function PartnerKycForm({ partnerUserId, partnerName }: PartnerKycFormPro
   );
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       <div className="border-b border-border px-6 py-4">
         <h2 className="font-semibold text-charcoal">KYC identifiers</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -125,7 +125,7 @@ export function PartnerKycForm({ partnerUserId, partnerName }: PartnerKycFormPro
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-md bg-brand-orange px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+          className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-60"
         >
           {pending ? "Saving…" : "Save KYC identifiers"}
         </button>

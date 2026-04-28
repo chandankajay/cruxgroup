@@ -104,7 +104,7 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
         ← Back to My Fleet
       </Link>
 
-      <div className="rounded-xl border border-border bg-white p-5 shadow-sm sm:p-8">
+      <div className="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-8">
         <h1 className="text-xl font-bold text-charcoal sm:text-2xl">
           Add equipment
         </h1>
@@ -120,9 +120,9 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
           >
             <p className="font-medium">Equipment type list is empty.</p>
             <p className="mt-1 text-amber-900/90">
-              Run <code className="rounded bg-white/90 px-1.5 py-0.5 text-xs">prisma db push</code> then{" "}
-              <code className="rounded bg-white/90 px-1.5 py-0.5 text-xs">prisma db seed</code> so{" "}
-              <code className="rounded bg-white/90 px-1.5 py-0.5 text-xs">master_catalog</code> has rows.
+              Run <code className="rounded bg-muted/90 px-1.5 py-0.5 text-xs">prisma db push</code> then{" "}
+              <code className="rounded bg-muted/90 px-1.5 py-0.5 text-xs">prisma db seed</code> so{" "}
+              <code className="rounded bg-muted/90 px-1.5 py-0.5 text-xs">master_catalog</code> has rows.
             </p>
           </div>
         )}

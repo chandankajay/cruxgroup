@@ -32,19 +32,19 @@ export function DeleteConfirmDialog({
         }}
       >
         <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
-          <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 max-h-[90vh] overflow-y-auto rounded-t-3xl bg-zinc-900 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] outline-none">
-            <div className="mx-auto mb-5 h-1 w-10 shrink-0 rounded-full bg-zinc-600" aria-hidden />
-            <Drawer.Title className="text-lg font-semibold text-zinc-50">Delete Equipment</Drawer.Title>
-            <p className="mt-4 text-sm text-zinc-300">
-              Are you sure you want to delete <strong className="text-white">{equipmentName}</strong>? This action
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-foreground/30" />
+          <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 max-h-[90vh] overflow-y-auto rounded-t-3xl border border-border bg-card p-6 text-card-foreground pb-[calc(1.5rem+env(safe-area-inset-bottom))] outline-none">
+            <div className="mx-auto mb-5 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" aria-hidden />
+            <Drawer.Title className="text-lg font-semibold text-foreground">Delete Equipment</Drawer.Title>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Are you sure you want to delete <strong className="text-foreground">{equipmentName}</strong>? This action
               cannot be undone.
             </p>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="h-12 touch-manipulation rounded-xl border-zinc-600 bg-zinc-800 text-zinc-100 active:bg-zinc-700"
+                className="h-12 touch-manipulation rounded-xl"
                 onClick={onClose}
               >
                 Cancel

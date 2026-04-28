@@ -23,7 +23,7 @@ export function AdminBottomNav({
       role="navigation"
       aria-label="Primary admin"
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-700 bg-zinc-900 pb-[env(safe-area-inset-bottom)] lg:hidden",
+        "fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden",
         className
       )}
     >
@@ -41,13 +41,15 @@ export function AdminBottomNav({
                 href={item.href}
                 className={cn(
                   "flex min-h-[48px] w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-center text-[9px] font-medium leading-tight touch-manipulation select-none active:opacity-90",
-                  active ? "text-white" : "text-zinc-500"
+                  active
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground"
                 )}
               >
                 <span
                   className={cn(
-                    "flex size-5 shrink-0 items-center justify-center [&_svg]:size-[18px] [&_svg]:shrink-0",
-                    active ? "text-white" : "text-zinc-500"
+                    "flex size-5 shrink-0 items-center justify-center text-foreground [&_svg]:size-[18px] [&_svg]:shrink-0",
+                    !active && "text-muted-foreground"
                   )}
                 >
                   {item.icon}

@@ -89,7 +89,7 @@ export function BookingsPageContent({ initialData }: BookingsPageContentProps) {
           return (
             <div
               key={status}
-              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 shadow-sm"
+              className="flex items-center gap-2 rounded-lg bg-card px-4 py-2 shadow-sm"
             >
               <span className="text-xs font-medium text-muted-foreground capitalize">
                 {status.charAt(0) + status.slice(1).toLowerCase()}
@@ -101,7 +101,7 @@ export function BookingsPageContent({ initialData }: BookingsPageContentProps) {
       </div>
 
       {/* Table Card */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl bg-card shadow-sm">
         <BookingsTable
           bookings={bookings}
           updatingId={isPending ? updatingId : null}

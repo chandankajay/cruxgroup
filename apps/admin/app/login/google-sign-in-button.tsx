@@ -32,7 +32,7 @@ export function GoogleSignInButton({ action }: GoogleSignInButtonProps) {
     <form action={action}>
       <button
         type="submit"
-        className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-white/10 bg-white py-3.5 text-sm font-semibold text-gray-800 shadow-sm transition hover:bg-gray-100 active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-border bg-card py-3.5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-accent active:scale-[0.99]"
       >
         <GoogleIcon />
         Continue with Google

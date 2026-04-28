@@ -16,7 +16,7 @@ export default async function SettingsPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Account info */}
-        <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <h2 className="mb-4 font-semibold text-charcoal">
             Logged-in Account
           </h2>
@@ -35,7 +35,7 @@ export default async function SettingsPage() {
         </div>
 
         {/* Partner role management hint */}
-        <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <h2 className="mb-4 font-semibold text-charcoal">
             Partner Role Management
           </h2>
@@ -66,7 +66,7 @@ export default async function SettingsPage() {
         </div>
 
         {/* Environment checklist */}
-        <div className="rounded-xl border border-border bg-white p-6 shadow-sm lg:col-span-2">
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm lg:col-span-2">
           <h2 className="mb-4 font-semibold text-charcoal">
             Environment Checklist
           </h2>

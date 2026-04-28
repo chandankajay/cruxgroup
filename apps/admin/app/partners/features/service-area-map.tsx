@@ -389,7 +389,7 @@ export function ServiceAreaMap({
 
       {/* Current pin info */}
       {pinLocation && (
-        <div className="rounded-lg border border-border bg-white px-4 py-3 text-sm">
+        <div className="rounded-lg border border-border bg-card px-4 py-3 text-sm">
           <p className="font-medium text-charcoal">Base location</p>
           <p className="mt-0.5 text-muted-foreground">{baseAddress || "—"}</p>
           <p className="mt-1 font-mono text-xs text-muted-foreground">
@@ -408,7 +408,7 @@ export function ServiceAreaMap({
             type="button"
             onClick={handleSaveClick}
             disabled={!pinLocation || isSaving}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-orange px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? (
               <>

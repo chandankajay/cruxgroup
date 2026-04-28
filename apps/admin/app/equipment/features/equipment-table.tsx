@@ -10,7 +10,8 @@ import {
   TableCell,
 } from "@repo/ui/table";
 import { Badge } from "@repo/ui/badge";
-import { Button } from "@repo/ui/button";
+import { Button, buttonVariants } from "@repo/ui/button";
+import { cn } from "@repo/ui/lib/utils";
 
 interface EquipmentRow {
   id: string;
@@ -67,9 +68,12 @@ export function EquipmentTable({ items, onEdit, onDelete }: EquipmentTableProps)
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
-                <Button size="sm" variant="secondary" asChild>
-                  <Link href={`/fleet/${item.id}/health`}>Health</Link>
-                </Button>
+                <Link
+                  href={`/fleet/${item.id}/health`}
+                  className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+                >
+                  Health
+                </Link>
                 <Button
                   size="sm"
                   variant="outline"

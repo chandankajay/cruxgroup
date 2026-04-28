@@ -71,15 +71,15 @@ export function PartnerCommandCenter({
   return (
     <motion.div
       className={cn(
-        "dark min-h-full w-full p-2 min-w-0 max-w-full rounded-none border-0 bg-zinc-950 py-4 text-zinc-100 lg:rounded-2xl lg:border lg:border-zinc-800 lg:p-6",
-        "selection:bg-amber-500/30 selection:text-amber-50"
+        "min-h-full w-full min-w-0 max-w-full rounded-none border-0 bg-card p-2 py-4 text-foreground lg:rounded-2xl lg:border lg:border-border lg:p-6",
+        "selection:bg-primary/20 selection:text-foreground"
       )}
       variants={containerVariants}
       initial="initial"
       animate="animate"
     >
       <motion.header className="mb-6 space-y-4" variants={cardVariants}>
-        <h1 className="select-none text-2xl font-semibold tracking-tight text-zinc-50">
+        <h1 className="select-none text-2xl font-semibold tracking-tight text-foreground">
           Welcome back, {displayName}
         </h1>
 
@@ -87,22 +87,22 @@ export function PartnerCommandCenter({
           <div className="select-none">
             <div
               className={cn(
-                "w-full rounded-2xl border border-amber-500/60 bg-amber-500/10 p-4 text-amber-50",
-                "shadow-sm"
+                "w-full rounded-2xl border border-amber-500/50 bg-amber-500/10 p-4 text-amber-900 shadow-sm",
+                "dark:text-amber-50"
               )}
             >
               <div className="flex gap-3">
-                <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-300" aria-hidden />
+                <AlertCircle className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-300" aria-hidden />
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-widest text-amber-200/90">
+                  <p className="text-xs font-medium uppercase tracking-widest text-amber-800/90 dark:text-amber-200/90">
                     Action required
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-100">
-                    <span className="font-semibold text-amber-100">Complete your Trust Center KYC</span> to start
+                  <p className="mt-2 text-sm leading-relaxed text-amber-950/90 dark:text-zinc-100">
+                    <span className="font-semibold text-amber-900 dark:text-amber-100">Complete your Trust Center KYC</span> to start
                     receiving bookings.{" "}
                     <Link
                       href="/settings/kyc"
-                      className="touch-manipulation font-semibold text-amber-200 underline decoration-amber-100/50 underline-offset-2 active:text-white lg:hover:text-white"
+                      className="touch-manipulation font-semibold text-amber-800 underline decoration-amber-600/50 underline-offset-2 hover:text-amber-900 active:text-amber-900 dark:text-amber-200 dark:decoration-amber-100/50 dark:hover:text-amber-100 dark:active:text-amber-100"
                     >
                       Trust Center
                     </Link>
@@ -117,7 +117,7 @@ export function PartnerCommandCenter({
       <IdleMachineBanner idleMachines={bi.idleMachines} />
 
       <motion.div className="mb-8" variants={cardVariants} role="region" aria-label="Key metrics">
-        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-zinc-400">Overview</p>
+        <p className="mb-3 text-xs font-medium uppercase tracking-widest text-muted-foreground">Overview</p>
         <motion.div
           className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6 xl:gap-4"
           variants={metricsGridVariants}
@@ -182,18 +182,18 @@ export function PartnerCommandCenter({
         animate="animate"
       >
         <motion.div className="lg:col-span-7" variants={cardVariants}>
-          <Card className="select-none border-zinc-800 bg-zinc-800 shadow-md lg:bg-zinc-900/80">
-            <CardHeader className="border-b border-zinc-800 pb-4">
-              <CardTitle className="text-lg text-zinc-50">Current &amp; Upcoming Jobs</CardTitle>
-              <CardDescription className="text-sm text-zinc-300">
+          <Card className="select-none border border-border bg-card text-card-foreground shadow-md">
+            <CardHeader className="border-b border-border pb-4">
+              <CardTitle className="text-lg text-foreground">Current &amp; Upcoming Jobs</CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
                 Live view of work assigned to your fleet
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center px-4 py-12 text-center sm:px-6 sm:py-16">
-              <div className="mb-4 flex size-16 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800/50">
-                <MapIcon className="size-8 text-zinc-500" strokeWidth={1.25} aria-hidden />
+              <div className="mb-4 flex size-16 items-center justify-center rounded-2xl border border-border bg-muted/50">
+                <MapIcon className="size-8 text-muted-foreground" strokeWidth={1.25} aria-hidden />
               </div>
-              <p className="max-w-sm text-sm leading-relaxed text-zinc-300">
+              <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
                 Your fleet is currently resting. Make sure your machines are active to catch the next booking!
               </p>
             </CardContent>
@@ -202,21 +202,21 @@ export function PartnerCommandCenter({
 
         <div className="flex flex-col gap-6 lg:col-span-5">
           <motion.div variants={cardVariants}>
-            <Card className="select-none border-zinc-800 bg-zinc-800 shadow-md lg:bg-zinc-900/80">
-              <CardHeader className="border-b border-zinc-800 pb-4">
-                <CardTitle className="text-lg text-zinc-50">Quick Actions</CardTitle>
-                <CardDescription className="text-sm text-zinc-300">Common tasks, optimized for mobile</CardDescription>
+            <Card className="select-none border border-border bg-card text-card-foreground shadow-md">
+              <CardHeader className="border-b border-border pb-4">
+                <CardTitle className="text-lg text-foreground">Quick Actions</CardTitle>
+                <CardDescription className="text-sm text-muted-foreground">Common tasks, optimized for mobile</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col gap-3 pt-6">
                 <Link
                   href="/fleet/new"
-                  className="flex h-12 w-full touch-manipulation select-none items-center justify-center rounded-xl bg-amber-500 px-4 text-center text-sm font-semibold text-zinc-950 shadow-sm active:bg-amber-400 lg:hover:bg-amber-400"
+                  className="flex h-12 w-full touch-manipulation select-none items-center justify-center rounded-xl bg-primary px-4 text-center text-sm font-semibold text-primary-foreground shadow-sm active:bg-primary/90 lg:hover:bg-primary/90"
                 >
                   Add New Equipment
                 </Link>
                 <Link
                   href="/settings/kyc"
-                  className="flex h-12 w-full touch-manipulation select-none items-center justify-center rounded-xl border-2 border-amber-500/80 bg-amber-500/10 px-4 text-center text-sm font-semibold text-amber-100 active:bg-amber-500/25 lg:hover:bg-amber-500/20"
+                  className="flex h-12 w-full touch-manipulation select-none items-center justify-center rounded-xl border-2 border-primary/40 bg-primary/10 px-4 text-center text-sm font-semibold text-foreground active:bg-primary/20 lg:hover:bg-primary/15"
                 >
                   Update KYC
                 </Link>
@@ -225,28 +225,28 @@ export function PartnerCommandCenter({
           </motion.div>
 
           <motion.div variants={cardVariants}>
-            <Card className="select-none border-zinc-800 bg-zinc-800/80 shadow-inner lg:bg-zinc-900/60">
+            <Card className="select-none border border-border bg-muted/40 shadow-inner">
               <CardHeader className="pb-2 pt-5">
-                <CardTitle className="text-base text-zinc-200">Fleet Health</CardTitle>
+                <CardTitle className="text-base text-foreground">Fleet Health</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 pb-5">
-                <p className="text-sm text-zinc-300">
-                  <span className="font-semibold text-amber-400">{fleet.active}</span> Active,{" "}
-                  <span className="font-semibold text-amber-400/90">{pendingKycCount}</span> Pending KYC
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">{fleet.active}</span> Active,{" "}
+                  <span className="font-semibold text-amber-600/90 dark:text-amber-400/90">{pendingKycCount}</span> Pending KYC
                 </p>
                 <div className="space-y-1.5">
-                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-800">
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full rounded-full bg-amber-500 transition-[width]"
+                      className="h-full rounded-full bg-primary transition-[width]"
                       style={{ width: `${activeSharePct}%` }}
                     />
                   </div>
-                  <p className="text-xs text-zinc-400">
+                  <p className="text-xs text-muted-foreground">
                     {fleet.total === 0
                       ? "Add equipment to see utilization here."
                       : `${activeSharePct}% of units marked active`}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground/80">
                     {fleet.pending === 0
                       ? "No machines marked inactive or in maintenance."
                       : `${fleet.pending} unavailable for hire (inactive / maintenance).`}
@@ -274,14 +274,14 @@ function MetricCard({
 }) {
   return (
     <motion.div variants={cardVariants}>
-      <Card className="h-full select-none rounded-2xl border-zinc-700 bg-zinc-800 shadow-md transition-colors active:border-zinc-600 lg:border-zinc-800 lg:bg-zinc-900/90 lg:hover:border-zinc-700">
+      <Card className="h-full select-none rounded-2xl border border-border bg-card text-card-foreground shadow-md transition-colors active:border-primary/30 lg:hover:border-border">
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-          <CardTitle className="text-xs font-medium uppercase tracking-widest text-zinc-400">{title}</CardTitle>
+          <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{title}</CardTitle>
           {icon}
         </CardHeader>
         <CardContent>
-          <p className="text-2xl font-bold tracking-tight text-zinc-50">{value}</p>
-          {subtext ? <CardDescription className="mt-1.5 text-xs text-zinc-400">{subtext}</CardDescription> : null}
+          <p className="text-2xl font-bold tracking-tight text-foreground">{value}</p>
+          {subtext ? <CardDescription className="mt-1.5 text-xs text-muted-foreground">{subtext}</CardDescription> : null}
         </CardContent>
       </Card>
     </motion.div>

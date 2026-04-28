@@ -127,7 +127,7 @@ export function KycApprovalQueue({ initialRows }: KycApprovalQueueProps) {
         Review submitted partner identity documents. Queue: {rows.length}
       </p>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-border bg-white shadow-sm">
+      <div className="mt-6 overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow className="bg-charcoal/5 hover:bg-charcoal/5">
@@ -298,7 +298,7 @@ export function KycApprovalQueue({ initialRows }: KycApprovalQueueProps) {
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  className="bg-green-600 text-white hover:bg-green-700"
+                  className="bg-emerald-600 text-primary-foreground hover:bg-emerald-700"
                   disabled={pending !== null}
                   onClick={() => void handleVerify()}
                 >

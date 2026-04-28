@@ -77,7 +77,7 @@ export function ServiceAreaSelfContent({
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm select-none">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm select-none">
         <div className="border-b border-border px-4 py-4 lg:px-6">
           <h2 className="text-xs font-medium uppercase tracking-widest text-zinc-400">Coverage</h2>
           <p className="mt-1 font-semibold text-charcoal">{partnerName}</p>

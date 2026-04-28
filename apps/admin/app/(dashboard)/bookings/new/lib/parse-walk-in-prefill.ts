@@ -49,7 +49,8 @@ export function parseWalkInPrefill(
     lat: Number.isFinite(lat) ? lat : undefined,
     lng: Number.isFinite(lng) ? lng : undefined,
     pricingUnit,
-    duration: Number.isFinite(duration) && duration > 0 ? duration : undefined,
+    duration:
+      duration !== undefined && Number.isFinite(duration) && duration > 0 ? duration : undefined,
     expectedShift: firstString(sp, "expectedShift"),
   };
 }

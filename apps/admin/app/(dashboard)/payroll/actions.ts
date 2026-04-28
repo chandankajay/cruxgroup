@@ -288,7 +288,7 @@ export async function finalizePayrollAction(
   const blobPath = `payroll/${year}/${month}/${operatorId}/salary-slip.pdf`;
   let pdfUrl: string | null = null;
   try {
-    const blob = await put(blobPath, new Blob([pdfBytes], { type: "application/pdf" }), {
+    const blob = await put(blobPath, new Blob([pdfBytes as BlobPart], { type: "application/pdf" }), {
       access: "public",
       contentType: "application/pdf",
     });

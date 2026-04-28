@@ -56,7 +56,7 @@ function CompletedTripInvoiceActions({
 }: {
   readonly tripId: string;
   readonly invoice: LiveTripInvoiceDto | null;
-  readonly onRefresh: () => void;
+  readonly onRefresh?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -66,7 +66,7 @@ function CompletedTripInvoiceActions({
         const res = await fn();
         if (res.ok) {
           toast.success(okMsg);
-          onRefresh();
+          onRefresh?.();
         } else {
           toast.error(res.error);
         }
