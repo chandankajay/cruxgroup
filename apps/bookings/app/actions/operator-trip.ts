@@ -140,9 +140,11 @@ export async function operatorEndJobAction(
         return { type: "FUTURE_BOOKING" as const };
       }
 
-      const canEndWithEndOtp =
-        (trip.status === "ON_SITE" || trip.status === "OVERRUN") && trip.actualStartTime;
-      if (!canEndWithEndOtp) {
+      if (trip.status !== "ON_SITE" && trip.status !== "OVERRUN") {
+        return { type: "BAD_STATE" as const };
+      }
+      const actualStartTime = trip.actualStartTime;
+      if (!actualStartTime) {
         return { type: "BAD_STATE" as const };
       }
       if (!fourDigitOtpMatches(trip.endOtp, digits)) {
@@ -150,7 +152,7 @@ export async function operatorEndJobAction(
       }
 
       const end = new Date();
-      const totalBilledHours = billedHoursFromRange(trip.actualStartTime, end);
+      const totalBilledHours = billedHoursFromRange(actualStartTime, end);
       const reviewToken = randomUUID();
 
       let totalPaise = Math.round(totalBilledHours * trip.lockedHourlyRate);
