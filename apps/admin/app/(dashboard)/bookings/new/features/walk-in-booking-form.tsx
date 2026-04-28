@@ -20,6 +20,7 @@ import {
 } from "../actions";
 import { computeWalkInQuote, distanceJobToPartnerKm, partnerBaseCoords } from "../lib/walk-in-pricing";
 import type { WalkInPrefill } from "../lib/parse-walk-in-prefill";
+import { LocationPicker } from "../../../../../components/location-picker";
 import { walkInBookingSchema, type WalkInBookingValues } from "../schema";
 
 function fmtInr(n: number) {
@@ -413,29 +414,42 @@ export function WalkInBookingForm({
               )}
             </select>
           </div>
+          <div className="space-y-2">
+            <Label className="text-foreground">Job site on map</Label>
+            <LocationPicker
+              className="pt-1"
+              defaultValue={{
+                lat: typeof lat === "number" && Number.isFinite(lat) ? lat : undefined,
+                lng: typeof lng === "number" && Number.isFinite(lng) ? lng : undefined,
+              }}
+              prefillAddress={prefill?.siteAddress ?? null}
+              disabled={!!reschedule}
+              onChange={(v) => {
+                setValue("lat", v.lat, { shouldValidate: true, shouldDirty: true });
+                setValue("lng", v.lng, { shouldValidate: true, shouldDirty: true });
+                setValue("siteAddress", v.address, { shouldValidate: true, shouldDirty: true });
+                if (v.pincode?.trim()) {
+                  setValue("pincode", v.pincode.trim(), {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  });
+                }
+              }}
+            />
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="siteAddress">Site address</Label>
-            <Input id="siteAddress" {...register("siteAddress")} placeholder="Full site address" />
+            <Input id="siteAddress" {...register("siteAddress")} placeholder="Edit if the resolved address needs tweaks" />
             {errors.siteAddress ? (
               <p className="text-sm text-destructive">{errors.siteAddress.message}</p>
             ) : null}
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="pincode">Pincode</Label>
-              <Input id="pincode" {...register("pincode")} />
-              {errors.pincode ? (
-                <p className="text-sm text-destructive">{errors.pincode.message}</p>
-              ) : null}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lat">Latitude</Label>
-              <Input id="lat" type="number" step="any" {...register("lat")} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="lng">Longitude</Label>
-              <Input id="lng" type="number" step="any" {...register("lng")} />
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="pincode">Pincode</Label>
+            <Input id="pincode" {...register("pincode")} placeholder="PIN / postal code" />
+            {errors.pincode ? (
+              <p className="text-sm text-destructive">{errors.pincode.message}</p>
+            ) : null}
           </div>
         </section>
         </fieldset>

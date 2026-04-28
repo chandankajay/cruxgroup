@@ -5,7 +5,15 @@ const PARTNER_ONLY = ["/fleet", "/my-bookings", "/service-area", "/earnings"];
 
 function isPartnerBlockedFromPath(pathname: string): boolean {
   if (pathname.startsWith("/platform-admin")) return true;
-  if (["/equipment", "/bookings", "/partners"].some((p) => pathname.startsWith(p))) {
+  /** Partner walk-in desk lives under `/bookings/new`; admin global list is `/bookings` only. */
+  if (
+    pathname.startsWith("/bookings") &&
+    pathname !== "/bookings/new" &&
+    !pathname.startsWith("/bookings/new/")
+  ) {
+    return true;
+  }
+  if (["/equipment", "/partners"].some((p) => pathname.startsWith(p))) {
     return true;
   }
   if (pathname.startsWith("/settings") && !pathname.startsWith("/settings/kyc")) {

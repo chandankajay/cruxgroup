@@ -1,12 +1,13 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthResult } from "next-auth";
 import { authConfig } from "./auth.config";
 
 /**
  * Next.js 16 uses proxy.ts instead of middleware.ts.
  * This uses the lightweight Edge-safe authConfig (no Prisma imports).
  */
-const { auth } = NextAuth(authConfig);
+const nextAuth: NextAuthResult = NextAuth(authConfig);
 
+const auth: NextAuthResult["auth"] = nextAuth.auth;
 export default auth;
 
 export const config = {

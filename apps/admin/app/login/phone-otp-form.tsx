@@ -165,13 +165,13 @@ export function PhoneOtpForm() {
             <div>
               <label
                 htmlFor="admin-phone-input"
-                className="mb-2 block text-xs font-bold uppercase tracking-wide text-gray-400"
+                className="mb-2 block text-xs font-bold uppercase tracking-wide text-muted-foreground"
               >
                 WhatsApp Number
               </label>
 
-              <div className="flex overflow-hidden rounded-xl border border-white/20 bg-white/5 py-1 transition-all focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500">
-                <span className="flex shrink-0 items-center px-3 text-sm font-semibold tabular-nums text-gray-400 sm:px-4">
+              <div className="flex overflow-hidden rounded-xl border border-input bg-background/50 py-1 transition-all focus-within:border-amber-500/50 focus-within:ring-1 focus-within:ring-amber-500">
+                <span className="flex shrink-0 items-center px-3 text-sm font-semibold tabular-nums text-muted-foreground sm:px-4">
                   +91
                 </span>
                 <input
@@ -185,19 +185,19 @@ export function PhoneOtpForm() {
                     const raw = e.target.value.replace(/\D/g, "").slice(0, 10);
                     setDigits(raw);
                   }}
-                  className="min-w-0 flex-1 bg-transparent py-4 pr-3 text-base font-medium tabular-nums text-white outline-none placeholder:text-gray-500 sm:pr-4 sm:text-lg"
+                  className="min-w-0 flex-1 bg-transparent py-4 pr-3 text-base font-medium tabular-nums text-foreground outline-none placeholder:text-muted-foreground sm:pr-4 sm:text-lg"
                   required
                 />
               </div>
 
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-muted-foreground">
                 We&apos;ll send a one-time code to WhatsApp (data rates may apply).
               </p>
 
               {isDev && (
-                <p className="mt-3 text-center text-xs text-gray-500">
+                <p className="mt-3 text-center text-xs text-muted-foreground">
                   Dev OTP{" "}
-                  <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-amber-400/90">112233</code>
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-amber-500/90">112233</code>
                   . Any 10-digit number works — missing users are created as PARTNER; existing USER rows are promoted to
                   PARTNER (dev only).
                 </p>
@@ -207,7 +207,7 @@ export function PhoneOtpForm() {
             <button
               type="submit"
               disabled={!phoneValid}
-              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-center font-black uppercase tracking-tighter text-black shadow-lg transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-center font-black uppercase tracking-tighter text-primary-foreground shadow-lg transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
               GET OTP
             </button>
@@ -223,7 +223,7 @@ export function PhoneOtpForm() {
         >
           <form onSubmit={handleVerifySubmit} className="space-y-6">
             <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
-              <p className="text-base font-semibold tracking-tight text-white">{formatVerifyLine(phoneNumber)}</p>
+              <p className="text-base font-semibold tracking-tight text-foreground">{formatVerifyLine(phoneNumber)}</p>
               <button
                 type="button"
                 onClick={handleBack}
@@ -251,7 +251,7 @@ export function PhoneOtpForm() {
                     onChange={(e) => handleCellChange(i, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(i, e)}
                     disabled={isLoading}
-                    className="h-14 w-12 rounded-lg border border-white/20 bg-white/10 text-center text-2xl font-bold tabular-nums text-white outline-none transition-all focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
+                    className="h-14 w-12 rounded-lg border border-input bg-muted/60 text-center text-2xl font-bold tabular-nums text-foreground outline-none transition-all focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
                     aria-label={`Digit ${i + 1} of 6`}
                   />
                 ))}
@@ -269,7 +269,7 @@ export function PhoneOtpForm() {
             )}
 
             {isLoading && (
-              <p className="flex items-center justify-center gap-2 text-sm font-medium text-gray-400">
+              <p className="flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground">
                 <span
                   className="inline-block size-4 animate-spin rounded-full border-2 border-amber-500/30 border-t-amber-500"
                   aria-hidden
@@ -281,7 +281,7 @@ export function PhoneOtpForm() {
             <button
               type="submit"
               disabled={!otpValid || isLoading}
-              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-center font-black uppercase tracking-tighter text-black shadow-lg transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+              className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-center font-black uppercase tracking-tighter text-primary-foreground shadow-lg transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
               {isLoading ? "Verifying…" : "Verify & Sign In"}
             </button>

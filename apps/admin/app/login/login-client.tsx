@@ -9,27 +9,27 @@ import { PhoneOtpForm } from "./phone-otp-form";
 
 function TrustFooter() {
   const item =
-    "flex flex-1 flex-col items-center gap-1 text-center text-gray-500";
-  const sep = "hidden text-gray-600 sm:block sm:px-1";
+    "flex flex-1 flex-col items-center gap-1 text-center text-muted-foreground";
+  const sep = "hidden text-muted-foreground/80 sm:block sm:px-1";
   return (
-    <div className="mt-6 flex items-stretch border-t border-white/10 pt-5">
+    <div className="mt-6 flex items-stretch border-t border-border pt-5">
       <div className={item}>
-        <Shield className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-        <span className="text-[10px] font-medium leading-tight tracking-wide">Verified Fleet</span>
+        <Shield className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+        <span className="text-[10px] font-medium leading-tight tracking-wide text-muted-foreground">Verified Fleet</span>
       </div>
       <span className={sep} aria-hidden>
         |
       </span>
       <div className={item}>
-        <Clock className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-        <span className="text-[10px] font-medium leading-tight tracking-wide">2hr Response</span>
+        <Clock className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+        <span className="text-[10px] font-medium leading-tight tracking-wide text-muted-foreground">2hr Response</span>
       </div>
       <span className={sep} aria-hidden>
         |
       </span>
       <div className={item}>
-        <MapPin className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-        <span className="text-[10px] font-medium leading-tight tracking-wide">50km Coverage</span>
+        <MapPin className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden />
+        <span className="text-[10px] font-medium leading-tight tracking-wide text-muted-foreground">50km Coverage</span>
       </div>
     </div>
   );
@@ -73,7 +73,7 @@ export function LoginClient({ isAccessDenied, isConfiguration, googleLoginAction
   );
 
   const card = (
-    <div className="rounded-2xl border border-white/10 bg-black/55 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-3xl sm:p-8">
+    <div className="dark w-full max-w-md rounded-2xl border border-border/60 bg-card/90 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-3xl sm:p-8">
       {showError ? (
         <div
           className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/40 bg-red-950/50 px-4 py-3 text-left"
@@ -96,20 +96,20 @@ export function LoginClient({ isAccessDenied, isConfiguration, googleLoginAction
       ) : null}
 
       <div className="mb-3">
-        <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">Admin Login</p>
+        <p className="mb-3 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Admin Login</p>
         <GoogleSignInButton action={googleLoginAction} />
       </div>
 
       <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-white/10" />
-        <span className="text-xs font-medium text-gray-400">or Partner login</span>
-        <div className="h-px flex-1 bg-white/10" />
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs font-medium text-muted-foreground">or Partner login</span>
+        <div className="h-px flex-1 bg-border" />
       </div>
 
       <PhoneOtpForm />
       <TrustFooter />
 
-      <p className="mt-6 text-center text-[11px] leading-relaxed text-gray-500">
+      <p className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground">
         Admin access requires a @cruxgroup.in Google account.
         <br />
         Partners sign in with their registered phone number.

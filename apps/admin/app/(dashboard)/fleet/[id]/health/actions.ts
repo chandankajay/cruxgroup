@@ -9,6 +9,7 @@ import { auth } from "../../../../../lib/auth";
 import {
   getAuthorizedWhereClause,
   getResourceAuthzContext,
+  requireAdminResourceAuthz,
   type ResourceAuthzContext,
 } from "../../../../../lib/resource-authz";
 import {
@@ -110,7 +111,7 @@ export type MachineHealthPageData = {
 export async function fetchMachineHealthPageData(
   equipmentId: string
 ): Promise<MachineHealthPageData | null> {
-  if (!(await requireAdmin())) return null;
+  if (!(await requireAdminResourceAuthz())) return null;
 
   const eq = await prisma.equipment.findUnique({
     where: { id: equipmentId },
@@ -251,7 +252,8 @@ export async function addHourMeterEntryAction(
 export async function addBreakdownReportAction(
   formData: FormData
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!(await requireAdmin())) return { ok: false, error: "Forbidden" };
+  const adminCtx = await requireAdminResourceAuthz();
+  if (!adminCtx) return { ok: false, error: "Forbidden" };
 
   const equipmentId = String(formData.get("equipmentId") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
@@ -271,7 +273,7 @@ export async function addBreakdownReportAction(
     return { ok: false, error: "Photo must be JPEG, PNG, or WebP." };
   }
 
-  const equipmentWhere = getAuthorizedWhereClause(ctx, {
+  const equipmentWhere = getAuthorizedWhereClause(adminCtx, {
     resource: "Equipment",
     targetId: equipmentId,
   });

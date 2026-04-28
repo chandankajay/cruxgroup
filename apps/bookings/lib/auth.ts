@@ -1,4 +1,5 @@
 import NextAuth from "next-auth";
+import type { NextAuthConfig, NextAuthResult } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { verifyOtp } from "@repo/api";
 import { enterpriseAuthSecurity } from "@repo/auth";
@@ -29,7 +30,7 @@ function toSessionUser(u: {
   };
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const authConfig = {
   ...enterpriseAuthSecurity,
 
   providers: [
@@ -154,4 +155,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   pages: {
     signIn: "/login",
   },
-});
+} satisfies NextAuthConfig;
+
+const nextAuth = NextAuth(authConfig) as NextAuthResult;
+
+export const handlers: NextAuthResult["handlers"] = nextAuth.handlers;
+export const signIn: NextAuthResult["signIn"] = nextAuth.signIn;
+export const signOut: NextAuthResult["signOut"] = nextAuth.signOut;
+export const auth: NextAuthResult["auth"] = nextAuth.auth;

@@ -53,7 +53,7 @@ export function AdminShell({
 
   if (pathname === "/onboarding") {
     return (
-      <div className="min-h-screen overflow-y-auto bg-gray-50 p-6 md:p-10">{children}</div>
+      <div className="min-h-screen overflow-y-auto bg-background p-6 md:p-10">{children}</div>
     );
   }
 
@@ -61,7 +61,7 @@ export function AdminShell({
 
   if (isPartner) {
     return (
-      <div className="flex min-h-dvh flex-col bg-gray-50 lg:h-screen lg:flex-row lg:overflow-hidden">
+      <div className="flex min-h-dvh flex-col bg-background lg:h-screen lg:flex-row lg:overflow-hidden">
         <AdminSidebar
           className="hidden lg:flex"
           userName={userName}

@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthResult } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
@@ -31,7 +31,7 @@ function isAllowedAdmin(email: string): boolean {
   return normalised.endsWith(`@${ALLOWED_DOMAIN}`);
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const nextAuth: NextAuthResult = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -186,3 +186,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 });
+
+export const handlers: NextAuthResult["handlers"] = nextAuth.handlers;
+export const signIn: NextAuthResult["signIn"] = nextAuth.signIn;
+export const signOut: NextAuthResult["signOut"] = nextAuth.signOut;
+export const auth: NextAuthResult["auth"] = nextAuth.auth;

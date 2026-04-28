@@ -41,7 +41,7 @@ function StatCard({
       className={`rounded-xl border px-5 py-4 ${
         accent
           ? "border-amber-200 bg-amber-50"
-          : "border-border bg-white"
+          : "border-border bg-card"
       }`}
     >
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -129,7 +129,7 @@ export function MyBookingsContent({ initialData }: MyBookingsContentProps) {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         {bookings.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-muted-foreground">

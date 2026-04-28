@@ -197,7 +197,7 @@ const NAV_ITEM_DEFINITIONS: readonly NavItemDefinition[] = [
   },
   {
     navId: "partner-settings",
-    href: "/settings",
+    href: "/settings/kyc",
     label: "Settings",
     roles: ["PARTNER"],
     icon: (
@@ -224,8 +224,8 @@ function RoleBadge({ role }: { role: string }) {
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
         isPartner
-          ? "bg-amber-500/20 text-amber-300"
-          : "bg-emerald-500/20 text-emerald-300"
+          ? "bg-amber-500/15 text-amber-800 dark:text-amber-200"
+          : "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
       )}
     >
       {isPartner ? "Partner" : "Admin"}
@@ -262,7 +262,7 @@ function UserAvatar({
   }
 
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-orange text-xs font-bold text-white">
+    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
       {initials}
     </div>
   );
@@ -288,12 +288,12 @@ export function AdminSidebar({
   return (
     <aside
       className={cn(
-        "flex h-screen w-64 shrink-0 flex-col bg-charcoal text-white",
+        "flex h-screen w-64 shrink-0 flex-col border-r border-border bg-card text-card-foreground",
         className
       )}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center justify-between gap-2 border-b border-white/10 px-5">
+      <div className="flex h-16 items-center justify-between gap-2 border-b border-border px-5">
         <Image
           src="/logo.png"
           alt="Crux Group"
@@ -304,7 +304,7 @@ export function AdminSidebar({
           priority
         />
         <div className="flex shrink-0 items-center gap-1">
-          <ThemeToggle className="text-white hover:bg-white/10 hover:text-white" />
+          <ThemeToggle />
           <RoleBadge role={role} />
         </div>
       </div>
@@ -321,8 +321,8 @@ export function AdminSidebar({
               className={cn(
                 "flex min-h-11 touch-manipulation select-none items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all lg:min-h-0",
                 isActive
-                  ? "bg-brand-orange text-white shadow-sm"
-                  : "text-gray-400 active:bg-white/10 active:text-white lg:hover:bg-white/5 lg:hover:text-white"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground active:bg-accent/80 active:text-accent-foreground lg:hover:bg-accent/50 lg:hover:text-foreground"
               )}
             >
               <span className="shrink-0 opacity-80">{item.icon}</span>
@@ -333,14 +333,14 @@ export function AdminSidebar({
       </nav>
 
       {/* User footer */}
-      <div className="border-t border-white/10 p-3">
+      <div className="border-t border-border p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           <UserAvatar name={userName} image={userImage} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-white">
+            <p className="truncate text-sm font-medium text-foreground">
               {userName ?? "User"}
             </p>
-            <p className="truncate text-xs text-gray-400">
+            <p className="truncate text-xs text-muted-foreground">
               {userEmail ?? ""}
             </p>
           </div>
@@ -348,7 +348,7 @@ export function AdminSidebar({
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="mt-1 flex min-h-11 w-full touch-manipulation select-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors active:bg-white/10 active:text-white lg:hover:bg-white/5 lg:hover:text-white"
+          className="mt-1 flex min-h-11 w-full touch-manipulation select-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors active:bg-accent/80 active:text-accent-foreground lg:hover:bg-accent/50 lg:hover:text-foreground"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

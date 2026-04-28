@@ -74,7 +74,7 @@ export function FleetPageContent({ initialData, partnerKycStatus }: FleetPageCon
           </p>
           <Link
             href="/settings/kyc"
-            className="inline-flex h-12 min-w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-xl border border-amber-700 bg-white px-4 text-sm font-semibold text-amber-950 shadow-sm active:bg-amber-100 lg:rounded-md lg:hover:bg-amber-100"
+            className="inline-flex h-12 min-w-11 shrink-0 touch-manipulation select-none items-center justify-center rounded-xl border border-amber-700 bg-background px-4 text-sm font-semibold text-amber-950 shadow-sm active:bg-amber-100 lg:rounded-md lg:hover:bg-amber-100"
           >
             Go to Trust Center
           </Link>
@@ -90,7 +90,7 @@ export function FleetPageContent({ initialData, partnerKycStatus }: FleetPageCon
         </div>
         <Link
           href="/fleet/new"
-          className="inline-flex h-12 min-w-11 shrink-0 touch-manipulation select-none items-center justify-center gap-2 rounded-xl bg-brand-orange px-4 text-sm font-semibold text-white shadow-sm active:bg-amber-600 lg:rounded-lg lg:hover:bg-amber-600"
+          className="inline-flex h-12 min-w-11 shrink-0 touch-manipulation select-none items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm active:bg-primary/90 lg:rounded-lg lg:hover:bg-primary/90"
         >
           + Add Equipment
         </Link>
@@ -114,7 +114,7 @@ export function FleetPageContent({ initialData, partnerKycStatus }: FleetPageCon
         />
       </div>
 
-      <div className="rounded-xl border border-border bg-white p-4 shadow-sm sm:p-6">
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
         <FleetEquipmentCards
           items={items}
           partnerKycVerified={partnerKycVerified}
@@ -144,7 +144,7 @@ function StatCard({
   icon: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border bg-white px-5 py-4 shadow-sm">
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
       <span className="text-2xl">{icon}</span>
       <div>
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

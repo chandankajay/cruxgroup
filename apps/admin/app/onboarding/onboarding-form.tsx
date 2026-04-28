@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
+import { LocationPicker } from "../../components/location-picker";
 import {
   Card,
   CardContent,
@@ -82,18 +83,22 @@ export function PartnerOnboardingForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="baseLocation">City or coordinates</Label>
-            <Input
-              id="baseLocation"
-              autoComplete="off"
-              placeholder="Hyderabad — or 17.4065, 78.4772"
-              disabled={pending}
-              {...form.register("baseLocation")}
-            />
+            <Label>Base yard anchor (map)</Label>
             <p className="text-xs text-muted-foreground">
-              Use decimal latitude and longitude separated by a comma for an exact pin; otherwise
-              we place a default map anchor until you refine location in Service Area.
+              Drop the pin on your depot — we save decimal coordinates for routing and listings.
             </p>
+            <LocationPicker
+              defaultValue={null}
+              disabled={pending}
+              onChange={(v) => {
+                form.setValue(
+                  "baseLocation",
+                  `${v.lat.toFixed(6)}, ${v.lng.toFixed(6)}`,
+                  { shouldValidate: true, shouldDirty: true }
+                );
+              }}
+            />
+            <input type="hidden" {...form.register("baseLocation")} />
             {form.formState.errors.baseLocation ? (
               <p className="text-xs text-red-600">{form.formState.errors.baseLocation.message}</p>
             ) : null}

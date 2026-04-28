@@ -28,7 +28,7 @@ export function PartnerBottomNav({ className }: { readonly className?: string })
       role="navigation"
       aria-label="Primary"
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-700 bg-zinc-900 pb-[env(safe-area-inset-bottom)] lg:hidden",
+        "fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden",
         className
       )}
     >
@@ -46,7 +46,9 @@ export function PartnerBottomNav({ className }: { readonly className?: string })
                 href={href}
                 className={cn(
                   "flex min-h-[44px] w-full flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[10px] font-medium touch-manipulation select-none active:opacity-90",
-                  active ? "text-white" : "text-zinc-500"
+                  active
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground"
                 )}
               >
                 <Icon className="size-5 shrink-0" strokeWidth={active ? 2.25 : 2} aria-hidden />

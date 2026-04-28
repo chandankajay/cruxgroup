@@ -14,7 +14,7 @@ export default async function PartnerTrustCenterKycPage() {
   const role = (session.user as { role?: string }).role;
   if (role !== "PARTNER") {
     return (
-      <div className="max-w-xl rounded-xl border border-border bg-white p-8 shadow-sm">
+      <div className="max-w-xl rounded-xl border border-border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-charcoal">Trust Center</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           KYC self-service is available to partner accounts. Admins can review partner

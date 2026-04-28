@@ -178,11 +178,11 @@ export function EquipmentFormDialog({
         }}
       >
         <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 z-50 bg-black/60" />
-          <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] flex-col rounded-t-3xl bg-zinc-900 outline-none">
-            <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-zinc-600" aria-hidden />
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-foreground/30" />
+          <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[92vh] flex-col rounded-t-3xl border border-border bg-card text-card-foreground outline-none">
+            <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-muted-foreground/30" aria-hidden />
             <div className="min-h-0 flex-1 overflow-y-auto p-6 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-              <Drawer.Title className="text-lg font-semibold text-zinc-50">
+              <Drawer.Title className="text-lg font-semibold text-foreground">
                 {isEditing ? "Edit Equipment" : "Add Equipment"}
               </Drawer.Title>
               <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4">
@@ -191,7 +191,7 @@ export function EquipmentFormDialog({
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-12 touch-manipulation rounded-xl border-zinc-600 bg-zinc-800 text-zinc-100"
+                    className="h-12 touch-manipulation rounded-xl"
                     onClick={handleClose}
                   >
                     Cancel

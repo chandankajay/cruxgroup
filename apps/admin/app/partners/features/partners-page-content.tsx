@@ -45,7 +45,7 @@ function PartnerRow({
       className={`flex cursor-pointer items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
         isSelected
           ? "border-brand-orange bg-orange-50"
-          : "border-border bg-white hover:border-brand-orange/40 hover:bg-orange-50/30"
+          : "border-border bg-card hover:border-brand-orange/40 hover:bg-orange-50/30"
       }`}
     >
       <div className="min-w-0 flex-1">
@@ -127,12 +127,12 @@ export function PartnersPageContent({ partners }: PartnersPageContentProps) {
     [selectedPartner]
   );
 
+  const coords = selectedPartner?.location?.coordinates;
   const initialLocation =
-    selectedPartner?.location?.coordinates?.length === 2
-      ? {
-          lat: selectedPartner.location.coordinates[1],
-          lng: selectedPartner.location.coordinates[0],
-        }
+    coords?.length === 2 &&
+    typeof coords[0] === "number" &&
+    typeof coords[1] === "number"
+      ? { lat: coords[1], lng: coords[0] }
       : null;
 
   return (
@@ -147,7 +147,7 @@ export function PartnersPageContent({ partners }: PartnersPageContentProps) {
       </div>
 
       {partners.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-white py-16 text-center">
+        <div className="rounded-xl border border-dashed border-border bg-card py-16 text-center">
           <p className="text-sm text-muted-foreground">
             No partners found. Add users with role{" "}
             <code className="rounded bg-muted px-1 font-mono text-xs">PARTNER</code>{" "}
@@ -174,7 +174,7 @@ export function PartnersPageContent({ partners }: PartnersPageContentProps) {
           {/* Service area map panel */}
           {selectedPartner && (
             <div className="flex flex-col gap-6">
-              <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                 <div className="border-b border-border px-6 py-4">
                   <h2 className="font-semibold text-charcoal">
                     {selectedPartner.name ?? "Partner"} — Service Area

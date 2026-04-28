@@ -132,13 +132,13 @@ function KycFileDropzoneInner({ field, disabled, inputId, existingFileUrl }: Kyc
       />
       {hasExistingOnServer && existingFileUrl ? (
         <div
-          className="mb-3 w-full max-w-full rounded-md border border-border bg-white/80 px-3 py-2.5 text-left text-sm text-charcoal dark:bg-background/50"
+          className="mb-3 w-full max-w-full rounded-md border border-border bg-card/80 px-3 py-2.5 text-left text-sm text-foreground dark:bg-background/50"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="flex min-w-0 items-center gap-2">
-              <FileText className="h-4 w-4 shrink-0 text-charcoal" aria-hidden />
+              <FileText className="h-4 w-4 shrink-0 text-foreground" aria-hidden />
               <div className="min-w-0">
                 <p className="font-medium leading-tight">Document on file</p>
                 <p
@@ -174,12 +174,12 @@ function KycFileDropzoneInner({ field, disabled, inputId, existingFileUrl }: Kyc
               className="max-h-28 max-w-full rounded-md border object-contain"
             />
           ) : file.type === "application/pdf" ? (
-            <div className="flex items-center gap-2 text-sm font-medium text-charcoal">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <FileText className="h-6 w-6 shrink-0 text-red-600" aria-hidden />
               <span className="truncate">{file.name}</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-sm font-medium text-charcoal">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <ImageIcon className="h-6 w-6 shrink-0" aria-hidden />
               <span className="truncate">{file.name}</span>
             </div>

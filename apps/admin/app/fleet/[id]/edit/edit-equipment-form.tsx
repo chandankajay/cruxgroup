@@ -103,7 +103,7 @@ export function EditEquipmentForm({ initial }: EditEquipmentFormProps) {
         ← Back to My Fleet
       </Link>
 
-      <div className="rounded-xl border border-border bg-white p-5 shadow-sm sm:p-8">
+      <div className="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-8">
         <h1 className="text-xl font-bold text-charcoal sm:text-2xl">Edit equipment</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Update rates, service radius, and operator details. Platform rate limits still apply
