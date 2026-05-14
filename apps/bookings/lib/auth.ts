@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials";
 import { verifyOtp } from "@repo/api";
 import { enterpriseAuthSecurity } from "@repo/auth";
 import { prisma } from "@repo/db";
+import { sendWhatsAppMessage } from "@repo/lib";
 import { normalizeBookingsPhone } from "./phone";
 
 /** + then 10–15 digits (E.164-style, India is 12 digits after +). */
@@ -14,6 +15,7 @@ const userSelect = {
   name: true,
   role: true,
   phoneNumber: true,
+  welcomeNoteSentAt: true,
 } as const;
 
 function toSessionUser(u: {
@@ -75,31 +77,46 @@ const authConfig = {
             select: userSelect,
           });
 
-          if (existing) {
-            return toSessionUser(existing);
+          let row = existing;
+
+          if (!row) {
+            try {
+              row = await prisma.user.create({
+                data: {
+                  phoneNumber,
+                  role: "USER",
+                },
+                select: userSelect,
+              });
+            } catch (createErr) {
+              console.warn(
+                "[auth.authorize] user.create failed, retrying findUnique",
+                createErr instanceof Error ? createErr.message : createErr,
+              );
+              const retry = await prisma.user.findUnique({
+                where: { phoneNumber },
+                select: userSelect,
+              });
+              if (!retry) throw createErr;
+              row = retry;
+            }
           }
 
-          try {
-            const created = await prisma.user.create({
-              data: {
-                phoneNumber,
-                role: "USER",
-              },
-              select: userSelect,
-            });
-            return toSessionUser(created);
-          } catch (createErr) {
-            console.warn(
-              "[auth.authorize] user.create failed, retrying findUnique",
-              createErr instanceof Error ? createErr.message : createErr,
-            );
-            const retry = await prisma.user.findUnique({
-              where: { phoneNumber },
-              select: userSelect,
-            });
-            if (retry) return toSessionUser(retry);
-            throw createErr;
+          if (!row.welcomeNoteSentAt) {
+            const welcomeTemplate =
+              process.env["AISENSY_WELCOME_TEMPLATE_NAME"] ?? "welcome_note";
+            const ok = await sendWhatsAppMessage(phoneNumber, welcomeTemplate, [
+              row.name?.trim() || "Customer",
+            ]);
+            if (ok) {
+              await prisma.user.update({
+                where: { id: row.id },
+                data: { welcomeNoteSentAt: new Date() },
+              });
+            }
           }
+
+          return toSessionUser(row);
         } catch (err) {
           console.error(
             "[auth.authorize]",

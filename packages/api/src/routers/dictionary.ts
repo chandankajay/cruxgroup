@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createRouter, publicProcedure } from "../trpc";
 import { getLabelsForApp } from "../services/dictionary-service";
 
-const dictionaryAppSchema = z.enum(["BOOKING", "ADMIN"]);
+const dictionaryAppSchema = z.enum(["BOOKING", "ADMIN", "WEB"]);
 
 export const dictionaryRouter = createRouter({
   getLabels: publicProcedure

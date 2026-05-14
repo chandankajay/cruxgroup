@@ -19,6 +19,9 @@ function isPartnerBlockedFromPath(pathname: string): boolean {
   if (pathname.startsWith("/settings") && !pathname.startsWith("/settings/kyc")) {
     return true;
   }
+  if (pathname.startsWith("/website-cms")) {
+    return true;
+  }
   return false;
 }
 
@@ -50,6 +53,9 @@ export const authConfig: NextAuthConfig = {
       const isLoginPage = pathname === "/login";
 
       if (isAuthRoute) return true;
+
+      // Public legal documents (readable without a session).
+      if (!isLoggedIn && pathname.startsWith("/legal")) return true;
 
       // Plain USERs should never be in the admin app.
       if (isLoggedIn && role === "USER") {

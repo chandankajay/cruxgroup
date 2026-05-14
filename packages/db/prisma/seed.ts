@@ -1,4 +1,5 @@
 import { EquipmentCategory, PrismaClient } from "@prisma/client";
+import { seedWebsiteContent } from "../src/seeds/website.seed";
 
 const prisma = new PrismaClient();
 
@@ -6,7 +7,7 @@ interface SeedEntry {
   key: string;
   value: string;
   language: string;
-  app: "BOOKING" | "ADMIN";
+  app: "BOOKING" | "ADMIN" | "WEB";
 }
 
 const bookingLabels: SeedEntry[] = [
@@ -340,6 +341,7 @@ async function seedMasterCatalog(): Promise<void> {
 
 async function seed(): Promise<void> {
   await seedMasterCatalog();
+  await seedWebsiteContent(prisma);
 
   const allLabels = [...bookingLabels, ...adminLabels];
 

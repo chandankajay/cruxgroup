@@ -114,6 +114,25 @@ export function LoginClient({ isAccessDenied, isConfiguration, googleLoginAction
         <br />
         Partners sign in with their registered phone number.
       </p>
+
+      <p className="mt-3 text-center text-[11px] text-muted-foreground">
+        <Link
+          href="/legal/partner-terms"
+          className="font-medium text-amber-500/90 underline-offset-4 hover:text-amber-400 hover:underline"
+        >
+          Partner Terms of Service
+        </Link>
+        <span className="text-muted-foreground/80" aria-hidden>
+          {" "}
+          ·{" "}
+        </span>
+        <Link
+          href="/legal/privacy-policy"
+          className="font-medium text-amber-500/90 underline-offset-4 hover:text-amber-400 hover:underline"
+        >
+          Privacy Policy
+        </Link>
+      </p>
     </div>
   );
 

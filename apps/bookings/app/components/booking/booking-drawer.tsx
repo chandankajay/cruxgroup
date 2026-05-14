@@ -15,6 +15,10 @@ import { Calendar } from "@repo/ui/calendar";
 import { useLabels } from "@repo/ui/dictionary-provider";
 import { PriceSummary } from "./price-summary";
 import { SiteAddressPicker } from "./site-address-picker";
+import {
+  SavedSitesSelect,
+  type SavedSiteOption,
+} from "./saved-sites-select";
 import type { DateRange } from "react-day-picker";
 
 interface EquipmentForDrawer {
@@ -64,6 +68,7 @@ export function BookingDrawer({
   const [hours, setHours] = useState("1");
   // null = not yet fetched / fetching in progress; number = resolved km distance
   const [partnerDistanceKm, setPartnerDistanceKm] = useState<number | null>(null);
+  const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
 
   const today = useMemo(() => new Date(), []);
 
@@ -90,6 +95,7 @@ export function BookingDrawer({
       setPriceType("daily");
       setHours("1");
       setPartnerDistanceKm(null);
+      setSelectedSavedId(null);
     }
   }, [open]);
 
@@ -116,11 +122,30 @@ export function BookingDrawer({
     [duration]
   );
 
+  const applySavedSite = useCallback(
+    (site: SavedSiteOption | null) => {
+      if (!site) {
+        setSelectedSavedId(null);
+        setAddress("");
+        setPincode("");
+        setCoords(null);
+        setPartnerDistanceKm(null);
+        return;
+      }
+      setSelectedSavedId(site.id);
+      setAddress(site.address);
+      setPincode(site.pincode.replace(/\D/g, "").slice(0, 6));
+      handleLocationChange({ lat: site.lat, lng: site.lng });
+    },
+    [handleLocationChange]
+  );
+
   const canSubmit =
     equipment &&
     (priceType === "daily" ? (dateRange?.from && dateRange?.to) : hourlyDate) &&
     address.length > 0 &&
     pincode.length >= 4 &&
+    coords !== null &&
     duration > 0 &&
     !isSubmitting;
 
@@ -237,15 +262,27 @@ export function BookingDrawer({
             )}
           </div>
 
+          <SavedSitesSelect
+            open={open}
+            selectedId={selectedSavedId}
+            onSelect={applySavedSite}
+          />
+
           <div className="space-y-2">
             <Label>{t("DRAWER_ADDRESS")}</Label>
-            <SiteAddressPicker
-              address={address}
-              onAddressChange={setAddress}
-              onLocationChange={handleLocationChange}
-              onPincodeChange={setPincode}
-              placeholder={t("DRAWER_ADDRESS")}
-            />
+            {selectedSavedId ? (
+              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+                {address}
+              </p>
+            ) : (
+              <SiteAddressPicker
+                address={address}
+                onAddressChange={setAddress}
+                onLocationChange={handleLocationChange}
+                onPincodeChange={setPincode}
+                placeholder={t("DRAWER_ADDRESS")}
+              />
+            )}
           </div>
 
           <div className="space-y-2">
