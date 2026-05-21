@@ -1,5 +1,6 @@
 import { Footer } from "../../components/layout/Footer";
 import { Navbar } from "../../components/layout/Navbar";
+import { ScrollProgress } from "../../components/ui/ScrollProgress";
 import { LanguageProvider } from "../../components/ui/LanguageProvider";
 import { getSiteConfigMap } from "../../lib/content";
 import { parseLocale } from "../../lib/locale";
@@ -30,9 +31,10 @@ export default async function LocaleLayout({
 
   return (
     <LanguageProvider initialLocale={locale}>
-      <div className="flex min-h-screen flex-col bg-dark pt-16">
+      <div className="flex min-h-screen min-w-0 flex-col overflow-x-clip bg-dark pt-16">
+        <ScrollProgress />
         <Navbar locale={locale} />
-        <main className="flex-1">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-clip">{children}</main>
         <Footer locale={locale} data={footerData} />
       </div>
     </LanguageProvider>

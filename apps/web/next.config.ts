@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // In dev, default image cache is very long; local `/public` swaps look "stuck" until cache clears.
+    ...(process.env["NODE_ENV"] === "development" ? { minimumCacheTTL: 0 } : {}),
     remotePatterns: [
       { protocol: "https", hostname: "img1.wsimg.com", pathname: "/**" },
       { protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" },

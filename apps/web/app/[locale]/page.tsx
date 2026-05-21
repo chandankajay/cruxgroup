@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { SiteBlock } from "@prisma/client";
 import { Hero } from "../../components/sections/Hero";
+import { MachineSections } from "../../components/sections/MachineSections";
 import { StatsBar } from "../../components/sections/StatsBar";
 import { Fleet } from "../../components/sections/Fleet";
 import { ForPartners } from "../../components/sections/ForPartners";
@@ -109,6 +110,7 @@ export default async function HomePage(): Promise<React.ReactElement> {
           te: heroCfg["heroSubtitle_te"],
         }}
       />
+      <MachineSections />
       <StatsBar blocks={statsBlocks} />
       <Fleet
         heading={{
