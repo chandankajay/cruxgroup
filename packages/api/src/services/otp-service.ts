@@ -1,11 +1,15 @@
 import { randomInt } from "node:crypto";
+import { sendWhatsAppMessage } from "@repo/lib";
 import { prisma } from "@repo/db";
 
 /** Dev / pre–WhatsApp bypass — must match bookings NextAuth credentials check. */
-export const DEV_MASTER_OTP = "112233";
+export const DEV_MASTER_OTP = "4242";
+
+/** Legacy admin dev bypass (6 digits); still accepted in {@link verifyOtp}. */
+const LEGACY_DEV_MASTER_OTP = "112233";
 
 const OTP_EXPIRY_MINUTES = 5;
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 4;
 const MAX_OTP_FAILS_BEFORE_LOCKOUT = 5;
 const LOCKOUT_MINUTES = 15;
 
@@ -84,7 +88,10 @@ export async function verifyOtp(phone: string, code: string): Promise<VerifyOtpR
   }
 
   const normalizedCode = code.replace(/\D/g, "");
-  if (normalizedCode === DEV_MASTER_OTP) {
+  if (
+    normalizedCode === DEV_MASTER_OTP ||
+    normalizedCode === LEGACY_DEV_MASTER_OTP
+  ) {
     await clearOtpLockoutForPhone(phone);
     return { verified: true, lockedOut: false };
   }
@@ -111,4 +118,26 @@ export async function verifyOtp(phone: string, code: string): Promise<VerifyOtpR
 
   await clearOtpLockoutForPhone(phone);
   return { verified: true, lockedOut: false };
+}
+
+/**
+ * B2C bookings: upsert `User`, persist OTP, send WhatsApp template (or log when no API key).
+ */
+export async function sendBookingsOtpWithWhatsApp(phone: string): Promise<void> {
+  await prisma.user.upsert({
+    where: { phoneNumber: phone },
+    update: {},
+    create: {
+      phoneNumber: phone,
+      role: "USER",
+    },
+  });
+
+  const code = await createOtp(phone);
+  const template =
+    process.env["AISENSY_OTP_TEMPLATE_NAME"] ??
+    process.env["AISENSY_TEMPLATE_NAME"] ??
+    "otp_login";
+
+  await sendWhatsAppMessage(phone, template, [code]);
 }

@@ -152,6 +152,25 @@ export default function LoginPage() {
         )}
       </AnimatePresence>
       <TrustFooter />
+
+      <p className="mt-4 text-center text-[11px] text-gray-500">
+        <Link
+          href="/legal/terms-and-conditions"
+          className="font-medium text-amber-500/90 underline-offset-4 hover:text-amber-400 hover:underline"
+        >
+          Terms and Conditions
+        </Link>
+        <span className="text-gray-600" aria-hidden>
+          {" "}
+          ·{" "}
+        </span>
+        <Link
+          href="/legal/privacy-policy"
+          className="font-medium text-amber-500/90 underline-offset-4 hover:text-amber-400 hover:underline"
+        >
+          Privacy Policy
+        </Link>
+      </p>
     </div>
   );
 
@@ -159,7 +178,7 @@ export default function LoginPage() {
     process.env["NEXT_PUBLIC_NODE_ENV"] === "development" ? (
       <p className="text-center text-xs text-gray-500">
         Dev OTP{" "}
-        <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-amber-400/90">112233</code>
+        <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-amber-400/90">4242</code>
       </p>
     ) : null;
 

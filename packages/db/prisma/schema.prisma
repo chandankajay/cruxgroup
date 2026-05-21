@@ -19,6 +19,8 @@ model User {
   /// Stored as "phone" in Mongo for backwards compat with OTP flow
   phoneNumber   String?   @unique @map("phone")
   name          String    @default("")
+  /// B2C profile — optional trading / site company name (distinct from Partner.companyName).
+  companyName   String    @default("")
   /// Optional — phone/WhatsApp OTP users may have no email.
   /// Not @unique: MongoDB rejects multiple `null` values on a unique index.
   email         String?
@@ -29,6 +31,8 @@ model User {
   otpAttempts   Int       @default(0)
   /// When set and in the future, `sendOtp` / non-bypass OTP verify are rejected for this user.
   lockoutUntil  DateTime?
+  /// First-login welcome WhatsApp (`welcome_note` template) sent at most once.
+  welcomeNoteSentAt DateTime?
 
   accounts         Account[]
   sessions         Session[]
@@ -39,6 +43,8 @@ model User {
   /// Operator payroll / rate card (fleet operators)
   operatorProfile  OperatorProfile?
   payrollEntries   PayrollEntry[]
+  /// When set, links this login to a CRM `Customer` row (B2C saved sites, unified billing context).
+  customerProfile  Customer?
 
   @@index([email])
   @@map("users")
@@ -112,14 +118,35 @@ model Customer {
   gstin          String?
   /// JSON array of coordinates/addresses (structure defined by app)
   savedLocations Json     @default("[]")
+  /// Optional B2C platform user — when set, `savedSites` are used for the bookings app.
+  userId         String?  @unique @db.ObjectId
+  user           User?    @relation(fields: [userId], references: [id])
   /// Credit limit in paise (1 INR = 100 paise)
   creditLimit    Int      @default(0)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  bookings Booking[]
+  bookings    Booking[]
+  savedSites  SavedLocation[]
 
   @@map("customers")
+}
+
+/// Named job sites saved under a CRM `Customer` (including B2C rows linked via `Customer.userId`).
+model SavedLocation {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  customerId  String   @db.ObjectId
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label       String   @default("")
+  address     String
+  lat         Float
+  lng         Float
+  pincode     String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([customerId])
+  @@map("saved_locations")
 }
 
 // ─── Partner ─────────────────────────────────────────────────────────────────
@@ -595,4 +622,81 @@ model Dictionary {
 enum DictionaryApp {
   BOOKING
   ADMIN
+  WEB
+}
+
+// ─── Public website CMS (apps/web) ───────────────────────────────────────────
+
+model SiteConfig {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("site_config")
+}
+
+model SiteSection {
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
+  slug      String      @unique
+  order     Int
+  published Boolean     @default(true)
+  blocks    SiteBlock[]
+
+  @@map("site_sections")
+}
+
+model SiteBlock {
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  sectionId    String        @db.ObjectId
+  section      SiteSection   @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  type         SiteBlockType
+  order        Int
+  heading_en   String?
+  heading_te   String?
+  body_en      String?
+  body_te      String?
+  cta_label_en String?
+  cta_label_te String?
+  cta_href     String?
+  imageUrl     String?
+  videoUrl     String?
+  icon         String?
+  published    Boolean       @default(true)
+
+  @@index([sectionId])
+  @@map("site_blocks")
+}
+
+enum SiteBlockType {
+  HERO
+  STAT
+  FEATURE_CARD
+  EQUIPMENT_CARD
+  TESTIMONIAL
+  FAQ_ITEM
+  HOOK_BANNER
+  CTA_STRIP
+}
+
+model BlogPost {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  slug        String    @unique
+  title_en    String
+  title_te    String?
+  excerpt_en  String?
+  excerpt_te  String?
+  body_en     String
+  body_te     String?
+  coverImage  String?
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  authorName  String?
+  tags        String[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  seoTitle    String?
+  seoDesc     String?
+
+  @@map("blog_posts")
 }

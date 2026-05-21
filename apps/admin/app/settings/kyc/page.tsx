@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth } from "../../../lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@repo/db";
@@ -18,7 +19,21 @@ export default async function PartnerTrustCenterKycPage() {
         <h1 className="text-2xl font-bold text-charcoal">Trust Center</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           KYC self-service is available to partner accounts. Admins can review partner
-          documents from the Partners section.
+          documents from the Partners section. See the{" "}
+          <Link
+            href="/legal/partner-terms"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Partner Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/legal/privacy-policy"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Privacy Policy
+          </Link>{" "}
+          for platform rules.
         </p>
       </div>
     );
@@ -73,7 +88,21 @@ export default async function PartnerTrustCenterKycPage() {
         <h1 className="text-2xl font-bold text-charcoal">Trust Center</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Upload identity and payout documents. Information is stored securely; file
-          storage uses Vercel Blob.
+          storage uses Vercel Blob. Use of the Partner OS is also governed by our{" "}
+          <Link
+            href="/legal/partner-terms"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Partner Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/legal/privacy-policy"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Privacy Policy
+          </Link>
+          .
         </p>
       </div>
 

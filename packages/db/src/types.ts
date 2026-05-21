@@ -107,7 +107,7 @@ export interface ServiceableArea {
   name: string;
 }
 
-export type DictionaryApp = "BOOKING" | "ADMIN";
+export type DictionaryApp = "BOOKING" | "ADMIN" | "WEB";
 
 export interface DictionaryEntry {
   key: string;

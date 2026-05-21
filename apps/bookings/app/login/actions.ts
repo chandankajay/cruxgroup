@@ -2,7 +2,6 @@
 
 import { CredentialsSignin } from "next-auth";
 import { createCaller } from "@repo/api";
-import { prisma } from "@repo/db";
 import { signIn } from "../../lib/auth";
 import { normalizeBookingsPhone } from "../../lib/phone";
 
@@ -11,14 +10,6 @@ const caller = createCaller({});
 export async function sendOtpAction(phone: string): Promise<{ success: boolean; error?: string }> {
   try {
     const phoneNumber = normalizeBookingsPhone(phone);
-    await prisma.user.upsert({
-      where: { phoneNumber },
-      update: {},
-      create: {
-        phoneNumber,
-        role: "USER",
-      },
-    });
     await caller.auth.sendOtp({ phone: phoneNumber });
     return { success: true };
   } catch (e) {

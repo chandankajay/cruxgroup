@@ -29,7 +29,7 @@ export function OtpStep({
   error,
 }: OtpStepProps) {
   const [cells, setCells] = useState<string[]>(() =>
-    Array.from({ length: 6 }, () => ""),
+    Array.from({ length: 4 }, () => ""),
   );
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -47,7 +47,7 @@ export function OtpStep({
 
   useEffect(() => {
     if (!error) return;
-    setCells(Array.from({ length: 6 }, () => ""));
+    setCells(Array.from({ length: 4 }, () => ""));
     queueMicrotask(() => focusIndex(0));
   }, [error, focusIndex]);
 
@@ -66,14 +66,14 @@ export function OtpStep({
         const next = [...prev];
         next[index] = digit;
         const full = next.join("");
-        if (full.length === 6) {
+        if (full.length === 4) {
           queueMicrotask(() => {
             onSubmit(full);
           });
         }
         return next;
       });
-      if (index < 5) focusIndex(index + 1);
+      if (index < 3) focusIndex(index + 1);
       return;
     }
     setCellAt(index, "");
@@ -92,7 +92,7 @@ export function OtpStep({
       e.preventDefault();
       focusIndex(index - 1);
     }
-    if (e.key === "ArrowRight" && index < 5) {
+    if (e.key === "ArrowRight" && index < 3) {
       e.preventDefault();
       focusIndex(index + 1);
     }
@@ -100,13 +100,13 @@ export function OtpStep({
 
   function handlePaste(e: React.ClipboardEvent) {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
     if (!pasted) return;
-    const next = Array.from({ length: 6 }, (_, i) => pasted[i] ?? "");
+    const next = Array.from({ length: 4 }, (_, i) => pasted[i] ?? "");
     setCells(next);
-    const last = Math.min(pasted.length, 5);
+    const last = Math.min(pasted.length, 3);
     focusIndex(last);
-    if (pasted.length === 6) {
+    if (pasted.length === 4) {
       queueMicrotask(() => onSubmit(pasted));
     }
   }
@@ -134,7 +134,7 @@ export function OtpStep({
       </div>
 
       <fieldset>
-        <legend className="sr-only">Enter 6-digit verification code</legend>
+        <legend className="sr-only">Enter 4-digit verification code</legend>
         <div
           className="flex flex-wrap justify-center gap-2 sm:gap-2.5"
           onPaste={handlePaste}
@@ -154,7 +154,7 @@ export function OtpStep({
               onKeyDown={(e) => handleKeyDown(i, e)}
               disabled={isLoading}
               className="h-14 w-12 rounded-lg border border-white/20 bg-white/10 text-center text-2xl font-bold tabular-nums text-white outline-none transition-all focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
-              aria-label={`Digit ${i + 1} of 6`}
+              aria-label={`Digit ${i + 1} of 4`}
             />
           ))}
         </div>

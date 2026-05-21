@@ -27,6 +27,9 @@ type NavItemDefinition = NavItem & {
 };
 
 export function isShellNavItemActive(pathname: string, item: Pick<NavItem, "href">): boolean {
+  if (item.href === "/website-cms") {
+    return pathname === "/website-cms" || pathname.startsWith("/website-cms/");
+  }
   if (item.href === "/dashboard") {
     return pathname === "/dashboard" || pathname === "/";
   }
@@ -117,6 +120,15 @@ const NAV_ITEM_DEFINITIONS: readonly NavItemDefinition[] = [
     label: "Global bookings",
     roles: ["ADMIN"],
     icon: <Icon d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />,
+  },
+  {
+    navId: "admin-website-cms",
+    href: "/website-cms",
+    label: "Website CMS",
+    roles: ["ADMIN"],
+    icon: (
+      <Icon d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm6.93 9h-2.89a15.9 15.9 0 0 0-1.27-4.59A8.03 8.03 0 0 1 18.93 11zM8.26 13h7.48a13.8 13.8 0 0 1-1.12 3.23A8.1 8.1 0 0 1 12 17a8.1 8.1 0 0 1-2.62-.77A13.8 13.8 0 0 1 8.26 13zm-1.19-2H4.07a8.03 8.03 0 0 1 4.16-4.59A15.9 15.9 0 0 0 7.07 11zm0 2a15.9 15.9 0 0 0 1.16 4.59A8.03 8.03 0 0 1 4.07 13h2.89zm9.86 0h2.89a8.03 8.03 0 0 1-4.16 4.59A15.9 15.9 0 0 0 16.93 13zm-5.47-8.26A15.9 15.9 0 0 0 12 7a15.9 15.9 0 0 0-.46 2.26h.92c.15-.78.27-1.54.46-2.26zM12 17c.19.72.31 1.48.46 2.26h-.92A15.9 15.9 0 0 0 12 17z" />
+    ),
   },
   {
     navId: "admin-settings",

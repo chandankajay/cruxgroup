@@ -35,18 +35,36 @@ function maskDestinationForLog(dest: string): string {
 }
 
 /**
- * Send a named WhatsApp template campaign.
- * No-ops (returns `true`) when API key or destination is missing.
- * On HTTP errors or network failure, logs without leaking full PII and returns `false`.
+ * Generic WhatsApp template send (AiSensy campaign API).
+ * If `AISENSY_API_KEY` is missing, logs the full payload and returns `true` (local dev).
  */
-export async function sendAisensyCampaign(
-  payload: AisensyCampaignPayload
+export async function sendWhatsAppMessage(
+  phone: string,
+  templateName: string,
+  params: string[],
 ): Promise<boolean> {
   const apiKey = process.env["AISENSY_API_KEY"];
-  if (!apiKey) return true;
+  const destination = normalizeWhatsAppDestination(phone);
 
-  const destination = normalizeWhatsAppDestination(payload.destination);
-  if (!destination || destination.length < 8) return true;
+  const payload = {
+    campaignName: templateName,
+    destination,
+    userName: "Crux Group",
+    templateParams: params,
+  };
+
+  if (!apiKey) {
+    // eslint-disable-next-line no-console
+    console.log("[aisensy] sendWhatsAppMessage (no AISENSY_API_KEY):", {
+      ...payload,
+      apiKeyPresent: false,
+    });
+    return true;
+  }
+
+  if (!destination || destination.length < 8) {
+    return true;
+  }
 
   try {
     const res = await fetch(AISENSY_API_URL, {
@@ -56,10 +74,7 @@ export async function sendAisensyCampaign(
       },
       body: JSON.stringify({
         apiKey,
-        campaignName: payload.campaignName,
-        destination,
-        userName: "Crux Group",
-        templateParams: payload.templateParams,
+        ...payload,
       }),
     });
 
@@ -73,7 +88,7 @@ export async function sendAisensyCampaign(
       console.error("[aisensy] campaign request failed", {
         status: res.status,
         statusText: res.statusText,
-        campaignName: payload.campaignName,
+        campaignName: templateName,
         destination: maskDestinationForLog(destination),
         bodyPreview: bodyPreview || undefined,
       });
@@ -83,12 +98,26 @@ export async function sendAisensyCampaign(
     return true;
   } catch (e) {
     console.error("[aisensy] campaign fetch error", {
-      campaignName: payload.campaignName,
+      campaignName: templateName,
       destination: maskDestinationForLog(destination),
       error: e instanceof Error ? e.message : String(e),
     });
     return false;
   }
+}
+
+/**
+ * Send a named WhatsApp template campaign.
+ * Delegates to {@link sendWhatsAppMessage} (logs payload when API key is absent).
+ */
+export async function sendAisensyCampaign(
+  payload: AisensyCampaignPayload
+): Promise<boolean> {
+  return sendWhatsAppMessage(
+    payload.destination,
+    payload.campaignName,
+    payload.templateParams,
+  );
 }
 
 /** OTP template — matches legacy `AISENSY_TEMPLATE_NAME` usage. */
@@ -98,11 +127,7 @@ export async function sendWhatsAppOtp(params: {
 }): Promise<boolean> {
   const campaignName = process.env["AISENSY_TEMPLATE_NAME"];
   if (!campaignName) return true;
-  return sendAisensyCampaign({
-    destination: params.phone,
-    campaignName,
-    templateParams: [params.otp],
-  });
+  return sendWhatsAppMessage(params.phone, campaignName, [params.otp]);
 }
 
 /**

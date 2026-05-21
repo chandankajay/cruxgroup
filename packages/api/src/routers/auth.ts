@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createRouter, publicProcedure } from "../trpc";
-import { createOtp, verifyOtp } from "../services/otp-service";
+import { sendBookingsOtpWithWhatsApp, verifyOtp } from "../services/otp-service";
 
 /** Accepts +91…, 91…, or 10-digit local (stored as +91…). */
 const phoneSchema = z
@@ -21,12 +21,7 @@ export const authRouter = createRouter({
     .input(z.object({ phone: phoneSchema }))
     .mutation(async ({ input }) => {
       try {
-        const code = await createOtp(input.phone);
-
-        // Temporary simulated OTP flow: no live WhatsApp integration for now.
-        // eslint-disable-next-line no-console
-        console.log(`[SIMULATED OTP] ${input.phone}: ${code}`);
-
+        await sendBookingsOtpWithWhatsApp(input.phone);
         return { success: true };
       } catch (e) {
         const msg = e instanceof Error ? e.message : "";
