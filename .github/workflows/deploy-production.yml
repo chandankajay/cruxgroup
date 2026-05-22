@@ -1,0 +1,34 @@
+# Optional: run a production deploy from the GitHub Actions tab (Run workflow).
+# This lets Vercel build in the cloud (same as pushing to your production Git branch).
+#
+# Secrets (Repo → Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN        — https://vercel.com/account/tokens
+#   VERCEL_ORG_ID       — Project → Settings → General
+#   VERCEL_PROJECT_ID   — same
+#
+# Tip: Configure an Environment named `production` (Settings → Environments) with required reviewers
+# so the job waits for approval before deploying.
+
+name: Deploy production (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel (production)
+        run: npx vercel@latest deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
