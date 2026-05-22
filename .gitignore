@@ -35,6 +35,9 @@ yarn-error.log*
 # ui
 dist/
 
+# prisma generated client
+**/generated/client/
+
 # env files
 .env
 .env.*
