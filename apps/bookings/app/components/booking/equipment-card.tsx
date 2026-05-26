@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import Image from "next/image";
-import { Badge } from "@repo/ui/badge";
-import { Button } from "@repo/ui/button";
 import { useLabels } from "@repo/ui/dictionary-provider";
+import type { NearbyEquipmentItem } from "@repo/api";
 
 interface EquipmentCardProps {
   readonly id: string;
@@ -15,16 +13,50 @@ interface EquipmentCardProps {
   readonly dailyRate: number;
   readonly image?: string;
   readonly specifications: Record<string, unknown>;
-  readonly onSelect: (id: string) => void;
+  readonly onSelect: (
+    id: string,
+    partner?: {
+      equipmentId: string;
+      partnerId: string;
+      dailyRate: number;
+      hourlyRate: number;
+    }
+  ) => void;
+  readonly priceRange?: {
+    minDaily: number;
+    maxDaily: number;
+    minHourly: number;
+    maxHourly: number;
+  };
+  readonly partnerCount: number;
+  readonly partners: NearbyEquipmentItem["partners"];
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
+const CATEGORY_ICONS: Record<string, string> = {
+  Crane: "\u{1F3D7}\u{FE0F}",
+  JCB: "\u{1F69C}",
+  Excavator: "\u{26CF}\u{FE0F}",
+  Dozer: "\u{1F6A7}",
+  Harvester: "\u{1F33E}",
+  Agriculture: "\u{1F33E}",
+  Earthmoving: "\u{1F69C}",
+};
+
+const SPEC_LABELS: Record<string, string> = {
+  liftingCapacity: "Lifting",
+  boomLength: "Boom",
+  power: "Power",
+  bladeCapacity: "Blade",
+  trackType: "Track",
+  cutterBarWidth: "Cutter",
+  grainTank: "Grain Tank",
+  bucketCapacity: "Bucket",
+  maxDepth: "Max Depth",
+  operatingWeight: "Weight",
+};
+
+function formatPaise(paise: number): string {
+  return (paise / 100).toLocaleString("en-IN");
 }
 
 export function EquipmentCard({
@@ -36,24 +68,70 @@ export function EquipmentCard({
   image,
   specifications,
   onSelect,
+  priceRange,
+  partnerCount,
+  partners,
 }: EquipmentCardProps) {
   const t = useLabels();
   const [imgError, setImgError] = useState(false);
-
-  function handleSelect() {
-    onSelect(id);
-  }
+  const [hovered, setHovered] = useState(false);
 
   const showImage = image && !imgError;
+  const emoji = CATEGORY_ICONS[category] ?? "\u{1F3D7}\u{FE0F}";
+
+  const specs = Object.entries(specifications)
+    .filter(([key]) => key !== "imageUrl" && key !== "description")
+    .slice(0, 3);
+
+  const hasRange =
+    priceRange &&
+    priceRange.minDaily !== priceRange.maxDaily;
+
+  const handleBook = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (partners.length > 0) {
+      const cheapest = [...partners].sort((a, b) => a.dailyRate - b.dailyRate)[0]!;
+      onSelect(id, {
+        equipmentId: cheapest.equipmentId,
+        partnerId: cheapest.partnerId,
+        dailyRate: cheapest.dailyRate,
+        hourlyRate: cheapest.hourlyRate,
+      });
+    } else {
+      onSelect(id);
+    }
+  };
 
   return (
-    <motion.div
-      whileHover={{ y: -4 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={handleSelect}
-      className="flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+    <div
+      onClick={handleBook}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        backgroundColor: "#ffffff",
+        borderRadius: 16,
+        border: "1px solid #e2e8f0",
+        overflow: "hidden",
+        cursor: "pointer",
+        transition: "box-shadow 0.2s ease, transform 0.2s ease",
+        boxShadow: hovered
+          ? "0 8px 24px rgba(0,0,0,0.1)"
+          : "0 1px 3px rgba(0,0,0,0.04)",
+        transform: hovered ? "translateY(-2px)" : "none",
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
-      <div className="relative h-48 w-full bg-muted">
+      {/* Image area */}
+      <div
+        style={{
+          width: "100%",
+          height: 180,
+          position: "relative",
+          backgroundColor: "#f1f5f9",
+          overflow: "hidden",
+        }}
+      >
         {showImage ? (
           <Image
             src={image}
@@ -64,52 +142,224 @@ export function EquipmentCard({
             onError={() => setImgError(true)}
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-brand-orange/10">
-            <span className="text-3xl font-bold text-brand-orange">
-              {getInitials(name)}
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ fontSize: "2.5rem" }}>{emoji}</span>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                color: "#94a3b8",
+                fontWeight: 500,
+              }}
+            >
+              {category}
             </span>
           </div>
         )}
-      </div>
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold leading-tight text-brand-navy">{name}</h3>
-          <Badge variant="secondary" className="shrink-0 p-1">
-            {category}
-          </Badge>
-        </div>
-        {subType && (
-          <Badge variant="outline" className="w-fit p-1">{subType}</Badge>
+
+        {/* Category badge overlaying image */}
+        <span
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            backgroundColor: "rgba(255,255,255,0.92)",
+            backdropFilter: "blur(4px)",
+            borderRadius: 20,
+            padding: "3px 10px",
+            fontSize: "0.7rem",
+            fontWeight: 600,
+            color: "#1d6fa4",
+            border: "1px solid rgba(29,111,164,0.2)",
+          }}
+        >
+          {category}
+        </span>
+
+        {/* Partner count badge */}
+        {partnerCount > 1 && (
+          <span
+            style={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              backgroundColor: "rgba(212,88,0,0.9)",
+              backdropFilter: "blur(4px)",
+              borderRadius: 20,
+              padding: "3px 10px",
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: "#ffffff",
+            }}
+          >
+            {partnerCount} providers
+          </span>
         )}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {Object.entries(specifications)
-            .filter(([key]) => key !== "imageUrl" && key !== "description")
-            .slice(0, 3)
-            .map(([key, val]) => (
-              <span key={key}>
-                {key}: <strong>{String(val)}</strong>
+      </div>
+
+      {/* Card body */}
+      <div
+        style={{
+          padding: "14px 16px 16px",
+          display: "flex",
+          flexDirection: "column",
+          flex: 1,
+        }}
+      >
+        {/* Name */}
+        <h3
+          style={{
+            fontSize: "1rem",
+            fontWeight: 700,
+            color: "#0f172a",
+            marginBottom: 4,
+          }}
+        >
+          {name}
+        </h3>
+
+        {/* SubType badge */}
+        {subType && (
+          <span
+            style={{
+              display: "inline-block",
+              width: "fit-content",
+              fontSize: "0.72rem",
+              backgroundColor: "#e8f2fa",
+              color: "#1d6fa4",
+              borderRadius: 6,
+              padding: "2px 8px",
+              fontWeight: 500,
+              marginBottom: 8,
+            }}
+          >
+            {subType}
+          </span>
+        )}
+
+        {/* Specs */}
+        {specs.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+              marginBottom: 12,
+            }}
+          >
+            {specs.map(([key, val]) => (
+              <span
+                key={key}
+                style={{
+                  fontSize: "0.72rem",
+                  backgroundColor: "#f1f5f9",
+                  color: "#475569",
+                  borderRadius: 6,
+                  padding: "2px 8px",
+                  fontWeight: 500,
+                }}
+              >
+                {SPEC_LABELS[key] ?? key}:{" "}
+                <strong style={{ color: "#0f172a" }}>{String(val)}</strong>
               </span>
             ))}
-        </div>
-        <div className="mt-auto flex items-center justify-between pt-2">
-          <p className="text-lg font-bold text-brand-orange">
-            ₹{(dailyRate / 100).toLocaleString("en-IN")}
-            <span className="text-sm font-normal text-muted-foreground">
-              {t("EQUIPMENT_PER_DAY")}
-            </span>
-          </p>
-          <Button
-            size="sm"
-            className="cursor-pointer rounded-full bg-[#F97316] font-bold text-white hover:bg-[#EA580C]"
-            onClick={(event) => {
-              event.stopPropagation();
-              handleSelect();
+          </div>
+        )}
+
+        {/* Price + Book Now */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: "auto",
+          }}
+        >
+          <div>
+            {hasRange ? (
+              <>
+                <span
+                  style={{
+                    fontSize: "1.15rem",
+                    fontWeight: 800,
+                    color: "#d45800",
+                  }}
+                >
+                  ₹{formatPaise(priceRange.minDaily)} – ₹
+                  {formatPaise(priceRange.maxDaily)}
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "#94a3b8",
+                    fontWeight: 400,
+                  }}
+                >
+                  {t("EQUIPMENT_PER_DAY")}
+                </span>
+              </>
+            ) : (
+              <>
+                <span
+                  style={{
+                    fontSize: "1.25rem",
+                    fontWeight: 800,
+                    color: "#d45800",
+                  }}
+                >
+                  ₹{formatPaise(dailyRate)}
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "#94a3b8",
+                    fontWeight: 400,
+                  }}
+                >
+                  {t("EQUIPMENT_PER_DAY")}
+                </span>
+              </>
+            )}
+          </div>
+          <button
+            onClick={handleBook}
+            style={{
+              backgroundColor: "#d45800",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 10,
+              padding: "8px 18px",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "background 0.15s, transform 0.1s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#b84a00";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#d45800";
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = "scale(0.97)";
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
             }}
           >
             {t("EQUIPMENT_BOOK_NOW")}
-          </Button>
+          </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

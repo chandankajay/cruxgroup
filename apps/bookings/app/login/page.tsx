@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Clock, MapPin, Shield } from "lucide-react";
-import { CruxLoginShell } from "@repo/ui/crux-login-shell";
 import { useLabels } from "@repo/ui/dictionary-provider";
 import { sendOtpAction, signInWithCredentialsAction } from "./actions";
 import { PhoneStep } from "./features/phone-step";
@@ -13,42 +12,49 @@ import { OtpStep } from "./features/otp-step";
 
 type Step = "phone" | "otp";
 
-function TrustFooter() {
-  const item =
-    "flex flex-1 flex-col items-center gap-1 text-center text-gray-500";
-  const sep = "hidden text-gray-600 sm:block sm:px-1";
+const ease = [0.16, 1, 0.3, 1] as const;
+
+const FEATURES = [
+  { icon: "✓", text: "Verified machines & trained operators" },
+  { icon: "✓", text: "Book in under 2 minutes" },
+  { icon: "✓", text: "Available across Telangana" },
+];
+
+function TrustBadges() {
   return (
-    <div className="mt-6 flex items-stretch border-t border-white/10 pt-5">
-      <div className={item}>
-        <Shield className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-        <span className="text-[10px] font-medium leading-tight tracking-wide">
-          Verified Fleet
-        </span>
-      </div>
-      <span className={sep} aria-hidden>
-        |
-      </span>
-      <div className={item}>
-        <Clock className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-        <span className="text-[10px] font-medium leading-tight tracking-wide">
-          2hr Response
-        </span>
-      </div>
-      <span className={sep} aria-hidden>
-        |
-      </span>
-      <div className={item}>
-        <MapPin className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-        <span className="text-[10px] font-medium leading-tight tracking-wide">
-          50km Coverage
-        </span>
-      </div>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-around",
+        alignItems: "center",
+        marginTop: 24,
+        paddingTop: 20,
+        borderTop: "1px solid #2a2825",
+      }}
+    >
+      {[
+        { Icon: Shield, label: "Verified Fleet" },
+        { Icon: Clock, label: "2hr Response" },
+        { Icon: MapPin, label: "Pan Telangana" },
+      ].map(({ Icon, label }) => (
+        <div
+          key={label}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <Icon size={20} color="#d45800" strokeWidth={1.75} aria-hidden />
+          <span style={{ fontSize: "0.7rem", color: "#9a9490", textAlign: "center" }}>
+            {label}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
-
-const BOOKINGS_SUBHEAD =
-  "The largest heavy machinery fleet in Telangana, at your fingertips.";
 
 export default function LoginPage() {
   const t = useLabels();
@@ -56,19 +62,24 @@ export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const [lockout, setLockout] = useState(false);
   const [success, setSuccess] = useState(false);
 
   async function handleSendOtp(phoneNumber: string) {
     setIsLoading(true);
     setError(undefined);
+    setLockout(false);
     const sent = await sendOtpAction(phoneNumber);
     setIsLoading(false);
     if (!sent.success) {
-      setError(
-        sent.error === "ACCOUNT_LOCKED"
-          ? "Too many failed attempts. Please wait 15 minutes before requesting a new code."
-          : t("LOGIN_ERROR_SEND"),
-      );
+      if (sent.error === "ACCOUNT_LOCKED") {
+        setLockout(true);
+        setError(
+          "Too many failed attempts. Please wait 15 minutes before requesting a new code.",
+        );
+      } else {
+        setError(t("LOGIN_ERROR_SEND"));
+      }
       return;
     }
     setPhone(phoneNumber);
@@ -92,104 +103,367 @@ export default function LoginPage() {
   function handleBack() {
     setStep("phone");
     setError(undefined);
+    setLockout(false);
   }
-
-  const logo = (
-    <Link href="/" className="inline-block outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-amber-500/80" aria-label="Crux Group home">
-      <Image
-        src="/logo.png"
-        alt="Crux Group"
-        width={400}
-        height={140}
-        unoptimized
-        className="h-24 w-auto max-w-[min(92vw,400px)] drop-shadow-[0_12px_40px_rgba(0,0,0,0.5)] sm:h-28 lg:h-32 xl:h-[8.5rem]"
-        priority
-      />
-    </Link>
-  );
-
-  const headline = (
-    <>
-      <span className="text-amber-500">Powering</span> Your Projects
-    </>
-  );
 
   if (success) {
     return (
-      <main className="relative flex h-[100dvh] max-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4">
+      <div
+        style={{
+          minHeight: "100dvh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#0f0e0d",
+          position: "relative",
+        }}
+      >
         <div
-          className="absolute inset-0 z-0 bg-zinc-950 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/loginbg.jpg')" }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            backgroundImage: "url('/loginbg.jpg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
         />
-        <div className="absolute inset-0 z-[1] bg-black/50 backdrop-blur-[2px]" />
-        <div className="relative z-10 flex max-w-md flex-col items-center gap-4 rounded-3xl border border-white/10 bg-black/60 px-10 py-12 shadow-2xl backdrop-blur-xl">
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            background:
+              "linear-gradient(to bottom, rgba(15,14,13,0.85) 0%, rgba(15,14,13,0.75) 50%, rgba(15,14,13,0.92) 100%)",
+          }}
+        />
+        <div
+          style={{
+            position: "relative",
+            zIndex: 10,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+            backgroundColor: "#1a1917",
+            border: "1px solid #2a2825",
+            borderRadius: 16,
+            padding: "48px 40px",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+          }}
+        >
           <div
-            className="h-12 w-12 animate-spin rounded-full border-[3px] border-amber-500/30 border-t-amber-500"
-            aria-hidden
+            className="animate-spin"
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              border: "3px solid rgba(212,88,0,0.3)",
+              borderTopColor: "#d45800",
+            }}
           />
-          <p className="text-center text-lg font-extrabold tracking-tight text-white">
+          <p
+            style={{
+              color: "#f5f0eb",
+              fontSize: "1.125rem",
+              fontWeight: 800,
+              letterSpacing: "-0.01em",
+              textAlign: "center",
+            }}
+          >
             Success! Loading Fleet…
           </p>
         </div>
-      </main>
+      </div>
     );
   }
 
-  const card = (
-    <div className="rounded-2xl border border-white/10 bg-black/55 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-3xl sm:p-8">
-      <AnimatePresence mode="wait">
-        {step === "phone" ? (
-          <PhoneStep key="phone" onSubmit={handleSendOtp} isLoading={isLoading} />
-        ) : (
-          <OtpStep
-            key="otp"
-            phone={phone}
-            onSubmit={handleVerifyOtp}
-            onBack={handleBack}
-            isLoading={isLoading}
-            error={error}
-          />
-        )}
-      </AnimatePresence>
-      <TrustFooter />
-
-      <p className="mt-4 text-center text-[11px] text-gray-500">
-        <Link
-          href="/legal/terms-and-conditions"
-          className="font-medium text-amber-500/90 underline-offset-4 hover:text-amber-400 hover:underline"
-        >
-          Terms and Conditions
-        </Link>
-        <span className="text-gray-600" aria-hidden>
-          {" "}
-          ·{" "}
-        </span>
-        <Link
-          href="/legal/privacy-policy"
-          className="font-medium text-amber-500/90 underline-offset-4 hover:text-amber-400 hover:underline"
-        >
-          Privacy Policy
-        </Link>
-      </p>
-    </div>
-  );
-
-  const belowFold =
-    process.env["NEXT_PUBLIC_NODE_ENV"] === "development" ? (
-      <p className="text-center text-xs text-gray-500">
-        Dev OTP{" "}
-        <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-amber-400/90">4242</code>
-      </p>
-    ) : null;
+  const isDev = process.env["NEXT_PUBLIC_NODE_ENV"] === "development";
 
   return (
-    <CruxLoginShell
-      logo={logo}
-      headline={headline}
-      subheadline={BOOKINGS_SUBHEAD}
-      belowFold={belowFold}
+    <div
+      style={{
+        minHeight: "100dvh",
+        width: "100%",
+        position: "relative",
+        display: "flex",
+        backgroundColor: "#0f0e0d",
+      }}
     >
-      {card}
-    </CruxLoginShell>
+      {/* Background image */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 0,
+          backgroundImage: "url('/loginbg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+      {/* Dark overlay */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 0,
+          background:
+            "linear-gradient(to bottom, rgba(15,14,13,0.85) 0%, rgba(15,14,13,0.75) 50%, rgba(15,14,13,0.92) 100%)",
+        }}
+      />
+
+      {/* LEFT PANEL — desktop only (md+) */}
+      <div className="hidden md:flex" style={{
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: "0 64px",
+        width: "50%",
+        position: "relative",
+        zIndex: 10,
+      }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, ease }}
+          style={{ marginBottom: 40 }}
+        >
+          <Image
+            src="/logo.png"
+            alt="Crux Group"
+            width={180}
+            height={90}
+            priority
+            unoptimized
+            style={{ mixBlendMode: "lighten", objectFit: "contain" }}
+          />
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1, ease }}
+          style={{
+            fontSize: "clamp(2.5rem, 4vw, 4rem)",
+            fontWeight: 800,
+            lineHeight: 1.1,
+            letterSpacing: "-0.02em",
+            color: "#f5f0eb",
+          }}
+        >
+          <span style={{ color: "#d45800" }}>Book</span> Your Equipment.
+          <br />
+          Built for Builders.
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2, ease }}
+          style={{
+            color: "#9a9490",
+            fontSize: "1.1rem",
+            marginTop: "1rem",
+            maxWidth: 420,
+          }}
+        >
+          Telangana&apos;s most trusted heavy equipment platform. JCBs, Cranes,
+          Excavators — on demand.
+        </motion.p>
+
+        <motion.ul
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3, ease }}
+          style={{
+            marginTop: "2rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem",
+            listStyle: "none",
+            padding: 0,
+          }}
+        >
+          {FEATURES.map((item) => (
+            <li
+              key={item.text}
+              style={{
+                display: "flex",
+                gap: 10,
+                alignItems: "center",
+                color: "#9a9490",
+                fontSize: "0.95rem",
+              }}
+            >
+              <span style={{ color: "#d45800", fontWeight: 700 }}>
+                {item.icon}
+              </span>
+              {item.text}
+            </li>
+          ))}
+        </motion.ul>
+      </div>
+
+      {/* RIGHT PANEL — login form (full on mobile, half on desktop) */}
+      <div
+        className="w-full md:w-1/2"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          position: "relative",
+          zIndex: 10,
+          padding: "40px 20px",
+          minHeight: "100dvh",
+        }}
+      >
+        {/* Logo — mobile only */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, ease }}
+          className="md:hidden"
+          style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}
+        >
+          <Image
+            src="/logo.png"
+            alt="Crux Group"
+            width={140}
+            height={70}
+            priority
+            unoptimized
+            style={{ mixBlendMode: "lighten", objectFit: "contain" }}
+          />
+        </motion.div>
+
+        {/* Mobile headline — hidden on desktop */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1, ease }}
+          className="md:hidden"
+          style={{ textAlign: "left", width: "100%", maxWidth: 400, marginBottom: 24 }}
+        >
+          <h1
+            style={{
+              fontSize: "clamp(1.8rem, 8vw, 2.4rem)",
+              fontWeight: 800,
+              lineHeight: 1.15,
+              letterSpacing: "-0.02em",
+              color: "#f5f0eb",
+            }}
+          >
+            <span style={{ color: "#d45800" }}>Book</span> Your
+            Equipment.
+            <br />
+            Built for Builders.
+          </h1>
+          <p
+            style={{
+              color: "#9a9490",
+              fontSize: "0.88rem",
+              marginTop: "0.5rem",
+            }}
+          >
+            Telangana&apos;s most trusted heavy equipment platform.
+          </p>
+        </motion.div>
+
+        {/* Login card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.3, ease }}
+          style={{
+            backgroundColor: "#1a1917",
+            border: "1px solid #2a2825",
+            borderRadius: 16,
+            padding: "28px 24px",
+            width: "100%",
+            maxWidth: 400,
+            boxShadow: "0 0 0 1px rgba(212,88,0,0.06), 0 24px 64px rgba(0,0,0,0.6)",
+          }}
+        >
+          {/* Dev OTP notice */}
+          {isDev && (
+            <div
+              style={{
+                backgroundColor: "rgba(212,88,0,0.1)",
+                border: "1px solid rgba(212,88,0,0.25)",
+                borderRadius: 8,
+                padding: "8px 12px",
+                marginBottom: 16,
+                fontSize: "0.82rem",
+                fontFamily: "monospace",
+                color: "#d45800",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              Dev OTP: <strong>4242</strong>
+            </div>
+          )}
+
+          <AnimatePresence mode="wait">
+            {step === "phone" ? (
+              <PhoneStep
+                key="phone"
+                onSubmit={handleSendOtp}
+                isLoading={isLoading}
+                error={error}
+                lockout={lockout}
+              />
+            ) : (
+              <OtpStep
+                key="otp"
+                phone={phone}
+                onSubmit={handleVerifyOtp}
+                onBack={handleBack}
+                isLoading={isLoading}
+                error={error}
+                lockout={lockout}
+              />
+            )}
+          </AnimatePresence>
+
+          <TrustBadges />
+        </motion.div>
+
+        {/* Terms links */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.5, ease }}
+          style={{
+            marginTop: 24,
+            textAlign: "center",
+            fontSize: "0.72rem",
+          }}
+        >
+          <Link
+            href="/legal/terms-and-conditions"
+            style={{ color: "#9a9490", textDecoration: "none" }}
+            onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+            onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+          >
+            Terms and Conditions
+          </Link>
+          <span style={{ color: "#9a9490" }} aria-hidden>
+            {" · "}
+          </span>
+          <Link
+            href="/legal/privacy-policy"
+            style={{ color: "#9a9490", textDecoration: "none" }}
+            onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+            onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+          >
+            Privacy Policy
+          </Link>
+        </motion.p>
+      </div>
+    </div>
   );
 }

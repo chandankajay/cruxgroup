@@ -8,11 +8,13 @@ import {
   type MotionValue,
 } from "framer-motion";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { BOOKINGS_URL } from "../../lib/env";
 import type { Locale } from "../../lib/locale";
 import { Button } from "../ui/Button";
 import { type MachineSlide, MACHINE_SLIDES } from "./machine-sections-data";
+
+const SCROLL_PER_SLIDE_VH = 150;
 
 function resolveSlide(slide: MachineSlide, lang: Locale) {
   const te = lang === "te";
@@ -23,6 +25,51 @@ function resolveSlide(slide: MachineSlide, lang: Locale) {
     specs: slide.specs.map((s) => ({ label: te ? s.label_te : s.label_en })),
     cta: te ? slide.cta_te : slide.cta_en,
   };
+}
+
+function useSlideTransforms(
+  scrollYProgress: MotionValue<number>,
+  index: number,
+  total: number,
+) {
+  const segmentSize = 1 / total;
+  const start = index * segmentSize;
+  const end = start + segmentSize;
+  const mid = (start + end) / 2;
+
+  const imgIn = start + segmentSize * 0.08;
+  const imgSettled = start + segmentSize * 0.28;
+  const imgExitStart = end - segmentSize * 0.28;
+  const imgY = useTransform(
+    scrollYProgress,
+    [start, imgIn, imgSettled, imgExitStart, end],
+    ["100%", "0%", "0%", "0%", "-100%"],
+  );
+
+  const textIn = start + segmentSize * 0.12;
+  const textSettled = start + segmentSize * 0.36;
+  const textExitStart = end - segmentSize * 0.32;
+  const textExit = end - segmentSize * 0.08;
+  const textOpacity = useTransform(
+    scrollYProgress,
+    [textIn, textSettled, textExitStart, textExit],
+    [0, 1, 1, 0],
+  );
+  const textX = useTransform(
+    scrollYProgress,
+    [textIn, textSettled, textExitStart, textExit],
+    ["40px", "0px", "0px", "-40px"],
+  );
+
+  const layerOpacity = useTransform(
+    scrollYProgress,
+    index === 0
+      ? [0, 1]
+      : [start - 0.002, start],
+    [index === 0 ? 1 : 0, 1],
+  );
+
+  return { imgY, textOpacity, textX, layerOpacity };
 }
 
 function MachineSlideDesktop({
@@ -101,6 +148,50 @@ function MachineSlideDesktop({
   );
 }
 
+function SlideLayer({
+  slide,
+  lang,
+  scrollYProgress,
+  index,
+  total,
+  interactive,
+}: {
+  readonly slide: MachineSlide;
+  readonly lang: Locale;
+  readonly scrollYProgress: MotionValue<number>;
+  readonly index: number;
+  readonly total: number;
+  readonly interactive: boolean;
+}): React.ReactElement {
+  const resolved = useMemo(() => resolveSlide(slide, lang), [slide, lang]);
+  const { imgY, textOpacity, textX, layerOpacity } = useSlideTransforms(
+    scrollYProgress,
+    index,
+    total,
+  );
+
+  return (
+    <motion.div
+      className="absolute inset-0 overflow-hidden bg-[#0f0e0d]"
+      style={{ zIndex: index + 1, opacity: layerOpacity }}
+    >
+      <MachineSlideDesktop
+        image={slide.image}
+        imageAlt={slide.imageAlt}
+        eyebrow={resolved.eyebrow}
+        title={resolved.title}
+        body={resolved.body}
+        specs={resolved.specs}
+        cta={resolved.cta}
+        imgY={imgY}
+        textOpacity={textOpacity}
+        textX={textX}
+        interactive={interactive}
+      />
+    </motion.div>
+  );
+}
+
 export function MachineSectionsDesktop({
   lang,
 }: {
@@ -112,68 +203,29 @@ export function MachineSectionsDesktop({
     offset: ["start start", "end end"],
   });
 
-  // Slide 1 (JCB): image in a bit faster so less time on empty panel before the photo arrives.
-  const img0 = useTransform(scrollYProgress, [0, 0.12, 0.36, 0.5], ["100%", "0%", "0%", "-100%"]);
-  const text0Opacity = useTransform(scrollYProgress, [0.04, 0.18, 0.32, 0.46], [0, 1, 1, 0]);
-  const text0X = useTransform(scrollYProgress, [0.04, 0.18, 0.32, 0.46], ["40px", "0px", "0px", "-40px"]);
+  const total = MACHINE_SLIDES.length;
+  const containerHeight = `${total * SCROLL_PER_SLIDE_VH}vh`;
 
-  // Slide 2 sits above slide 1 (z-index). Without animating this layer's opacity, it paints solid #0f0e0d
-  // over the whole viewport for the first half of the scroll track — hiding JCB (black screen).
-  // Fade slide 2 in only once we're past the midpoint; align text fade with the same beat (no 0.5–0.52 gap).
-  const slide2LayerOpacity = useTransform(scrollYProgress, [0, 0.498, 0.5], [0, 0, 1]);
-
-  const img1 = useTransform(scrollYProgress, [0.5, 0.64, 0.88, 1], ["100%", "0%", "0%", "-100%"]);
-  const text1Opacity = useTransform(scrollYProgress, [0.5, 0.62, 0.84, 0.98], [0, 1, 1, 0]);
-  const text1X = useTransform(scrollYProgress, [0.5, 0.62, 0.84, 0.98], ["40px", "0px", "0px", "-40px"]);
-
-  const [activeSlide, setActiveSlide] = useState<0 | 1>(0);
-  useEffect(() => {
-    setActiveSlide(scrollYProgress.get() < 0.5 ? 0 : 1);
-  }, [scrollYProgress]);
+  const [activeSlide, setActiveSlide] = useState(0);
   useMotionValueEvent(scrollYProgress, "change", (v: number) => {
-    setActiveSlide(v < 0.5 ? 0 : 1);
+    const idx = Math.min(Math.floor(v * total), total - 1);
+    setActiveSlide(idx);
   });
 
-  const slides = MACHINE_SLIDES;
-  const s0 = resolveSlide(slides[0], lang);
-  const s1 = resolveSlide(slides[1], lang);
-
   return (
-    <section ref={containerRef} className="relative h-[300vh]">
+    <section ref={containerRef} className="relative" style={{ height: containerHeight }}>
       <div className="sticky top-0 h-[100dvh] min-h-0 w-full overflow-hidden bg-[#0f0e0d]">
-        <div className="absolute inset-0 z-[1] overflow-hidden bg-[#0f0e0d]">
-          <MachineSlideDesktop
-            image={slides[0].image}
-            imageAlt={slides[0].imageAlt}
-            eyebrow={s0.eyebrow}
-            title={s0.title}
-            body={s0.body}
-            specs={s0.specs}
-            cta={s0.cta}
-            imgY={img0}
-            textOpacity={text0Opacity}
-            textX={text0X}
-            interactive={activeSlide === 0}
+        {MACHINE_SLIDES.map((slide, i) => (
+          <SlideLayer
+            key={slide.id}
+            slide={slide}
+            lang={lang}
+            scrollYProgress={scrollYProgress}
+            index={i}
+            total={total}
+            interactive={activeSlide === i}
           />
-        </div>
-        <motion.div
-          className="absolute inset-0 z-[2] overflow-hidden bg-[#0f0e0d]"
-          style={{ opacity: slide2LayerOpacity }}
-        >
-          <MachineSlideDesktop
-            image={slides[1].image}
-            imageAlt={slides[1].imageAlt}
-            eyebrow={s1.eyebrow}
-            title={s1.title}
-            body={s1.body}
-            specs={s1.specs}
-            cta={s1.cta}
-            imgY={img1}
-            textOpacity={text1Opacity}
-            textX={text1X}
-            interactive={activeSlide === 1}
-          />
-        </motion.div>
+        ))}
       </div>
     </section>
   );

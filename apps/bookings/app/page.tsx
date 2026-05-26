@@ -19,7 +19,7 @@ export default async function Page() {
     redirect("/login");
   }
 
-  const equipment = await getEquipment();
+  const fallbackEquipment = await getEquipment();
 
-  return <HomeContent equipment={equipment} />;
+  return <HomeContent fallbackEquipment={fallbackEquipment} />;
 }

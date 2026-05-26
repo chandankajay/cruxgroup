@@ -3,9 +3,27 @@
 
 @source "../../../packages/ui/src/*.tsx";
 
-body {
-  color: var(--color-foreground);
-  background-color: var(--color-background);
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: #f8f9fa;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html { scroll-behavior: smooth; }
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f8f9fa; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+::selection { background: #d45800; color: white; }
+
+@media (max-width: 768px) {
+  body { -webkit-overflow-scrolling: touch; }
 }
 
 /* ─── Google Places Autocomplete dropdown ────────────────────────────────────
@@ -64,4 +82,10 @@ body {
 
 .pac-logo::after {
   display: none;
+}
+
+/* Skeleton loading pulse */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }

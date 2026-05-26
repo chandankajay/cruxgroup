@@ -1,4 +1,5 @@
-import type { MyBookingCardData } from "../data";
+import Link from "next/link";
+import type { MyBookingCardData, TripStatus } from "../data";
 
 function statusBadgeClass(status: MyBookingCardData["status"]): string {
   switch (status) {
@@ -21,6 +22,38 @@ function statusLabel(status: MyBookingCardData["status"]): string {
   switch (status) {
     case "DISPATCHED":
       return "Dispatched";
+    default:
+      return status.charAt(0) + status.slice(1).toLowerCase();
+  }
+}
+
+function tripStatusBadgeClass(status: TripStatus): string {
+  switch (status) {
+    case "SCHEDULED":
+      return "bg-blue-50 text-blue-800 ring-blue-300/40";
+    case "ENROUTE":
+      return "bg-orange-50 text-orange-800 ring-orange-300/40";
+    case "ON_SITE":
+      return "bg-green-50 text-green-800 ring-green-400/40";
+    case "COMPLETED":
+      return "bg-emerald-50 text-emerald-800 ring-emerald-400/40";
+    case "OVERRUN":
+      return "bg-red-50 text-red-800 ring-red-300/40";
+    case "CANCELLED":
+      return "bg-zinc-100 text-zinc-700 ring-zinc-300/30";
+    case "DISPUTED":
+      return "bg-rose-50 text-rose-800 ring-rose-300/40";
+    default:
+      return "bg-zinc-100 text-zinc-700 ring-zinc-300/30";
+  }
+}
+
+function tripStatusLabel(status: TripStatus): string {
+  switch (status) {
+    case "ENROUTE":
+      return "En Route";
+    case "ON_SITE":
+      return "On Site";
     default:
       return status.charAt(0) + status.slice(1).toLowerCase();
   }
@@ -59,6 +92,26 @@ export function BookingCard({ booking }: { readonly booking: MyBookingCardData }
           </p>
         </div>
       </div>
+
+      {booking.tripStatus && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-brand-navy/8 bg-slate-50/80 px-3 py-2">
+          <span
+            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset ${tripStatusBadgeClass(booking.tripStatus)}`}
+          >
+            {tripStatusLabel(booking.tripStatus)}
+          </span>
+          <span className="text-xs text-brand-navy/60">Trip status</span>
+          {booking.trackUrl && (
+            <Link
+              href={booking.trackUrl}
+              className="ml-auto text-xs font-semibold text-[#d45800] hover:underline"
+            >
+              Track →
+            </Link>
+          )}
+        </div>
+      )}
+
       {booking.invoices.length > 0 ? (
         <ul className="mt-4 space-y-1 border-t border-brand-navy/10 pt-3 text-xs text-brand-navy/70">
           {booking.invoices.map((inv) => (
