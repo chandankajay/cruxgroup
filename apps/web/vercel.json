@@ -1,6 +1,6 @@
 {
   "buildCommand": "cd ../.. && pnpm turbo run build --filter=@crux/web",
-  "installCommand": "pnpm install",
-  "outputDirectory": "apps/web/.next",
+  "installCommand": "cd ../.. && pnpm install",
+  "outputDirectory": ".next",
   "framework": "nextjs"
 }
