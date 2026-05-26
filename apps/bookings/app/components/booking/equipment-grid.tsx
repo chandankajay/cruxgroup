@@ -2,28 +2,65 @@
 
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { Input } from "@repo/ui/input";
+import { motion } from "framer-motion";
 import { useLabels } from "@repo/ui/dictionary-provider";
 import { EquipmentCard } from "./equipment-card";
+import type { NearbyEquipmentItem } from "@repo/api";
 
 interface EquipmentItem {
   id: string;
   name: string;
   category: string;
   subType?: string | null;
-  pricing: { daily: number };
+  pricing: { daily: number; hourly?: number };
   images: string[];
   specifications: Record<string, unknown>;
+  priceRange?: {
+    minDaily: number;
+    maxDaily: number;
+    minHourly: number;
+    maxHourly: number;
+  };
+  partnerCount: number;
+  partners: NearbyEquipmentItem["partners"];
 }
 
 interface EquipmentGridProps {
   readonly items: EquipmentItem[];
-  readonly onSelect: (id: string) => void;
+  readonly onSelect: (
+    id: string,
+    partner?: {
+      equipmentId: string;
+      partnerId: string;
+      dailyRate: number;
+      hourlyRate: number;
+    }
+  ) => void;
+  readonly locationAware?: boolean;
 }
 
-export function EquipmentGrid({ items, onSelect }: EquipmentGridProps) {
+const containerVariants = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.07,
+    },
+  },
+} as const;
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
+  },
+} as const;
+
+export function EquipmentGrid({ items, onSelect, locationAware }: EquipmentGridProps) {
   const t = useLabels();
   const [query, setQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -41,46 +78,106 @@ export function EquipmentGrid({ items, onSelect }: EquipmentGridProps) {
 
   if (items.length === 0) {
     return (
-      <p className="py-12 text-center text-muted-foreground">
+      <p
+        style={{
+          padding: "48px 24px",
+          textAlign: "center",
+          color: "#94a3b8",
+        }}
+      >
         {t("NO_EQUIPMENT")}
       </p>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-border bg-background p-3 shadow-sm">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={searchPlaceholder}
-          className="w-full rounded-lg px-4 py-2 pl-10"
-        />
+    <div>
+      {/* Search bar */}
+      <div style={{ padding: "20px 24px 0" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            backgroundColor: "#f8f9fa",
+            border: searchFocused
+              ? "1.5px solid #d45800"
+              : "1.5px solid #e2e8f0",
+            borderRadius: 12,
+            padding: "0 16px",
+            height: 50,
+            transition: "border-color 0.2s, box-shadow 0.2s",
+            boxShadow: searchFocused
+              ? "0 0 0 3px rgba(212,88,0,0.1)"
+              : "none",
+          }}
+        >
+          <Search
+            size={18}
+            color="#94a3b8"
+            style={{ flexShrink: 0 }}
+          />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={searchPlaceholder}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            style={{
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              flex: 1,
+              color: "#0f172a",
+              fontSize: "0.95rem",
+              height: "100%",
+            }}
+          />
         </div>
       </div>
 
+      {/* Grid */}
       {filteredItems.length === 0 ? (
-        <p className="py-12 text-center text-muted-foreground">
+        <p
+          style={{
+            padding: "48px 24px",
+            textAlign: "center",
+            color: "#94a3b8",
+          }}
+        >
           No equipment matches your search.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          key={locationAware ? "nearby" : "all"}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: 20,
+            padding: "20px 24px",
+          }}
+        >
           {filteredItems.map((item) => (
-            <EquipmentCard
-              key={item.id}
-              id={item.id}
-              name={item.name}
-              category={item.category}
-              subType={item.subType}
-              dailyRate={item.pricing.daily}
-              image={item.images[0]}
-              specifications={item.specifications as Record<string, unknown>}
-              onSelect={onSelect}
-            />
+            <motion.div key={item.id} variants={cardVariants}>
+              <EquipmentCard
+                id={item.id}
+                name={item.name}
+                category={item.category}
+                subType={item.subType}
+                dailyRate={item.pricing.daily}
+                image={item.images[0]}
+                specifications={item.specifications}
+                onSelect={onSelect}
+                priceRange={item.priceRange}
+                partnerCount={item.partnerCount}
+                partners={item.partners}
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );

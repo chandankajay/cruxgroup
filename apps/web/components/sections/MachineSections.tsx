@@ -33,14 +33,16 @@ function MachineSectionsMobileStack({
 }: {
   readonly lang: Locale;
 }): React.ReactElement {
-  const s0 = resolveSlide(MACHINE_SLIDES[0], lang);
-  const s1 = resolveSlide(MACHINE_SLIDES[1], lang);
-
   return (
     <section className="overflow-x-clip border-y border-border/40 bg-dark">
       <div className="mx-auto max-w-lg space-y-8 px-4 py-14 pb-[max(3.5rem,env(safe-area-inset-bottom))]">
-        <MachineMobileCard slide={MACHINE_SLIDES[0]} resolved={s0} />
-        <MachineMobileCard slide={MACHINE_SLIDES[1]} resolved={s1} />
+        {MACHINE_SLIDES.map((slide) => (
+          <MachineMobileCard
+            key={slide.id}
+            slide={slide}
+            resolved={resolveSlide(slide, lang)}
+          />
+        ))}
       </div>
     </section>
   );

@@ -10,12 +10,22 @@ import {
   createPartnerFleetEquipment,
   updatePartnerFleetEquipment,
   updateEquipment,
+  getNearbyEquipment,
 } from "../services/equipment-service";
 
 const categoryEnum = z.enum(["JCB", "Crane", "Excavator"]);
 
 export const equipmentRouter = createRouter({
   list: publicProcedure.query(() => listEquipment()),
+
+  getNearby: publicProcedure
+    .input(
+      z.object({
+        lat: z.number().min(-90).max(90),
+        lng: z.number().min(-180).max(180),
+      })
+    )
+    .query(({ input }) => getNearbyEquipment(input.lat, input.lng)),
 
   listByPartner: publicProcedure
     .input(z.object({ partnerId: z.string().min(1) }))

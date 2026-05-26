@@ -170,6 +170,15 @@ const SECTIONS: SectionSeed[] = [
       {
         type: "EQUIPMENT_CARD",
         order: 3,
+        heading_en: "Big Cranes",
+        heading_te: "పెద్ద క్రేన్లు",
+        body_en: "16–100 ton capacity for steel erection, heavy lifts, and large infrastructure.",
+        body_te: "ఉక్కు నిర్మాణం మరియు భారీ ఇన్‌ఫ్రా కోసం 16–100 టన్నుల సామర్థ్యం.",
+        icon: "Crane",
+      },
+      {
+        type: "EQUIPMENT_CARD",
+        order: 4,
         heading_en: "Mini Crane",
         heading_te: "మినీ క్రేన్",
         body_en: "Tight sites and lane work with compact reach.",
@@ -178,7 +187,7 @@ const SECTIONS: SectionSeed[] = [
       },
       {
         type: "EQUIPMENT_CARD",
-        order: 4,
+        order: 5,
         heading_en: "Excavator",
         heading_te: "ఎక్స్‌కవేటర్",
         body_en: "Bulk earthwork, trenches, and foundations.",
@@ -187,7 +196,7 @@ const SECTIONS: SectionSeed[] = [
       },
       {
         type: "EQUIPMENT_CARD",
-        order: 5,
+        order: 6,
         heading_en: "Dozer",
         heading_te: "డోజర్",
         body_en: "Rough grading, push, and site clearing.",
@@ -196,7 +205,7 @@ const SECTIONS: SectionSeed[] = [
       },
       {
         type: "EQUIPMENT_CARD",
-        order: 6,
+        order: 7,
         heading_en: "Road Roller",
         heading_te: "రోడ్ రోలర్",
         body_en: "Compaction for roads and paved yards.",
@@ -205,7 +214,7 @@ const SECTIONS: SectionSeed[] = [
       },
       {
         type: "EQUIPMENT_CARD",
-        order: 7,
+        order: 8,
         heading_en: "Post Hole Digger",
         heading_te: "పోస్ట్ హోల్ డిగ్గర్",
         body_en: "Fence lines, poles, and agriculture footings.",
@@ -214,7 +223,7 @@ const SECTIONS: SectionSeed[] = [
       },
       {
         type: "EQUIPMENT_CARD",
-        order: 8,
+        order: 9,
         heading_en: "Compactor",
         heading_te: "కంపాక్టర్",
         body_en: "Plate and trench compaction where rollers cannot go.",

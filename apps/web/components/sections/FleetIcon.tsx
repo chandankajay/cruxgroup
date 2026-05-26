@@ -5,6 +5,7 @@ import {
   ArrowBigUp,
   Building2,
   CircleDot,
+  Construction,
   Drill,
   Hammer,
   Layers,
@@ -23,6 +24,7 @@ const ICONS: Record<string, LucideIcon> = {
   Drill,
   Layers,
   Hammer,
+  Construction,
 };
 
 export function FleetIcon({

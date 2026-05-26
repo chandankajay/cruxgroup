@@ -5,6 +5,7 @@ import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
 import { DictionaryProvider } from "@repo/ui/dictionary-provider";
 import { ConditionalHeader } from "./components/conditional-header";
+import { BottomNav } from "./components/bottom-nav";
 import { PageTransition } from "./components/page-transition";
 import { getBookingLabels } from "./lib/get-labels";
 
@@ -30,6 +31,7 @@ export default async function RootLayout({
         <DictionaryProvider labels={labels}>
           <ConditionalHeader />
           <PageTransition>{children}</PageTransition>
+          <BottomNav />
           <Toaster position="top-center" richColors closeButton />
         </DictionaryProvider>
       </body>

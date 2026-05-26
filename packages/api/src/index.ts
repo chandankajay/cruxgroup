@@ -6,6 +6,8 @@ export type { AppRouter };
 /** Stable public inference surface for consumers (avoids TS2742 leaking Prisma runtime paths). */
 export type RouterOutputs = inferRouterOutputs<AppRouter>;
 export type EquipmentListOutput = RouterOutputs["equipment"]["list"];
+export type NearbyEquipmentOutput = RouterOutputs["equipment"]["getNearby"];
+export type { NearbyEquipmentItem } from "./services/equipment-service";
 export { getLabelsForApp } from "./services/dictionary-service";
 export {
   verifyOtp,

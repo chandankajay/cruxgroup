@@ -39,6 +39,26 @@ export const MACHINE_SLIDES = [
     cta_en: "Book a Post Hole Digger",
     cta_te: "పోస్ట్ హోల్ డిగ్గర్ బుక్ చేయండి",
   },
+  {
+    id: "crane",
+    image: "/images/crane-section.jpg",
+    imageAlt: "Heavy crane lifting steel beams at a construction site in Telangana",
+    eyebrow: "HEAVY LIFTING",
+    eyebrow_te: "భారీ ఎత్తడం",
+    title_en: "Big Cranes",
+    title_te: "పెద్ద క్రేన్లు",
+    body_en:
+      "16 to 100 ton capacity cranes for steel erection, heavy lifts, and large-scale infrastructure. On-demand across Telangana.",
+    body_te:
+      "16 నుండి 100 టన్నుల సామర్థ్యం గల క్రేన్లు — ఉక్కు నిర్మాణం, భారీ ఎత్తడం మరియు పెద్ద ఇన్‌ఫ్రా ప్రాజెక్టుల కోసం.",
+    specs: [
+      { label_en: "16–100 ton capacity", label_te: "16–100 టన్నుల సామర్థ్యం" },
+      { label_en: "Certified operators", label_te: "ధృవీకరించిన ఆపరేటర్లు" },
+      { label_en: "Hourly & daily rates", label_te: "గంట & రోజు రేట్లు" },
+    ],
+    cta_en: "Book a Crane Now",
+    cta_te: "ఇప్పుడే క్రేన్ బుక్ చేయండి",
+  },
 ] as const;
 
 export type MachineSlide = (typeof MACHINE_SLIDES)[number];

@@ -3,6 +3,15 @@ import "server-only";
 import type { BookingStatus } from "@repo/db";
 import { prisma } from "@repo/db";
 
+export type TripStatus =
+  | "SCHEDULED"
+  | "ENROUTE"
+  | "ON_SITE"
+  | "COMPLETED"
+  | "OVERRUN"
+  | "CANCELLED"
+  | "DISPUTED";
+
 /** B2C rows are owned by `Booking.userId` (platform user). `customerId` is CRM-only. */
 export type MyBookingCardData = {
   readonly id: string;
@@ -11,6 +20,8 @@ export type MyBookingCardData = {
   readonly totalInrLabel: string;
   readonly status: BookingStatus;
   readonly dateLabel: string;
+  readonly tripStatus: TripStatus | null;
+  readonly trackUrl: string | null;
   readonly invoices: readonly {
     readonly invoiceNumber: string;
     readonly paymentStatus: string;
@@ -60,6 +71,8 @@ function toCardData(b: {
   createdAt: Date;
   equipment: { name: string; partner: { companyName: string } | null };
   trips: {
+    id: string;
+    status: TripStatus;
     scheduledDate: Date;
     partner: { companyName: string };
     invoices: { invoiceNumber: string; paymentStatus: string; amount: number }[];
@@ -89,6 +102,12 @@ function toCardData(b: {
     })),
   );
 
+  const latestTrip = b.trips.length > 0
+    ? b.trips.reduce((latest, t) =>
+        t.scheduledDate > latest.scheduledDate ? t : latest
+      )
+    : null;
+
   return {
     id: b.id,
     equipmentName: b.equipment.name,
@@ -96,6 +115,8 @@ function toCardData(b: {
     totalInrLabel: formatInrFromPaise(totalPaise),
     status: b.status,
     dateLabel: formatDateIst(primaryDate),
+    tripStatus: (latestTrip?.status as TripStatus) ?? null,
+    trackUrl: latestTrip ? `/track/${latestTrip.id}` : null,
     invoices,
   };
 }
@@ -115,7 +136,10 @@ export async function fetchMyBookingsForUser(userId: string): Promise<{
       },
       trips: {
         orderBy: { scheduledDate: "desc" },
-        include: {
+        select: {
+          id: true,
+          status: true,
+          scheduledDate: true,
           partner: { select: { companyName: true } },
           invoices: {
             select: {

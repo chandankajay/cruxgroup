@@ -1,5 +1,10 @@
 import { EquipmentCategory, Prisma } from "@prisma/client";
 import { prisma } from "@repo/db";
+import { calculateDistanceKm } from "@repo/lib";
+import {
+  getPartnerServiceBase,
+  getPartnerServiceRadiusKm,
+} from "./partner-geo";
 
 /** Convert rupees from partner/admin forms to integer paise for persistence. */
 function rupeesToPaise(rupees: number): number {
@@ -335,6 +340,154 @@ export async function updatePartnerFleetEquipment(
       specifications: mergedSpecs,
     },
   });
+}
+
+// ─── Nearby Equipment (location-aware marketplace) ──────────────────────────
+
+export interface NearbyEquipmentItem {
+  catalogId: string;
+  catalogName: string;
+  category: string;
+  imageUrl: string;
+  specifications: Record<string, unknown>;
+  subType: string | null;
+  minDailyRate: number;
+  maxDailyRate: number;
+  minHourlyRate: number;
+  maxHourlyRate: number;
+  partnerCount: number;
+  /** Individual equipment rows from nearby partners (for booking) */
+  partners: {
+    equipmentId: string;
+    partnerId: string;
+    dailyRate: number;
+    hourlyRate: number;
+    distanceKm: number;
+  }[];
+}
+
+/**
+ * Returns equipment available near a given lat/lng, aggregated by MasterCatalog entry
+ * when possible, or by individual equipment row when no catalog link exists.
+ * For each catalog item served by multiple nearby partners, returns a price range (min/max).
+ */
+export async function getNearbyEquipment(lat: number, lng: number) {
+  const userLoc = { lat, lng };
+
+  const partners = await prisma.partner.findMany({
+    where: { isActive: true, kycStatus: "VERIFIED" },
+    select: {
+      id: true,
+      baseLocation: true,
+      baseCoordinates: true,
+      maxRadius: true,
+      maxServiceRadiusKm: true,
+    },
+  });
+
+  const nearbyPartnerIds = new Map<string, number>();
+  for (const p of partners) {
+    const base = getPartnerServiceBase(p);
+    if (!base) continue;
+    const radiusKm = getPartnerServiceRadiusKm(p);
+    if (radiusKm <= 0) continue;
+    const distKm = calculateDistanceKm(base, userLoc);
+    if (distKm <= radiusKm) {
+      nearbyPartnerIds.set(p.id, distKm);
+    }
+  }
+
+  if (nearbyPartnerIds.size === 0) {
+    return [];
+  }
+
+  const equipment = await prisma.equipment.findMany({
+    where: {
+      partnerId: { in: Array.from(nearbyPartnerIds.keys()) },
+      isActive: true,
+    },
+    select: {
+      id: true,
+      name: true,
+      category: true,
+      subType: true,
+      partnerId: true,
+      catalogId: true,
+      pricing: true,
+      hourlyRate: true,
+      images: true,
+      specifications: true,
+    },
+  });
+
+  const catalogIds = [...new Set(equipment.map((e) => e.catalogId).filter(Boolean))] as string[];
+  const catalogs = catalogIds.length > 0
+    ? await prisma.masterCatalog.findMany({ where: { id: { in: catalogIds } } })
+    : [];
+  const catalogMap = new Map(catalogs.map((c) => [c.id, c]));
+
+  const aggregated = new Map<string, NearbyEquipmentItem>();
+
+  for (const eq of equipment) {
+    if (!eq.partnerId) continue;
+    const distKm = nearbyPartnerIds.get(eq.partnerId) ?? 0;
+
+    const groupKey = eq.catalogId ?? `eq_${eq.id}`;
+    const catalog = eq.catalogId ? catalogMap.get(eq.catalogId) : null;
+
+    let entry = aggregated.get(groupKey);
+    if (!entry) {
+      const rawSpecs = catalog?.specifications ?? eq.specifications;
+      const specs =
+        rawSpecs != null &&
+        typeof rawSpecs === "object" &&
+        !Array.isArray(rawSpecs)
+          ? (rawSpecs as Record<string, unknown>)
+          : {};
+      entry = {
+        catalogId: groupKey,
+        catalogName: catalog?.name ?? eq.name,
+        category: catalog?.category ?? eq.category,
+        imageUrl: catalog?.imageUrl ?? (eq.images.length > 0 ? eq.images[0]! : ""),
+        specifications: specs,
+        subType: eq.subType,
+        minDailyRate: eq.pricing.daily,
+        maxDailyRate: eq.pricing.daily,
+        minHourlyRate: eq.pricing.hourly,
+        maxHourlyRate: eq.pricing.hourly,
+        partnerCount: 0,
+        partners: [],
+      };
+      aggregated.set(groupKey, entry);
+    }
+
+    entry.minDailyRate = Math.min(entry.minDailyRate, eq.pricing.daily);
+    entry.maxDailyRate = Math.max(entry.maxDailyRate, eq.pricing.daily);
+    entry.minHourlyRate = Math.min(entry.minHourlyRate, eq.pricing.hourly);
+    entry.maxHourlyRate = Math.max(entry.maxHourlyRate, eq.pricing.hourly);
+    entry.partnerCount += 1;
+
+    if (eq.images.length > 0 && !entry.imageUrl) {
+      entry.imageUrl = eq.images[0]!;
+    }
+
+    entry.partners.push({
+      equipmentId: eq.id,
+      partnerId: eq.partnerId,
+      dailyRate: eq.pricing.daily,
+      hourlyRate: eq.pricing.hourly,
+      distanceKm: Number(distKm.toFixed(2)),
+    });
+  }
+
+  const result = Array.from(aggregated.values());
+  result.sort((a, b) => {
+    const aMinDist = Math.min(...a.partners.map((p) => p.distanceKm));
+    const bMinDist = Math.min(...b.partners.map((p) => p.distanceKm));
+    return aMinDist - bMinDist;
+  });
+
+  return result;
 }
 
 interface UpdateEquipmentInput {
