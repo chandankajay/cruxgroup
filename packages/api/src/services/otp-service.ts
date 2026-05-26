@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { sendWhatsAppMessage } from "@repo/lib";
+import { sendWhatsAppMessage, buildCopyCodeButton } from "@repo/lib";
 import { prisma } from "@repo/db";
 
 /** Dev / pre–WhatsApp bypass — must match bookings NextAuth credentials check. */
@@ -135,9 +135,9 @@ export async function sendBookingsOtpWithWhatsApp(phone: string): Promise<void> 
 
   const code = await createOtp(phone);
   const template =
-    process.env["AISENSY_OTP_TEMPLATE_NAME"] ??
+    process.env["AISENSY_TEMPLATE_LOGIN_CODE"] ??
     process.env["AISENSY_TEMPLATE_NAME"] ??
     "otp_login";
 
-  await sendWhatsAppMessage(phone, template, [code]);
+  await sendWhatsAppMessage(phone, template, [code], [buildCopyCodeButton(code)]);
 }

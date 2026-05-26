@@ -5,10 +5,18 @@
 
 const AISENSY_API_URL = "https://backend.aisensy.com/campaign/t1/api/v2";
 
+export interface AisensyButtonParam {
+  type: "button";
+  sub_type: "url" | "quick_reply";
+  index: string;
+  parameters: { type: "text"; text: string }[];
+}
+
 export interface AisensyCampaignPayload {
   destination: string;
   campaignName: string;
   templateParams: string[];
+  buttons?: AisensyButtonParam[];
 }
 
 /** Normalize to +E.164 for India-first flows. */
@@ -42,16 +50,20 @@ export async function sendWhatsAppMessage(
   phone: string,
   templateName: string,
   params: string[],
+  buttons?: AisensyButtonParam[],
 ): Promise<boolean> {
   const apiKey = process.env["AISENSY_API_KEY"];
   const destination = normalizeWhatsAppDestination(phone);
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     campaignName: templateName,
     destination,
     userName: "Crux Group",
     templateParams: params,
   };
+  if (buttons?.length) {
+    payload.buttons = buttons;
+  }
 
   if (!apiKey) {
     // eslint-disable-next-line no-console
@@ -117,17 +129,35 @@ export async function sendAisensyCampaign(
     payload.destination,
     payload.campaignName,
     payload.templateParams,
+    payload.buttons,
   );
 }
 
-/** OTP template — matches legacy `AISENSY_TEMPLATE_NAME` usage. */
+/** Build a copy-code (URL-type) button param for OTP templates. */
+export function buildCopyCodeButton(otp: string, index = 0): AisensyButtonParam {
+  return {
+    type: "button",
+    sub_type: "url",
+    index: String(index),
+    parameters: [{ type: "text", text: otp }],
+  };
+}
+
+/** OTP template — uses `AISENSY_TEMPLATE_LOGIN_CODE` (falls back to legacy `AISENSY_TEMPLATE_NAME`). */
 export async function sendWhatsAppOtp(params: {
   phone: string;
   otp: string;
 }): Promise<boolean> {
-  const campaignName = process.env["AISENSY_TEMPLATE_NAME"];
+  const campaignName =
+    process.env["AISENSY_TEMPLATE_LOGIN_CODE"] ??
+    process.env["AISENSY_TEMPLATE_NAME"];
   if (!campaignName) return true;
-  return sendWhatsAppMessage(params.phone, campaignName, [params.otp]);
+  return sendWhatsAppMessage(
+    params.phone,
+    campaignName,
+    [params.otp],
+    [buildCopyCodeButton(params.otp)],
+  );
 }
 
 /**
