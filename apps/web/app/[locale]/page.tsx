@@ -7,6 +7,7 @@ import { Fleet } from "../../components/sections/Fleet";
 import { ForPartners } from "../../components/sections/ForPartners";
 import { ForCustomers } from "../../components/sections/ForCustomers";
 import { FAQ } from "../../components/sections/FAQ";
+import { WhatsAppOrder } from "../../components/sections/WhatsAppOrder";
 import { CTAStrip } from "../../components/sections/CTAStrip";
 import {
   getSiteConfig,
@@ -145,6 +146,16 @@ export default async function HomePage(): Promise<React.ReactElement> {
         }}
         blocks={customerBlocks}
         phone={phone}
+      />
+      <WhatsAppOrder
+        heading={{
+          en: "Book Your JCB Through WhatsApp — Click or Scan",
+          te: "WhatsApp ద్వారా మీ JCB బుక్ చేయండి — క్లిక్ చేయండి లేదా స్కాన్ చేయండి",
+        }}
+        sub={{
+          en: "Skip the app — send us a message on WhatsApp and book your equipment in minutes.",
+          te: "యాప్ అవసరం లేదు — WhatsApp లో మాకు మెసేజ్ పంపండి, నిమిషాల్లో మీ పరికరాన్ని బుక్ చేయండి.",
+        }}
       />
       <FAQ
         heading={{
