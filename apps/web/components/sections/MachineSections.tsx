@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { BOOKINGS_URL } from "../../lib/env";
+import Link from "next/link";
 import type { Locale } from "../../lib/locale";
 import { useLang } from "../ui/LanguageProvider";
 import { Button } from "../ui/Button";
@@ -41,6 +41,7 @@ function MachineSectionsMobileStack({
             key={slide.id}
             slide={slide}
             resolved={resolveSlide(slide, lang)}
+            lang={lang}
           />
         ))}
       </div>
@@ -51,13 +52,15 @@ function MachineSectionsMobileStack({
 function MachineMobileCard({
   slide,
   resolved,
+  lang,
 }: {
   readonly slide: MachineSlide;
   readonly resolved: ReturnType<typeof resolveSlide>;
+  readonly lang: Locale;
 }): React.ReactElement {
   return (
     <article className="max-w-full overflow-hidden rounded-2xl border border-border/60 bg-surface shadow-lg">
-      <div className="relative aspect-video w-full max-w-full">
+      <Link href={`/${lang}/equipment/${slide.id}`} className="relative block aspect-video w-full max-w-full">
         <Image
           src={slide.image}
           alt={slide.imageAlt}
@@ -65,7 +68,7 @@ function MachineMobileCard({
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 512px"
         />
-      </div>
+      </Link>
       <div
         className="min-w-0 px-5 py-6 sm:px-6"
         style={{ backgroundColor: BG_PANEL }}
@@ -73,9 +76,11 @@ function MachineMobileCard({
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand">
           {resolved.eyebrow}
         </p>
-        <h2 className="mt-2 max-w-full text-pretty break-words text-2xl font-extrabold leading-snug text-offwhite">
-          {resolved.title}
-        </h2>
+        <Link href={`/${lang}/equipment/${slide.id}`}>
+          <h2 className="mt-2 max-w-full text-pretty break-words text-2xl font-extrabold leading-snug text-offwhite hover:text-brand transition-colors">
+            {resolved.title}
+          </h2>
+        </Link>
         <p className="mt-3 max-w-full text-pretty break-words text-sm leading-relaxed text-muted">
           {resolved.body}
         </p>
@@ -91,8 +96,7 @@ function MachineMobileCard({
         </ul>
         <div className="mt-6">
           <Button
-            href={BOOKINGS_URL}
-            external
+            href={`/${lang}/equipment/${slide.id}`}
             variant="primary"
             size="lg"
             className="min-h-12 w-full touch-manipulation sm:w-auto"

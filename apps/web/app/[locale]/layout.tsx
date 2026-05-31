@@ -1,9 +1,18 @@
+import type { Metadata } from "next";
 import { Footer } from "../../components/layout/Footer";
 import { Navbar } from "../../components/layout/Navbar";
 import { ScrollProgress } from "../../components/ui/ScrollProgress";
 import { LanguageProvider } from "../../components/ui/LanguageProvider";
 import { getSiteConfigMap } from "../../lib/content";
 import { parseLocale } from "../../lib/locale";
+
+export const metadata: Metadata = {
+  robots: { index: true, follow: true },
+  openGraph: {
+    siteName: "Crux Agri & Rural Services",
+    type: "website",
+  },
+};
 
 export function generateStaticParams(): { locale: string }[] {
   return [{ locale: "en" }, { locale: "te" }];

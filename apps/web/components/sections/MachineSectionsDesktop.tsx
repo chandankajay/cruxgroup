@@ -8,8 +8,8 @@ import {
   type MotionValue,
 } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { BOOKINGS_URL } from "../../lib/env";
 import type { Locale } from "../../lib/locale";
 import { Button } from "../ui/Button";
 import { type MachineSlide, MACHINE_SLIDES } from "./machine-sections-data";
@@ -80,6 +80,7 @@ function MachineSlideDesktop({
   body,
   specs,
   cta,
+  detailHref,
   imgY,
   textOpacity,
   textX,
@@ -92,6 +93,7 @@ function MachineSlideDesktop({
   readonly body: string;
   readonly specs: readonly { label: string }[];
   readonly cta: string;
+  readonly detailHref: string;
   readonly imgY: MotionValue<string>;
   readonly textOpacity: MotionValue<number>;
   readonly textX: MotionValue<string>;
@@ -123,9 +125,11 @@ function MachineSlideDesktop({
       >
         <motion.div className="min-w-0" style={{ opacity: textOpacity }}>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand">{eyebrow}</p>
-          <h2 className="mt-3 text-balance break-words font-extrabold leading-tight text-offwhite [font-size:clamp(2rem,4vw,3.5rem)]">
-            {title}
-          </h2>
+          <Link href={detailHref}>
+            <h2 className="mt-3 text-balance break-words font-extrabold leading-tight text-offwhite hover:text-brand transition-colors [font-size:clamp(2rem,4vw,3.5rem)]">
+              {title}
+            </h2>
+          </Link>
           <p className="mt-4 max-w-md text-[1.1rem] leading-relaxed text-muted">{body}</p>
           <ul className="mt-8 flex flex-wrap gap-2">
             {specs.map((s) => (
@@ -138,7 +142,7 @@ function MachineSlideDesktop({
             ))}
           </ul>
           <div className="mt-10">
-            <Button href={BOOKINGS_URL} external variant="primary" size="lg">
+            <Button href={detailHref} variant="primary" size="lg">
               {cta}
             </Button>
           </div>
@@ -183,6 +187,7 @@ function SlideLayer({
         body={resolved.body}
         specs={resolved.specs}
         cta={resolved.cta}
+        detailHref={`/${lang}/equipment/${slide.id}`}
         imgY={imgY}
         textOpacity={textOpacity}
         textX={textX}
