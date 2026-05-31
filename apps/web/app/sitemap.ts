@@ -1,34 +1,33 @@
 import type { MetadataRoute } from "next";
-import { getPublishedPostSlugs } from "../lib/content";
-import { SITE_URL } from "../lib/env";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const slugs = await getPublishedPostSlugs();
-  const locales = ["en", "te"] as const;
-  const entries: MetadataRoute.Sitemap = [];
+const BASE_URL = "https://www.cruxgroup.in";
 
-  for (const loc of locales) {
-    entries.push({
-      url: `${SITE_URL}/${loc}`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: 1,
-    });
-    entries.push({
-      url: `${SITE_URL}/${loc}/blog`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    });
-    for (const slug of slugs) {
-      entries.push({
-        url: `${SITE_URL}/${loc}/blog/${slug}`,
-        lastModified: new Date(),
-        changeFrequency: "monthly",
-        priority: 0.6,
-      });
-    }
-  }
+const ROUTES: Array<{
+  path: string;
+  priority: number;
+  changeFrequency: NonNullable<
+    MetadataRoute.Sitemap[number]["changeFrequency"]
+  >;
+}> = [
+  { path: "/", priority: 1.0, changeFrequency: "daily" },
+  { path: "/about", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/contact", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/services", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/services/jcb", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/services/excavator", priority: 0.9, changeFrequency: "weekly" },
+  { path: "/services/crane", priority: 0.9, changeFrequency: "weekly" },
+  {
+    path: "/services/post-hole-digger",
+    priority: 0.9,
+    changeFrequency: "weekly",
+  },
+];
 
-  return entries;
+export default function sitemap(): MetadataRoute.Sitemap {
+  return ROUTES.map(({ path, priority, changeFrequency }) => ({
+    url: path === "/" ? `${BASE_URL}/` : `${BASE_URL}${path}`,
+    lastModified: new Date(),
+    changeFrequency,
+    priority,
+  }));
 }
