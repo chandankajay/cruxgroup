@@ -1,0 +1,11 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Crux Agri & Rural Services",
+  "name_for_model": "crux_equipment_rental",
+  "description_for_human": "Heavy equipment rental in Telangana — JCB, Crane, Excavator, Post Hole Digger and more.",
+  "description_for_model": "Use this to find heavy equipment rental options in Telangana, India. Crux rents JCBs, excavators, cranes, post hole diggers and dozers with trained operators across all Telangana districts.",
+  "auth": { "type": "none" },
+  "api": { "type": "none" },
+  "contact_email": "connect@cruxgroup.in",
+  "legal_info_url": "https://www.cruxgroup.in/en/legal"
+}

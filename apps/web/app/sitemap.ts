@@ -1,8 +1,11 @@
 import type { MetadataRoute } from "next";
+import { MACHINE_SLIDES } from "../components/sections/machine-sections-data";
 
 const BASE_URL = "https://www.cruxgroup.in";
 
-const ROUTES: Array<{
+const LOCALES = ["en", "te"] as const;
+
+const STATIC_ROUTES: Array<{
   path: string;
   priority: number;
   changeFrequency: NonNullable<
@@ -24,10 +27,25 @@ const ROUTES: Array<{
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return ROUTES.map(({ path, priority, changeFrequency }) => ({
-    url: path === "/" ? `${BASE_URL}/` : `${BASE_URL}${path}`,
-    lastModified: new Date(),
-    changeFrequency,
-    priority,
-  }));
+  const entries: MetadataRoute.Sitemap = STATIC_ROUTES.map(
+    ({ path, priority, changeFrequency }) => ({
+      url: path === "/" ? `${BASE_URL}/` : `${BASE_URL}${path}`,
+      lastModified: new Date(),
+      changeFrequency,
+      priority,
+    }),
+  );
+
+  for (const locale of LOCALES) {
+    for (const slide of MACHINE_SLIDES) {
+      entries.push({
+        url: `${BASE_URL}/${locale}/equipment/${slide.id}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly",
+        priority: 0.9,
+      });
+    }
+  }
+
+  return entries;
 }
