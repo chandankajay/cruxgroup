@@ -189,6 +189,10 @@ model Partner {
   bankIfscCode       String?
   cancelledChequeUrl String?
 
+  /// Partner Terms & Conditions acceptance (onboarding legal gate)
+  termsAcceptedAt DateTime?
+  termsVersion    String?
+
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

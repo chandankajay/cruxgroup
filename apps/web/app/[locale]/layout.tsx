@@ -9,6 +9,7 @@ import { parseLocale } from "../../lib/locale";
 export const metadata: Metadata = {
   robots: { index: true, follow: true },
   openGraph: {
+    images: [{ url: "/og-image.jpg", width: 1200, height: 630 }],
     siteName: "Crux Agri & Rural Services",
     type: "website",
   },

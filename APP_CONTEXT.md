@@ -1,10 +1,10 @@
-# Crux Group — application context (bookings + admin / partner OS)
+# Crux Group — application context (bookings + admin / partner OS + marketing web)
 
 **Purpose:** Single reference for the current state of the product codebase: stack, architecture, data model, and business-facing capabilities. Intended for onboarding, planning, and LLM context (paste or attach this file).
 
-**Scope:** `apps/bookings` (B2C customer app), `apps/admin` (platform **Admin** + **Partner** “Partner OS” in one Next.js app), and shared packages under `packages/`.
+**Scope:** `apps/bookings` (B2C customer app), `apps/admin` (platform **Admin** + **Partner** “Partner OS” in one Next.js app), `apps/web` (public marketing site + blog), and shared packages under `packages/`.
 
-**Last reviewed:** 2026-05-15 (generated from repository structure and code).
+**Last reviewed:** 2026-06-04 (generated from repository structure and code).
 
 ---
 
@@ -14,14 +14,17 @@
 |------|------|
 | `apps/bookings` | Customer-facing bookings web app (default dev port **3000**) |
 | `apps/admin` | Internal admin + partner operations (default dev port **3001**) |
+| `apps/web` | Public marketing website `www.cruxgroup.in` (default dev port **3002**); bilingual EN/TE |
 | `packages/db` | Prisma schema + MongoDB client, seeds |
 | `packages/api` | tRPC `appRouter` + domain services (OTP, bookings, equipment, partners, catalog, dictionary) |
-| `packages/lib` | Integrations and utilities (e.g. AiSensy WhatsApp, geo, invoice helpers, Blob/PDF-related code) |
+| `packages/lib` | Integrations and utilities (e.g. AiSensy WhatsApp, geo/distance, invoice helpers, Blob/PDF-related code) |
 | `packages/ui` | Shared React UI (Tailwind), includes `DictionaryProvider` and shared shells/components |
 | `packages/auth` | Shared NextAuth hardening (`enterpriseAuthSecurity`) |
 | `packages/tailwind-config`, `packages/typescript-config`, `packages/eslint-config` | Shared tooling |
 
 **Tooling:** `pnpm` workspaces + **Turborepo** (`turbo.json`). Root scripts: `dev`, `build`, `lint`, `check-types`, `db:*`.
+
+**Deep-dive for marketing app only:** `apps/web/WEB_APP_OVERVIEW.md`.
 
 ---
 
@@ -34,29 +37,43 @@
 - **Auth:** **NextAuth v5** (`next-auth@5.0.0-beta.30`) with `@auth/prisma-adapter` where applicable
 - **Database:** **MongoDB** via **Prisma** (`engineType = "library"`)
 - **API layer:** **tRPC** (`@repo/api`) — used from server components / server actions via `createCaller({})` (see bookings home). Not all features go through HTTP tRPC endpoints; many admin flows use colocated server actions.
+- **Client state (bookings):** **Zustand** with `persist` for user job-site location (`apps/bookings/app/stores/location-store.ts`)
 - **Styling:** **Tailwind CSS v4** (`@tailwindcss/postcss`), shared tokens/config from `@repo/tailwind-config`
-- **Maps:** `@react-google-maps/api`, **Leaflet** / `react-leaflet` (admin/partner map UIs)
+- **Maps (bookings):** Pluggable provider via `NEXT_PUBLIC_MAPS_PROVIDER`:
+  - **`osm` (default):** Leaflet + OpenStreetMap tiles + **Nominatim** search/reverse (`nominatim-client.ts`; throttled User-Agent per OSM policy)
+  - **`google`:** `@react-google-maps/api` + Places Autocomplete + Geocoder (`site-address-picker-google.tsx`, `location-header.tsx`)
+  - Facade: `site-address-picker.tsx` → OSM or Google implementation; config in `maps-config.ts`
+- **Maps (admin partner service area):** **Google Maps** (`service-area-map.tsx` under `app/partners/features/` and partner `/service-area`); requires `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
+- **Maps (admin misc):** Leaflet/Nominatim still used in some admin pickers (e.g. `components/location-picker.tsx`)
 - **Forms / validation:** `react-hook-form`, `zod`, `@hookform/resolvers`
-- **UI polish:** `framer-motion`, `sonner` toasts, `vaul` drawers (admin), Radix tabs (bookings)
+- **UI polish:** `framer-motion`, `sonner` toasts, `vaul` drawers (admin + bookings location search), Radix tabs (bookings)
 - **Documents:** `react-markdown` + `remark-gfm` for legal and markdown content
 - **PDF:** `pdf-lib` (admin + lib)
 
 ### 2.2 Architectural patterns
 
-- **Two Next.js apps, one database:** Same Prisma models; role-specific behavior enforced in **NextAuth callbacks** + **route guards** (admin app) and session checks (bookings).
+- **Three Next.js apps, one database:** Same Prisma models; role-specific behavior enforced in **NextAuth callbacks** + **route guards** (admin app) and session checks (bookings).
 - **Edge-safe auth config:** `apps/admin/auth.config.ts` is explicitly **Prisma-free** (used from `proxy.ts` / Edge). Session enrichment (e.g. `role`, `phoneNumber`) uses JWT/session callbacks; full provider logic lives in `apps/*/lib/auth.ts`.
 - **Next.js 16 “proxy” instead of middleware:** Admin app exports NextAuth from `apps/admin/proxy.ts` with a matcher that excludes static assets so `/login` branding assets are not redirected to HTML login.
-- **Internationalization / copy:** `Dictionary` model in Mongo (`DictionaryApp`: `BOOKING` | `ADMIN`) + `getLabelsForApp` / per-app label loaders feeding `@repo/ui` `DictionaryProvider`.
+- **Internationalization / copy:**
+  - **Bookings + admin:** `Dictionary` model (`DictionaryApp`: `BOOKING` | `ADMIN` | `WEB`) + `getLabelsForApp` feeding `@repo/ui` `DictionaryProvider`
+  - **Marketing web:** Custom locale routing (`en` / `te`) under `apps/web/app/[locale]/…`; bilingual `_en` / `_te` fields on CMS blocks (not Dictionary-driven for page copy)
 - **Money:** Amounts in **paise** (integer): **1 INR = 100 paise** (documented in `schema.prisma`). UI may display rupees.
 - **File storage:** **Vercel Blob** (`@vercel/blob`, `BLOB_READ_WRITE_TOKEN`) for uploads (KYC, machine docs, etc.).
+- **Marketing content:** Prisma-backed **Website CMS** (`SiteConfig`, `SiteSection`, `SiteBlock`, `BlogPost`) edited in admin; consumed by `apps/web` via `lib/content.ts` (ISR `revalidate = 3600` on homepage).
 
 ### 2.3 External integrations (from code + `turbo.json` env hints)
 
 - **Google OAuth:** Admin staff sign-in (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`).
+- **Google Maps Platform:** Optional in bookings (`NEXT_PUBLIC_MAPS_PROVIDER=google`, `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`); required for admin partner service-area UI.
 - **WhatsApp (AiSensy):** OTP delivery, welcome note, operator links, booking confirm, partner overrun, invoice payment / overdue reminders, payslips, partner service-due alerts (`AISENSY_*` env vars).
 - **Razorpay:** Payments / payment links for invoices (`RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`).
 - **Cron / webhooks:** Bookings app exposes e.g. `app/api/cron/invoice-payment-reminders/route.ts` (guarded; `CRON_SECRET` in turbo build env list).
-- **Cross-app URLs:** `NEXT_PUBLIC_BOOKINGS_URL`, `BOOKINGS_APP_ORIGIN` — admin auth redirects plain `USER` role to the public bookings origin (e.g. `https://bookings.cruxgroup.in` in `auth.config.ts`).
+- **Cross-app URLs:**
+  - `NEXT_PUBLIC_BOOKINGS_URL`, `BOOKINGS_APP_ORIGIN` — admin auth redirects plain `USER` role to the public bookings origin (e.g. `https://bookings.cruxgroup.in` in `auth.config.ts`)
+  - `NEXT_PUBLIC_ADMIN_URL` — partner/admin CTAs on marketing site
+  - `NEXT_PUBLIC_SITE_URL` — canonical marketing origin (`apps/web/lib/env.ts`)
+  - `NEXT_PUBLIC_PHONE`, `NEXT_PUBLIC_EMAIL` — contact surfaced on web (not hardcoded in components)
 
 ---
 
@@ -64,17 +81,18 @@
 
 Defined in `packages/db/prisma/schema.prisma`. Notable domains:
 
-- **Identity:** `User` (`UserRole`: `USER` | `ADMIN` | `PARTNER`), `Account`, `Session`, `Otp` (phone OTP storage).
-- **Partner profile:** `Partner` (1:1 with `User` when `role = PARTNER`) — yard info, service radius, **KYC** fields and documents, bank/GST, `kycStatus` (`PENDING` | `SUBMITTED` | `VERIFIED` | `REJECTED`).
-- **Catalog & fleet:** `MasterCatalog` (platform standard types + rate guardrails), `Equipment` (partner fleet or platform-owned when `partnerId` null) with pricing, transport rules, maintenance fields, hour-meter baselines, RC URL, etc. `EquipmentCategory`: JCB, Crane, Excavator.
+- **Identity:** `User` (`UserRole`: `USER` | `ADMIN` | `PARTNER`), optional B2C `companyName`, `Account`, `Session`, `Otp` (phone OTP storage), OTP lockout fields (`otpAttempts`, `lockoutUntil`), `welcomeNoteSentAt`.
+- **Partner profile:** `Partner` (1:1 with `User` when `role = PARTNER`) — yard info, service radius (`maxServiceRadius` / `maxServiceRadiusKm`, `baseLocation`, `baseCoordinates`), **KYC** fields and documents, bank/GST, `kycStatus` (`PENDING` | `SUBMITTED` | `VERIFIED` | `REJECTED`).
+- **Catalog & fleet:** `MasterCatalog` (platform standard types + rate guardrails), `Equipment` (partner fleet or platform-owned when `partnerId` null) with pricing, transport rules (`freeRadiusKm`, `maxRadiusKm`), maintenance fields, hour-meter baselines, RC URL, etc. `EquipmentCategory` enum in DB: **JCB, Crane, Excavator** (bookings UI may show extra filter chips e.g. Dozer/Agriculture for future catalog rows).
 - **B2C booking:** `Booking` — links `User`, `Equipment`, optional `Partner`, optional CRM `Customer`; `BookingStatus`; embedded `BookingLocation`, `BookingPricingType` (total in paise, duration, unit).
 - **Field execution:** `Trip` — operational lifecycle (`TripStatus`: scheduled → en route → on site → completed / overrun / cancelled / disputed); locked rates and transport fee; `operatorToken` (magic link); start/end OTPs; optional `bookingId`; reviews and invoices.
-- **CRM / B2B:** `Customer`, `SavedLocation` (named sites, geo); optional link `Customer.userId` to platform user for saved sites in bookings.
+- **CRM / B2B:** `Customer`, `SavedLocation` (named sites, geo, pincode); optional link `Customer.userId` to platform user for saved sites in bookings.
 - **Billing:** `Invoice` (per trip, sequential FY numbering via `InvoiceCounter`), `Payment` records, Razorpay link fields, reminder timestamps.
 - **Operator payroll:** `OperatorProfile`, `PayrollEntry` (monthly, PDF URL, deductions, PF flags).
 - **Maintenance:** `MachineServiceLog`, `HourMeterEntry`, `BreakdownReport`.
 - **Service coverage:** `ServiceableArea` (pincodes).
 - **Content:** `Dictionary` per app/language/key.
+- **Marketing CMS:** `SiteConfig` (key/value), `SiteSection` + `SiteBlock` (`SiteBlockType`: HERO, STAT, FEATURE_CARD, EQUIPMENT_CARD, etc.), `BlogPost` (bilingual fields, tags, SEO).
 
 ---
 
@@ -84,14 +102,16 @@ Defined in `packages/db/prisma/schema.prisma`. Notable domains:
 
 | Router | Responsibility |
 |--------|----------------|
-| `dictionary` | Label strings by app/language |
+| `dictionary` | Label strings by app/language (`BOOKING` \| `ADMIN` \| `WEB`) |
 | `auth` | Auth-related mutations (as defined in router) |
-| `equipment` | List/search/get/create/update equipment; partner-scoped listings |
+| `equipment` | `list`, **`getNearby`**, `search`, `get`/`create`/`update`; partner-scoped listings |
 | `booking` | `create` (B2C style input), `getAll`, `getByPartner`; `updateStatus` **throws** — status changes must use authenticated server actions in admin |
 | `partner` | Partner listing / detail / mutations for partner management |
 | `masterCatalog` | Master catalog listing |
 
-Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`DEV_MASTER_OTP`**, and **`getLabelsForApp`**.
+**`equipment.getNearby({ lat, lng })`** (`getNearbyEquipment` in `equipment-service.ts`): finds **VERIFIED** active partners whose service radius contains the point (haversine distance from partner base), aggregates fleet by `MasterCatalog` when linked, returns min/max rates and per-partner `equipmentId` rows for booking selection.
+
+Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`DEV_MASTER_OTP`**, **`getLabelsForApp`**, and types **`NearbyEquipmentItem`**, **`NearbyEquipmentOutput`**.
 
 ---
 
@@ -109,31 +129,46 @@ Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`
 
 | Route | Behavior |
 |-------|----------|
-| `/` | **Requires login** — loads equipment via `createCaller({}).equipment.list()` and renders `HomeContent` (fleet browse + booking UX). |
-| `/login` | Phone → OTP flow; links to legal pages. |
-| `/dashboard` | “My bookings” — active vs past tabs (`fetchMyBookingsForUser`). |
-| `/profile` | Customer profile. |
-| `/track/[tripId]` | Trip tracking / timeline for customers. |
-| `/operator/[token]` | Operator-facing magic-link flows tied to `Trip.operatorToken`. |
-| `/legal/terms-and-conditions`, `/legal/privacy-policy` | Markdown-backed legal. |
+| `/` | **Requires login** — SSR `equipment.list()` fallback; client **`HomeContent`** switches to **`equipment.getNearby`** when user location is resolved |
+| `/login` | Phone → OTP flow; links to legal pages |
+| `/dashboard` | “My bookings” — active vs past tabs (`fetchMyBookingsForUser`) |
+| `/profile` | Customer profile (incl. optional `companyName`) |
+| `/track/[tripId]` | Trip tracking / timeline for customers |
+| `/operator/[token]` | Operator-facing magic-link flows tied to `Trip.operatorToken` |
+| `/legal/terms-and-conditions`, `/legal/privacy-policy` | Markdown-backed legal |
 
-**Layout:** `force-dynamic`, Geist font, `DictionaryProvider` with `getBookingLabels`, conditional header, page transitions, Sonner toasts.
+**Layout:** `force-dynamic`, Geist font, `DictionaryProvider` with `getBookingLabels`, conditional header, **`LocationHeader`** (job-site picker), page transitions, Sonner toasts.
 
-### 5.3 Notable API routes (`app/api/**`)
+### 5.3 Location & booking UX
+
+- **`useLocationStore`** (Zustand + `localStorage` key `crux-user-location`): lat/lng, formatted address, `isResolved`, GPS `isLocating`.
+- **`LocationHeader`:** Drawer search — Nominatim (OSM) or Google Places depending on `getMapsProvider()`; “use current location” with reverse geocode.
+- **`HomeContent`:** Category filter chips; when location resolved, grid shows **nearby aggregated catalog** with partner count and price ranges; booking drawer uses **`SiteAddressPicker`** facade for site pin on map.
+- **Server actions:** `fetchNearbyEquipment` → tRPC `equipment.getNearby`; `createBookingAction` in `app/actions/booking.ts`.
+
+### 5.4 Notable API routes (`app/api/**`)
 
 - `auth/[...nextauth]` — NextAuth handler
 - `auth/send-otp`, `auth/verify-otp` — OTP HTTP helpers used by login actions
 - `search` — equipment search
-- `saved-locations` — persisted sites for customers (CRM-backed saved locations)
+- `saved-locations` — persisted sites for customers (CRM-backed `SavedLocation` rows)
 - `cron/invoice-payment-reminders` — scheduled invoice nudges
 
-### 5.4 Business features (customer)
+### 5.5 Business features (customer)
 
-- Browse **partner/platform equipment catalog** with geo and booking constraints.
-- Create **rental bookings** (hourly/daily pricing units, date range, site location) — backed by `booking.create` + Prisma `Booking` row.
+- **Location-aware marketplace:** browse equipment available within partner service radii; compare rates when multiple partners serve the same catalog type.
+- Fallback **platform-wide equipment list** when no job site is set.
+- Create **rental bookings** (hourly/daily pricing units, date range, site location via map picker) — backed by `booking.create` + Prisma `Booking` row (selected partner `equipmentId` when chosen from nearby results).
 - **Account dashboard** for rental history and active jobs.
 - **Trip tracking** and **operator** workflows aligned with `Trip` model (status, OTPs, tokens).
 - **Legal compliance** surface (T&C, privacy).
+
+### 5.6 Maps env (bookings)
+
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_MAPS_PROVIDER` | `osm` (default) or `google` |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Required when provider is `google` |
 
 ---
 
@@ -150,7 +185,7 @@ Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`
 
 ### 6.2 Route guard summary (`auth.config.ts`)
 
-- **Partners cannot access:** `/platform-admin/*`, `/equipment`, `/partners`, `/bookings` **except** walk-in desk under **`/bookings/new`** (and subpaths), `/settings` except **`/settings/kyc`**, and other platform-only areas.
+- **Partners cannot access:** `/platform-admin/*`, `/equipment`, `/partners`, `/bookings` **except** walk-in desk under **`/bookings/new`** (and subpaths), `/settings` except **`/settings/kyc`**, **`/website-cms`**, and other platform-only areas.
 - **Partners hitting forbidden paths** are redirected to **`/fleet`** (not dashboard).
 - **Admins** are kept off partner-only surface routes (`/fleet`, `/my-bookings`, `/service-area`, `/earnings`) — redirected to **`/dashboard`**.
 
@@ -164,11 +199,12 @@ Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`
 **Platform admin (`ADMIN` nav)**
 
 - **Dashboard** — `app/dashboard/page.tsx`: non-partner view is `DashboardHome` (platform metrics / tools).
-- **Partners** — `/partners`
+- **Partners** — `/partners` (includes **service area map** for admin editing partner yard/radius via Google Maps)
 - **KYC verification queue** — `/platform-admin/kyc`
 - **Master catalog** — `/equipment`
 - **Global bookings** — `/bookings` (list across partners; distinct from partner walk-in)
-- **Settings** — `/settings` (admin profile / configuration; server-rendered role checks)
+- **Website CMS** — `/website-cms` (hub → site config, sections/blocks, blog with Tiptap-style editing; `actions.ts` revalidates admin paths; public site uses same DB)
+- **Settings** — `/settings` (admin profile / configuration; shows env health e.g. Google Maps key)
 
 **Partner OS (`PARTNER` nav)**
 
@@ -179,7 +215,7 @@ Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`
 - **Fleet & health** — `/fleet`, machine health under `(dashboard)/fleet/[id]/health`, edits `fleet/[id]/edit`, add `fleet/new`
 - **My bookings** — `/my-bookings` (partner-scoped booking view)
 - **Payroll** — `/payroll`
-- **Service area** — `/service-area`
+- **Service area** — `/service-area` (partner self-serve: Google map + radius + base address; persists via partner APIs)
 - **Earnings** — `/earnings`
 - **Settings** — `/settings/kyc` entry in nav (partner KYC / compliance)
 
@@ -197,6 +233,7 @@ Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`
 - **Master equipment catalog** with guardrail pricing bands.
 - **Global booking oversight** across the network.
 - **Operational / BI dashboards** for headquarters.
+- **Marketing site operations:** manage homepage sections, equipment cards, FAQs, blog posts (bilingual), and global `SiteConfig` keys without redeploying `apps/web`.
 
 ### 6.6 Business features (partner)
 
@@ -206,37 +243,73 @@ Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`
 - **Walk-in / B2B desk:** create bookings tied to CRM-style context where implemented.
 - **Payroll** for operators tied to `OperatorProfile` / `PayrollEntry`.
 - **Earnings** views tied to trips/invoices/payments model.
-- **Service area** management aligned with partner radius + `ServiceableArea` data.
+- **Service area** management: map-based yard pin + **max service radius** (km) used by bookings `getNearby` matching.
 
 ---
 
-## 7. Cross-cutting operational story
+## 7. Marketing web app (`apps/web`)
 
-1. **Customer** (bookings app) authenticates with phone OTP → browses **`equipment.list`** → creates **`Booking`**.
-2. Platform/partner workflows promote work into **`Trip`** records (scheduling, OTP-gated start/complete, operator magic link, overrun handling).
-3. Completed work generates **`Invoice`** (+ PDF), **`Payment`** via Razorpay links, WhatsApp reminders.
-4. **Reviews** capture dual ratings (machine + operator).
+**Package:** `@crux/web`. **Production URL:** `NEXT_PUBLIC_SITE_URL` (default `https://www.cruxgroup.in`).
+
+### 7.1 Routing & i18n
+
+- **App Router** under `app/[locale]/…` with locales **`en`** (default) and **`te`**.
+- **`middleware.ts`:** `/` → `/en`; paths without locale prefix redirect to `/en/…`.
+- **Metadata routes:** `robots.ts`, `sitemap.ts`.
+- **No NextAuth** for public visitors; CTAs link to bookings and admin URLs from `lib/env.ts`.
+
+### 7.2 Content sources
+
+| Surface | Source |
+|---------|--------|
+| Hero, stats, partners, customers, FAQ, CTA, fleet grid | Prisma `SiteSection` / `SiteBlock` + `SiteConfig` via `lib/content.ts` |
+| Machine carousel (`MachineSections`) | Hardcoded `machine-sections-data.ts` (JCB, post-hole, crane slides) |
+| Blog index & posts | Prisma `BlogPost` (`published` filter) |
+| `content/content.json` | Legacy/unused in runtime (Dictionary-style keys only) |
+
+Homepage section order: Hero → MachineSections → StatsBar → Fleet → ForPartners → ForCustomers → WhatsAppOrder → FAQ → CTAStrip.
+
+### 7.3 Admin ↔ web coupling
+
+- CMS mutations live in `apps/admin/app/(dashboard)/website-cms/actions.ts`.
+- After publish/edit, admin actions call `revalidatePath` on CMS routes; public site relies on **ISR** (`revalidate = 3600`) unless extended with on-demand revalidation to `apps/web` paths.
+
+---
+
+## 8. Cross-cutting operational story
+
+1. **Customer** (bookings app) authenticates with phone OTP → sets **job site** (`LocationHeader` / persisted store) → **`equipment.getNearby`** lists catalog types served by verified partners in range → selects partner equipment → **`booking.create`** with map-picked site address.
+2. **Partner** maintains **service area** (yard + radius) in admin; only **VERIFIED** active partners participate in nearby matching.
+3. Platform/partner workflows promote work into **`Trip`** records (scheduling, OTP-gated start/complete, operator magic link, overrun handling).
+4. Completed work generates **`Invoice`** (+ PDF), **`Payment`** via Razorpay links, WhatsApp reminders.
+5. **Reviews** capture dual ratings (machine + operator).
+6. **Prospects** discover Crux on **`apps/web`**; CMS and blog are edited in admin **Website CMS**.
 
 (Exact state transitions are implemented across server actions and services; this is the conceptual spine reflected in Prisma.)
 
 ---
 
-## 8. Conventions for contributors & LLMs
+## 9. Conventions for contributors & LLMs
 
 - Prefer **role-aware server actions** in admin for mutations that touch `Booking`, `Trip`, or `Equipment` ownership — do not re-enable deprecated `booking.updateStatus` over public tRPC.
 - When adding **Edge** code paths, keep imports compatible with `auth.config.ts` (no `@repo/db` / Prisma).
 - Respect **monetary type = Int paise** unless explicitly geo or meter readings (`Float` allowed for coordinates, km, hours).
-- **Partner vs admin URL collisions:** `/bookings` is admin-global; `/bookings/new` is partner walk-in — a deliberate split enforced in middleware logic.
+- **Partner vs admin URL collisions:** `/bookings` is admin-global; `/bookings/new` is partner walk-in — enforced in `auth.config.ts`.
+- **Maps:** Use `getMapsProvider()` / `SiteAddressPicker` facade in bookings; do not assume Google is always configured. Default OSM for zero-cost dev; switch to Google for production launch.
+- **Nearby equipment:** Always pass resolved lat/lng from the location store (or booking form), not a hardcoded default — matching uses partner `maxServiceRadius` / coordinates.
+- **Website copy:** Prefer CMS `SiteBlock` bilingual fields over hardcoding strings in `apps/web` components.
 
 ---
 
-## 9. How to regenerate or extend this document
+## 10. How to regenerate or extend this document
 
 Update this file when:
 
 - New first-class routes appear under `apps/*/app`.
 - Prisma schema gains models or enum values that change product semantics.
 - Auth rules in `apps/admin/auth.config.ts` / `apps/admin/lib/auth.ts` or bookings `lib/auth.ts` change.
+- Maps provider strategy or env vars change (`maps-config.ts`, service-area map).
 - New third-party integrations or env vars are added to `turbo.json` / deployment.
+- Website CMS block types or locale strategy in `apps/web` change.
 
 For deep implementation detail, grep from the paths cited above rather than duplicating every server action name here.

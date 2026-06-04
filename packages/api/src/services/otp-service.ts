@@ -141,3 +141,17 @@ export async function sendBookingsOtpWithWhatsApp(phone: string): Promise<void> 
 
   await sendWhatsAppMessage(phone, template, [code], [buildCopyCodeButton(code)]);
 }
+
+/**
+ * Admin / Partner login: persist OTP and send WhatsApp template.
+ * Does NOT upsert the user — admin auth handles user creation separately.
+ */
+export async function sendAdminOtpWithWhatsApp(phone: string): Promise<void> {
+  const code = await createOtp(phone);
+  const template =
+    process.env["AISENSY_TEMPLATE_NAME"] ??
+    process.env["AISENSY_TEMPLATE_LOGIN_CODE"] ??
+    "otp_login";
+
+  await sendWhatsAppMessage(phone, template, [code], [buildCopyCodeButton(code)]);
+}

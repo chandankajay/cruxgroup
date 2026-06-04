@@ -17,9 +17,9 @@ export default async function DashboardPage() {
   if (role === "PARTNER") {
     const partner = await prisma.partner.findUnique({
       where: { userId },
-      select: { id: true, companyName: true, kycStatus: true },
+      select: { id: true, companyName: true, kycStatus: true, termsAcceptedAt: true },
     });
-    if (!partner) redirect("/onboarding");
+    if (!partner || !partner.termsAcceptedAt) redirect("/onboarding");
 
     const [total, active, pending, bi] = await Promise.all([
       prisma.equipment.count({ where: { partnerId: partner.id } }),

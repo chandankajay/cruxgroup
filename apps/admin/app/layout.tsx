@@ -17,6 +17,11 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Crux Group Admin",
   description: "Internal management dashboard for Crux Group",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default async function RootLayout({
@@ -32,13 +37,19 @@ export default async function RootLayout({
   const role = (session?.user as { role?: string } | undefined)?.role ?? "ADMIN";
   const userId = session?.user?.id;
 
-  const hasPartner =
+  const partnerOnboarding =
     !session || role !== "PARTNER" || !userId
-      ? true
-      : !!(await prisma.partner.findUnique({
+      ? { hasPartner: true, hasAcceptedTerms: true }
+      : await prisma.partner.findUnique({
           where: { userId },
-          select: { id: true },
+          select: { id: true, termsAcceptedAt: true },
+        }).then((p) => ({
+          hasPartner: !!p,
+          hasAcceptedTerms: !!p?.termsAcceptedAt,
         }));
+
+  const { hasPartner, hasAcceptedTerms } = partnerOnboarding;
+  const onboardingComplete = hasPartner && hasAcceptedTerms;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -51,7 +62,7 @@ export default async function RootLayout({
               userEmail={session?.user?.email ?? null}
               userImage={session?.user?.image ?? null}
               role={role}
-              hasPartner={hasPartner}
+              onboardingComplete={onboardingComplete}
             >
               {children}
             </AdminShell>
