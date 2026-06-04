@@ -128,6 +128,8 @@ export interface CreatePartnerFleetEquipmentInput {
   operatorPhone: string;
   manufacturingYear: number;
   isActive: boolean;
+  /** Optional partner-uploaded machine photo (Blob URL). Overrides catalog default. */
+  imageUrl?: string;
 }
 
 export async function createPartnerFleetEquipment(
@@ -182,8 +184,11 @@ export async function createPartnerFleetEquipment(
       ? (catalog.specifications as Record<string, unknown>)
       : {};
 
-  const images =
-    catalog.imageUrl && catalog.imageUrl.length > 0 ? [catalog.imageUrl] : [];
+  const images = input.imageUrl
+    ? [input.imageUrl]
+    : catalog.imageUrl && catalog.imageUrl.length > 0
+      ? [catalog.imageUrl]
+      : [];
 
   return prisma.equipment.create({
     data: {
@@ -240,6 +245,8 @@ export interface UpdatePartnerFleetEquipmentInput {
   operatorPhone: string;
   manufacturingYear: number;
   isActive: boolean;
+  /** Optional replacement machine photo (Blob URL). */
+  imageUrl?: string;
 }
 
 export async function updatePartnerFleetEquipment(
@@ -350,6 +357,7 @@ export async function updatePartnerFleetEquipment(
       isActive: input.isActive,
       pricing: { hourly: hourlyPaise, daily: dailyPaise },
       specifications: mergedSpecs,
+      ...(input.imageUrl ? { images: [input.imageUrl] } : {}),
     },
   });
 }

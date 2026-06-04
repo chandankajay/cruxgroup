@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -39,6 +39,9 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const catalogEmpty = catalog.length === 0;
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   const validationSchema = useMemo(
     () => buildAddFleetEquipmentSchema(catalog),
@@ -76,6 +79,18 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
     [catalog, catalogId]
   );
 
+  useEffect(() => {
+    if (!selected) return;
+    setValue("hourlyRate", selected.minHourlyRate / 100, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+    setValue("dailyRate", selected.minDailyRate / 100, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
+  }, [selected, setValue]);
+
   const specEntries = useMemo(() => {
     const raw = selected?.specifications;
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
@@ -84,11 +99,9 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
 
   function onSubmit(values: AddFleetEquipmentValues) {
     startTransition(async () => {
-      const result = await submitAddFleetEquipmentFromSession(values);
+      const result = await submitAddFleetEquipmentFromSession(values, photoFile);
       if (result.success) {
         toast.success("Equipment added to your fleet.");
-        // Replace avoids stacking /fleet on history; revalidatePath runs in the server action.
-        // Do not call router.refresh() here — it targets the *current* route (/fleet/new) and can block navigation.
         router.replace("/fleet");
       } else {
         toast.error(result.error ?? "Could not save equipment.");
@@ -181,6 +194,58 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
                 </dl>
               </div>
             ) : null}
+          </div>
+
+          <div className="space-y-4">
+            <SectionTitle>Machine photo (optional)</SectionTitle>
+            <p className="text-xs text-muted-foreground">
+              Upload a photo of your actual machine. If skipped, the catalog
+              type image is used.
+            </p>
+            <div className="flex items-center gap-4">
+              {photoPreview ? (
+                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoPreview}
+                    alt="Machine preview"
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 rounded-full bg-background/80 p-0.5 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setPhotoFile(null);
+                      setPhotoPreview(null);
+                      if (photoInputRef.current) photoInputRef.current.value = "";
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : null}
+              <div>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setPhotoFile(f);
+                    setPhotoPreview(f ? URL.createObjectURL(f) : null);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  {photoFile ? "Change photo" : "Choose photo"}
+                </Button>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4">

@@ -14,7 +14,7 @@ import type { Locale } from "../../lib/locale";
 import { Button } from "../ui/Button";
 import { type MachineSlide, MACHINE_SLIDES } from "./machine-sections-data";
 
-const SCROLL_PER_SLIDE_VH = 150;
+const SCROLL_PER_SLIDE_VH = 100;
 
 function resolveSlide(slide: MachineSlide, lang: Locale) {
   const te = lang === "te";
@@ -35,38 +35,45 @@ function useSlideTransforms(
   const segmentSize = 1 / total;
   const start = index * segmentSize;
   const end = start + segmentSize;
-  const mid = (start + end) / 2;
 
-  const imgIn = start + segmentSize * 0.08;
-  const imgSettled = start + segmentSize * 0.28;
-  const imgExitStart = end - segmentSize * 0.28;
+  const isFirst = index === 0;
+
+  const imgIn = start + segmentSize * 0.02;
+  const imgSettled = start + segmentSize * 0.15;
+  const imgExitStart = end - segmentSize * 0.15;
   const imgY = useTransform(
     scrollYProgress,
-    [start, imgIn, imgSettled, imgExitStart, end],
-    ["100%", "0%", "0%", "0%", "-100%"],
+    isFirst
+      ? [start, imgExitStart, end]
+      : [start, imgIn, imgSettled, imgExitStart, end],
+    isFirst
+      ? ["0%", "0%", "-100%"]
+      : ["100%", "30%", "0%", "0%", "-100%"],
   );
 
-  const textIn = start + segmentSize * 0.12;
-  const textSettled = start + segmentSize * 0.36;
-  const textExitStart = end - segmentSize * 0.32;
-  const textExit = end - segmentSize * 0.08;
+  const textIn = isFirst ? start : start + segmentSize * 0.04;
+  const textSettled = isFirst ? start : start + segmentSize * 0.2;
+  const textExitStart = end - segmentSize * 0.2;
+  const textExit = end - segmentSize * 0.05;
   const textOpacity = useTransform(
     scrollYProgress,
-    [textIn, textSettled, textExitStart, textExit],
-    [0, 1, 1, 0],
+    isFirst
+      ? [start, textExitStart, textExit]
+      : [textIn, textSettled, textExitStart, textExit],
+    isFirst ? [1, 1, 0] : [0, 1, 1, 0],
   );
   const textX = useTransform(
     scrollYProgress,
-    [textIn, textSettled, textExitStart, textExit],
-    ["40px", "0px", "0px", "-40px"],
+    isFirst
+      ? [start, textExitStart, textExit]
+      : [textIn, textSettled, textExitStart, textExit],
+    isFirst ? ["0px", "0px", "-40px"] : ["40px", "0px", "0px", "-40px"],
   );
 
   const layerOpacity = useTransform(
     scrollYProgress,
-    index === 0
-      ? [0, 1]
-      : [start - 0.002, start],
-    [index === 0 ? 1 : 0, 1],
+    isFirst ? [0, 1] : [start - 0.002, start],
+    [isFirst ? 1 : 0, 1],
   );
 
   return { imgY, textOpacity, textX, layerOpacity };

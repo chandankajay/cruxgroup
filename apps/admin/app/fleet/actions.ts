@@ -5,6 +5,7 @@ import { createCaller } from "@repo/api";
 import { prisma } from "@repo/db";
 import { revalidatePath } from "next/cache";
 import { auth } from "../../lib/auth";
+import { uploadPublicImage } from "../../lib/blob-upload";
 import {
   getAuthorizedWhereClause,
   getResourceAuthzContext,
@@ -113,6 +114,7 @@ export interface CreatePartnerFleetEquipmentInput {
   operatorPhone: string;
   manufacturingYear: number;
   isActive: boolean;
+  imageUrl?: string;
 }
 
 export async function createPartnerFleetEquipmentAction(
@@ -135,6 +137,7 @@ export async function createPartnerFleetEquipmentAction(
       operatorPhone: input.operatorPhone,
       manufacturingYear: input.manufacturingYear,
       isActive: input.isActive,
+      imageUrl: input.imageUrl,
     });
     revalidatePath("/fleet");
     revalidatePath("/fleet/new");
@@ -149,12 +152,27 @@ export async function createPartnerFleetEquipmentAction(
 }
 
 export async function submitAddFleetEquipmentFromSession(
-  input: AddFleetEquipmentValues
+  input: AddFleetEquipmentValues,
+  machinePhoto?: File | null
 ): Promise<{ success: boolean; error?: string }> {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) {
     return { success: false, error: "Unauthorized" };
+  }
+
+  let imageUrl: string | undefined;
+  if (machinePhoto instanceof File && machinePhoto.size > 0) {
+    const partner = await prisma.partner.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    const upload = await uploadPublicImage(
+      `fleet/${partner?.id ?? userId}/new`,
+      machinePhoto
+    );
+    if (!upload.ok) return { success: false, error: upload.error };
+    imageUrl = upload.url;
   }
 
   const payload: CreatePartnerFleetEquipmentInput = {
@@ -171,6 +189,7 @@ export async function submitAddFleetEquipmentFromSession(
     operatorPhone: input.operatorPhone.trim(),
     manufacturingYear: input.manufacturingYear,
     isActive: input.isActive === "true",
+    imageUrl,
   };
 
   return createPartnerFleetEquipmentAction(userId, payload);
@@ -212,6 +231,7 @@ export interface FleetEquipmentEditData {
   operatorPhone: string;
   manufacturingYear: number;
   isActive: boolean;
+  images: string[];
   catalog: {
     minHourlyRate: number;
     maxHourlyRate: number;
@@ -268,6 +288,7 @@ export async function getFleetEquipmentForEdit(
     operatorPhone: e.operatorPhone,
     manufacturingYear: y,
     isActive: e.isActive,
+    images: e.images,
     catalog: e.catalog,
   };
 }
@@ -286,15 +307,31 @@ export interface UpdatePartnerFleetEquipmentPayload {
   operatorPhone: string;
   manufacturingYear: number;
   isActive: boolean;
+  imageUrl?: string;
 }
 
 export async function updatePartnerFleetEquipmentFromSession(
-  input: UpdatePartnerFleetEquipmentPayload
+  input: UpdatePartnerFleetEquipmentPayload,
+  machinePhoto?: File | null
 ): Promise<{ success: boolean; error?: string }> {
   const session = await auth();
   const userId = session?.user?.id;
   if (!userId) {
     return { success: false, error: "Unauthorized" };
+  }
+
+  let imageUrl = input.imageUrl;
+  if (machinePhoto instanceof File && machinePhoto.size > 0) {
+    const partner = await prisma.partner.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+    const upload = await uploadPublicImage(
+      `fleet/${partner?.id ?? userId}/${input.equipmentId}`,
+      machinePhoto
+    );
+    if (!upload.ok) return { success: false, error: upload.error };
+    imageUrl = upload.url;
   }
 
   try {
@@ -313,11 +350,16 @@ export async function updatePartnerFleetEquipmentFromSession(
       operatorPhone: input.operatorPhone,
       manufacturingYear: input.manufacturingYear,
       isActive: input.isActive,
+      imageUrl,
     });
     revalidatePath("/fleet");
     revalidatePath(`/fleet/${input.equipmentId}/edit`);
     return { success: true };
-  } catch {
-    return { success: false, error: "Failed to update equipment." };
+  } catch (e) {
+    console.error("[updatePartnerFleetEquipmentFromSession]", e);
+    return {
+      success: false,
+      error: fleetMutationErrorMessage(e, "Failed to update equipment."),
+    };
   }
 }

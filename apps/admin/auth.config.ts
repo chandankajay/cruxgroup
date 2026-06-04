@@ -13,7 +13,7 @@ function isPartnerBlockedFromPath(pathname: string): boolean {
   ) {
     return true;
   }
-  if (["/equipment", "/partners"].some((p) => pathname.startsWith(p))) {
+  if (["/equipment", "/catalog", "/partners"].some((p) => pathname.startsWith(p))) {
     return true;
   }
   if (pathname.startsWith("/settings") && !pathname.startsWith("/settings/kyc")) {

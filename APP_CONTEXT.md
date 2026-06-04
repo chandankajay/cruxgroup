@@ -185,7 +185,7 @@ Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`
 
 ### 6.2 Route guard summary (`auth.config.ts`)
 
-- **Partners cannot access:** `/platform-admin/*`, `/equipment`, `/partners`, `/bookings` **except** walk-in desk under **`/bookings/new`** (and subpaths), `/settings` except **`/settings/kyc`**, **`/website-cms`**, and other platform-only areas.
+- **Partners cannot access:** `/platform-admin/*`, `/equipment`, `/catalog`, `/partners`, `/bookings` **except** walk-in desk under **`/bookings/new`** (and subpaths), `/settings` except **`/settings/kyc`**, **`/website-cms`**, and other platform-only areas.
 - **Partners hitting forbidden paths** are redirected to **`/fleet`** (not dashboard).
 - **Admins** are kept off partner-only surface routes (`/fleet`, `/my-bookings`, `/service-area`, `/earnings`) — redirected to **`/dashboard`**.
 
@@ -201,7 +201,8 @@ Exported helpers include **`verifyOtp`**, **`sendBookingsOtpWithWhatsApp`**, **`
 - **Dashboard** — `app/dashboard/page.tsx`: non-partner view is `DashboardHome` (platform metrics / tools).
 - **Partners** — `/partners` (includes **service area map** for admin editing partner yard/radius via Google Maps)
 - **KYC verification queue** — `/platform-admin/kyc`
-- **Master catalog** — `/equipment`
+- **Master catalog** — `/catalog` (type images + rate guardrails; Vercel Blob URLs)
+- **Platform equipment registry** — `/equipment` (all `Equipment` rows)
 - **Global bookings** — `/bookings` (list across partners; distinct from partner walk-in)
 - **Website CMS** — `/website-cms` (hub → site config, sections/blocks, blog with Tiptap-style editing; `actions.ts` revalidates admin paths; public site uses same DB)
 - **Settings** — `/settings` (admin profile / configuration; shows env health e.g. Google Maps key)

@@ -75,6 +75,7 @@ export const equipmentRouter = createRouter({
         operatorPhone: z.string().trim().min(10).max(20),
         manufacturingYear: z.number().int().min(1980).max(new Date().getFullYear() + 1),
         isActive: z.boolean(),
+        imageUrl: z.string().url().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -136,6 +137,7 @@ export const equipmentRouter = createRouter({
         operatorPhone: z.string().trim().min(10).max(20),
         manufacturingYear: z.number().int().min(1980).max(new Date().getFullYear() + 1),
         isActive: z.boolean(),
+        imageUrl: z.string().url().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -155,6 +157,7 @@ export const equipmentRouter = createRouter({
           operatorPhone: input.operatorPhone,
           manufacturingYear: input.manufacturingYear,
           isActive: input.isActive,
+          imageUrl: input.imageUrl,
         });
       } catch (e) {
         const msg = e instanceof Error ? e.message : "";

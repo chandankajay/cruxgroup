@@ -29,6 +29,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "img1.wsimg.com", pathname: "/**" },
       { protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" },
       { protocol: "https", hostname: "cdn.cruxgroup.in", pathname: "/**" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
     ],
   },
 };
