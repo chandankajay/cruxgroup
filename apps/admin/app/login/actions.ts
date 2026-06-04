@@ -1,8 +1,26 @@
 "use server";
 
 import { CredentialsSignin } from "next-auth";
+import { sendAdminOtpWithWhatsApp } from "@repo/api";
 import { signIn } from "../../lib/auth";
 import { normalizeAdminPhone } from "../../lib/phone";
+
+export async function sendAdminOtpAction(
+  phone: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const phoneNumber = normalizeAdminPhone(phone);
+    await sendAdminOtpWithWhatsApp(phoneNumber);
+    return { success: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("OTP_ACCOUNT_LOCKED")) {
+      return { success: false, error: "ACCOUNT_LOCKED" };
+    }
+    console.error("[admin] sendAdminOtpAction failed:", msg);
+    return { success: false, error: "FAILED_TO_SEND" };
+  }
+}
 
 /**
  * Server-side partner credentials sign-in (same pattern as bookings).

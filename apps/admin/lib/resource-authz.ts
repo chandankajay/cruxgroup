@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { partnerEquipmentOwnerWhere } from "@repo/api";
 import { prisma } from "@repo/db";
 import { auth } from "./auth";
 
@@ -88,7 +89,10 @@ export function getAuthorizedWhereClause(
 
   switch (resource) {
     case "Equipment":
-      return { id: targetId, partnerId: ctx.partnerId };
+      return {
+        id: targetId,
+        ...partnerEquipmentOwnerWhere(ctx.partnerId, ctx.userId),
+      };
     case "Booking":
       return {
         id: targetId,

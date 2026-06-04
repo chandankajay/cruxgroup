@@ -102,7 +102,7 @@ export async function createPartnerProfileAction(
     select: { id: true },
   });
   if (existing) {
-    redirect("/dashboard");
+    redirect("/onboarding");
   }
 
   const { companyName, address, baseLocation } = parsed.data;
@@ -143,5 +143,5 @@ export async function createPartnerProfileAction(
     };
   }
 
-  redirect("/dashboard");
+  redirect("/onboarding");
 }

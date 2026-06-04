@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -49,6 +49,7 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<AddFleetEquipmentValues>({
     resolver: zodResolver(validationSchema),
@@ -156,8 +157,11 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
               <div className="overflow-hidden rounded-lg border border-border bg-muted/20">
                 <img
                   src={selected.imageUrl}
-                  alt=""
+                  alt={selected.name}
                   className="h-40 w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
                 />
               </div>
             ) : null}

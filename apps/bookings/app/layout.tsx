@@ -16,6 +16,11 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Crux Group Bookings",
   description: "Book construction equipment with Crux Group",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default async function RootLayout({

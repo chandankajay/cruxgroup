@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: "Crux Group", template: "%s — Crux Group" },
   description: "Telangana's largest heavy equipment rental network",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     title: "Crux Group",
     description: "Telangana's largest heavy equipment rental network",

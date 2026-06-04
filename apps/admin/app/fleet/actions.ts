@@ -13,6 +13,14 @@ import type { AddFleetEquipmentValues } from "./new/schema";
 
 const caller = createCaller({});
 
+function fleetMutationErrorMessage(e: unknown, fallback: string): string {
+  if (e instanceof Error && e.message.trim()) {
+    const msg = e.message.trim();
+    if (msg !== "Failed to create equipment.") return msg;
+  }
+  return fallback;
+}
+
 export interface FleetEquipmentItem {
   id: string;
   name: string;
@@ -131,8 +139,12 @@ export async function createPartnerFleetEquipmentAction(
     revalidatePath("/fleet");
     revalidatePath("/fleet/new");
     return { success: true };
-  } catch {
-    return { success: false, error: "Failed to add equipment." };
+  } catch (e) {
+    console.error("[createPartnerFleetEquipmentAction]", e);
+    return {
+      success: false,
+      error: fleetMutationErrorMessage(e, "Failed to add equipment."),
+    };
   }
 }
 

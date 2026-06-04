@@ -11,6 +11,19 @@ function rupeesToPaise(rupees: number): number {
   return Math.round(rupees * 100);
 }
 
+/**
+ * Partner-scoped equipment filter. Supports `partnerId` = Partner.id (canonical) and
+ * legacy rows where `partnerId` was stored as the partner user's id.
+ */
+export function partnerEquipmentOwnerWhere(
+  partnerRecordId: string,
+  partnerUserId: string
+): Prisma.EquipmentWhereInput {
+  return {
+    OR: [{ partnerId: partnerRecordId }, { partnerId: partnerUserId }],
+  };
+}
+
 export function mapCatalogCategoryToEquipmentCategory(
   category: string
 ): EquipmentCategory {
@@ -35,14 +48,10 @@ export async function listEquipmentByPartner(partnerIdOrUserId: string) {
   const partner = await prisma.partner.findUnique({
     where: { userId: partnerIdOrUserId },
   });
-  const or: Prisma.EquipmentWhereInput[] = [
-    { partnerId: partnerIdOrUserId },
-  ];
-  if (partner) {
-    or.push({ partnerId: partner.id });
-  }
+  const partnerRecordId = partner?.id ?? partnerIdOrUserId;
+  const partnerUserId = partner?.userId ?? partnerIdOrUserId;
   return prisma.equipment.findMany({
-    where: { OR: or },
+    where: partnerEquipmentOwnerWhere(partnerRecordId, partnerUserId),
     orderBy: { name: "asc" },
     include: {
       partner: {
@@ -157,7 +166,7 @@ export async function createPartnerFleetEquipment(
   if (reg.length > 0) {
     const dup = await prisma.equipment.findFirst({
       where: {
-        partnerId: partner.id,
+        ...partnerEquipmentOwnerWhere(partner.id, partner.userId),
         registrationNumber: reg,
       },
     });
@@ -244,7 +253,10 @@ export async function updatePartnerFleetEquipment(
   }
 
   const existing = await prisma.equipment.findFirst({
-    where: { id: input.equipmentId, partnerId: partner.id },
+    where: {
+      id: input.equipmentId,
+      ...partnerEquipmentOwnerWhere(partner.id, partner.userId),
+    },
   });
   if (!existing) {
     throw new Error("EQUIPMENT_NOT_FOUND");

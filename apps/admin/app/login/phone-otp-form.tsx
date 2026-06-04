@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { signInPartnerPhoneAction } from "./actions";
+import { sendAdminOtpAction, signInPartnerPhoneAction } from "./actions";
 
 type Step = "phone" | "otp";
 
@@ -21,7 +21,8 @@ function formatVerifyLine(phone: string): string {
 export function PhoneOtpForm() {
   const [step, setStep] = useState<Step>("phone");
   const [digits, setDigits] = useState("");
-  const [cells, setCells] = useState<string[]>(() => Array.from({ length: 6 }, () => ""));
+  const OTP_LEN = 4;
+  const [cells, setCells] = useState<string[]>(() => Array.from({ length: OTP_LEN }, () => ""));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
@@ -30,7 +31,7 @@ export function PhoneOtpForm() {
   const phoneNumber = `+91${digits.replace(/\D/g, "")}`;
   const phoneValid = digits.replace(/\D/g, "").length === 10;
   const code = cells.join("");
-  const otpValid = code.length === 6;
+  const otpValid = code.length === OTP_LEN;
 
   const focusIndex = useCallback((i: number) => {
     const el = inputsRef.current[i];
@@ -48,20 +49,34 @@ export function PhoneOtpForm() {
 
   useEffect(() => {
     if (!error) return;
-    setCells(Array.from({ length: 6 }, () => ""));
+    setCells(Array.from({ length: OTP_LEN }, () => ""));
     queueMicrotask(() => focusIndex(0));
   }, [error, focusIndex]);
 
-  function handleSendOtp(e: React.FormEvent) {
+  async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
-    if (!phoneValid) return;
+    if (!phoneValid || isLoading) return;
     setError(undefined);
-    setCells(Array.from({ length: 6 }, () => ""));
-    setStep("otp");
+    setIsLoading(true);
+    try {
+      const result = await sendAdminOtpAction(phoneNumber);
+      if (!result.success) {
+        setError(
+          result.error === "ACCOUNT_LOCKED"
+            ? "Too many attempts. Try again after 15 minutes."
+            : "Failed to send OTP. Please try again.",
+        );
+        return;
+      }
+      setCells(Array.from({ length: OTP_LEN }, () => ""));
+      setStep("otp");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function submitOtp(full: string) {
-    if (full.length !== 6 || submitLock.current) return;
+    if (full.length !== OTP_LEN || submitLock.current) return;
     submitLock.current = true;
     setIsLoading(true);
     setError(undefined);
@@ -97,14 +112,14 @@ export function PhoneOtpForm() {
         const next = [...prev];
         next[index] = digit;
         const full = next.join("");
-        if (full.length === 6) {
+        if (full.length === OTP_LEN) {
           queueMicrotask(() => {
             void submitOtp(full);
           });
         }
         return next;
       });
-      if (index < 5) focusIndex(index + 1);
+      if (index < OTP_LEN - 1) focusIndex(index + 1);
       return;
     }
     setCellAt(index, "");
@@ -120,7 +135,7 @@ export function PhoneOtpForm() {
       e.preventDefault();
       focusIndex(index - 1);
     }
-    if (e.key === "ArrowRight" && index < 5) {
+    if (e.key === "ArrowRight" && index < OTP_LEN - 1) {
       e.preventDefault();
       focusIndex(index + 1);
     }
@@ -128,20 +143,20 @@ export function PhoneOtpForm() {
 
   function handlePaste(e: React.ClipboardEvent) {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, OTP_LEN);
     if (!pasted) return;
-    const next = Array.from({ length: 6 }, (_, i) => pasted[i] ?? "");
+    const next = Array.from({ length: OTP_LEN }, (_, i) => pasted[i] ?? "");
     setCells(next);
-    const last = Math.min(pasted.length, 5);
+    const last = Math.min(pasted.length, OTP_LEN - 1);
     focusIndex(last);
-    if (pasted.length === 6) {
+    if (pasted.length === OTP_LEN) {
       queueMicrotask(() => void submitOtp(pasted));
     }
   }
 
   function handleBack() {
     setStep("phone");
-    setCells(Array.from({ length: 6 }, () => ""));
+    setCells(Array.from({ length: OTP_LEN }, () => ""));
     setError(undefined);
   }
 
@@ -197,19 +212,29 @@ export function PhoneOtpForm() {
               {isDev && (
                 <p className="mt-3 text-center text-xs text-muted-foreground">
                   Dev OTP{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-amber-500/90">112233</code>
+                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-amber-500/90">4242</code>
                   . Any 10-digit number works — missing users are created as PARTNER; existing USER rows are promoted to
                   PARTNER (dev only).
                 </p>
               )}
             </div>
 
+            {error && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center text-sm font-medium text-red-400"
+              >
+                {error}
+              </motion.p>
+            )}
+
             <button
               type="submit"
-              disabled={!phoneValid}
+              disabled={!phoneValid || isLoading}
               className="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-4 text-center font-black uppercase tracking-tighter text-primary-foreground shadow-lg transition-all hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
-              GET OTP
+              {isLoading ? "Sending OTP…" : "GET OTP"}
             </button>
           </form>
         </motion.div>
@@ -235,7 +260,7 @@ export function PhoneOtpForm() {
             </div>
 
             <fieldset>
-              <legend className="sr-only">Enter 6-digit verification code</legend>
+              <legend className="sr-only">Enter 4-digit verification code</legend>
               <div className="flex flex-wrap justify-center gap-2 sm:gap-2.5" onPaste={handlePaste}>
                 {cells.map((val, i) => (
                   <input
@@ -252,7 +277,7 @@ export function PhoneOtpForm() {
                     onKeyDown={(e) => handleKeyDown(i, e)}
                     disabled={isLoading}
                     className="h-14 w-12 rounded-lg border border-input bg-muted/60 text-center text-2xl font-bold tabular-nums text-foreground outline-none transition-all focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
-                    aria-label={`Digit ${i + 1} of 6`}
+                    aria-label={`Digit ${i + 1} of ${OTP_LEN}`}
                   />
                 ))}
               </div>

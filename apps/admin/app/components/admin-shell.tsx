@@ -17,8 +17,8 @@ interface AdminShellProps {
   readonly userEmail: string | null;
   readonly userImage: string | null;
   readonly role: string;
-  /** For PARTNER users only: whether a `Partner` row exists (onboarding complete). */
-  readonly hasPartner: boolean;
+  /** For PARTNER users: profile created and terms accepted (full onboarding). */
+  readonly onboardingComplete: boolean;
 }
 
 export function AdminShell({
@@ -28,24 +28,24 @@ export function AdminShell({
   userEmail,
   userImage,
   role,
-  hasPartner,
+  onboardingComplete,
 }: AdminShellProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   useLayoutEffect(() => {
     if (!isAuthenticated || role !== "PARTNER") return;
-    if (hasPartner) return;
+    if (onboardingComplete) return;
     if (pathname === "/onboarding") return;
     router.replace("/onboarding");
-  }, [isAuthenticated, role, hasPartner, pathname, router]);
+  }, [isAuthenticated, role, onboardingComplete, pathname, router]);
 
   useLayoutEffect(() => {
     if (!isAuthenticated || role !== "PARTNER") return;
-    if (!hasPartner) return;
+    if (!onboardingComplete) return;
     if (pathname !== "/onboarding") return;
     router.replace("/dashboard");
-  }, [isAuthenticated, role, hasPartner, pathname, router]);
+  }, [isAuthenticated, role, onboardingComplete, pathname, router]);
 
   if (!isAuthenticated) {
     return <>{children}</>;
