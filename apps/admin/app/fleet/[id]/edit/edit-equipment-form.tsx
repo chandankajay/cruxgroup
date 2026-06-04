@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useTransition, type ReactNode } from "react";
+import { useRef, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -38,6 +38,10 @@ interface EditEquipmentFormProps {
 export function EditEquipmentForm({ initial }: EditEquipmentFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const currentImage = photoPreview ?? initial.images?.[0] ?? null;
 
   const validationSchema = useMemo(
     () => buildEditFleetEquipmentSchema(initial.catalog),
@@ -70,21 +74,24 @@ export function EditEquipmentForm({ initial }: EditEquipmentFormProps) {
 
   function onSubmit(values: EditFleetEquipmentValues) {
     startTransition(async () => {
-      const result = await updatePartnerFleetEquipmentFromSession({
-        equipmentId: initial.id,
-        hp: values.hp,
-        hourlyRate: values.hourlyRate,
-        dailyRate: values.dailyRate,
-        freeRadiusKm: values.freeRadiusKm,
-        transportRatePerKm: values.transportRatePerKm,
-        maxRadiusKm: values.maxRadiusKm,
-        minBookingHours: values.minBookingHours,
-        registrationNumber: values.registrationNumber.trim(),
-        operatorName: values.operatorName.trim(),
-        operatorPhone: values.operatorPhone.trim(),
-        manufacturingYear: values.manufacturingYear,
-        isActive: values.isActive === "true",
-      });
+      const result = await updatePartnerFleetEquipmentFromSession(
+        {
+          equipmentId: initial.id,
+          hp: values.hp,
+          hourlyRate: values.hourlyRate,
+          dailyRate: values.dailyRate,
+          freeRadiusKm: values.freeRadiusKm,
+          transportRatePerKm: values.transportRatePerKm,
+          maxRadiusKm: values.maxRadiusKm,
+          minBookingHours: values.minBookingHours,
+          registrationNumber: values.registrationNumber.trim(),
+          operatorName: values.operatorName.trim(),
+          operatorPhone: values.operatorPhone.trim(),
+          manufacturingYear: values.manufacturingYear,
+          isActive: values.isActive === "true",
+        },
+        photoFile
+      );
       if (result.success) {
         toast.success("Equipment updated.");
         router.replace("/fleet");
@@ -117,6 +124,53 @@ export function EditEquipmentForm({ initial }: EditEquipmentFormProps) {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-8">
+          <div className="space-y-4">
+            <SectionTitle>Machine photo</SectionTitle>
+            <div className="flex items-center gap-4">
+              {currentImage ? (
+                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={currentImage}
+                    alt={initial.name}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                  No photo
+                </div>
+              )}
+              <div>
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setPhotoFile(f);
+                    setPhotoPreview(f ? URL.createObjectURL(f) : null);
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  {currentImage ? "Replace photo" : "Upload photo"}
+                </Button>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  JPEG, PNG, or WebP — max 5 MB
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4">
             <SectionTitle>Machine</SectionTitle>
             <div className="space-y-2">
