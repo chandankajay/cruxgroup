@@ -73,6 +73,9 @@ export interface Equipment {
 
 export type BookingStatus =
   | "PENDING"
+  | "PENDING_PARTNER"
+  | "PARTNER_ACCEPTED"
+  | "PARTNER_DECLINED"
   | "CONFIRMED"
   | "DISPATCHED"
   | "COMPLETED"
