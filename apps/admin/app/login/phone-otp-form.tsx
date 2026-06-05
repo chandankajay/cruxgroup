@@ -18,7 +18,11 @@ function formatVerifyLine(phone: string): string {
   return `Verify ${phone}`;
 }
 
-export function PhoneOtpForm() {
+interface PhoneOtpFormProps {
+  readonly callbackUrl?: string;
+}
+
+export function PhoneOtpForm({ callbackUrl = "/" }: PhoneOtpFormProps) {
   const [step, setStep] = useState<Step>("phone");
   const [digits, setDigits] = useState("");
   const OTP_LEN = 4;
@@ -90,7 +94,7 @@ export function PhoneOtpForm() {
         );
         setIsLoading(false);
       } else {
-        window.location.assign("/");
+        window.location.assign(callbackUrl || "/");
       }
     } finally {
       submitLock.current = false;

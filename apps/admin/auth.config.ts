@@ -1,5 +1,10 @@
 import type { NextAuthConfig } from "next-auth";
 import { enterpriseAuthSecurity } from "@repo/auth";
+import {
+  isBookingResponseApi,
+  isBookingResponseMagicLink,
+  safeCallbackPath,
+} from "./lib/booking-response-routes";
 
 const PARTNER_ONLY = ["/fleet", "/my-bookings", "/service-area", "/earnings"];
 
@@ -57,6 +62,10 @@ export const authConfig: NextAuthConfig = {
       // Public legal documents (readable without a session).
       if (!isLoggedIn && pathname.startsWith("/legal")) return true;
 
+      // Public booking response magic links — token is the credential.
+      if (isBookingResponseMagicLink(pathname)) return true;
+      if (isBookingResponseApi(pathname)) return true;
+
       // Plain USERs should never be in the admin app.
       if (isLoggedIn && role === "USER") {
         return Response.redirect(
@@ -79,12 +88,21 @@ export const authConfig: NextAuthConfig = {
       }
 
       if (isLoggedIn && isLoginPage) {
+        const callback = safeCallbackPath(nextUrl.searchParams.get("callbackUrl"));
+        if (callback) {
+          return Response.redirect(new URL(callback, nextUrl));
+        }
         const home = role === "PARTNER" ? "/fleet" : "/dashboard";
         return Response.redirect(new URL(home, nextUrl));
       }
 
       if (!isLoggedIn && !isLoginPage) {
-        return Response.redirect(new URL("/login", nextUrl));
+        const loginUrl = new URL("/login", nextUrl);
+        loginUrl.searchParams.set(
+          "callbackUrl",
+          pathname + nextUrl.search,
+        );
+        return Response.redirect(loginUrl);
       }
 
       return true;

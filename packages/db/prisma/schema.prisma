@@ -199,6 +199,7 @@ model Partner {
 
   equipment Equipment[]
   trips     Trip[]
+  bookingResponseTokens BookingResponseToken[]
 
   @@index([panNumber])
   @@index([aadhaarNumber])
@@ -327,6 +328,7 @@ model Booking {
   user      User      @relation(fields: [userId], references: [id])
   equipment Equipment @relation(fields: [equipmentId], references: [id])
   trips     Trip[]
+  responseTokens BookingResponseToken[]
 
   @@index([customerId])
   @@map("bookings")
@@ -425,10 +427,36 @@ model Review {
 
 enum BookingStatus {
   PENDING
+  PENDING_PARTNER
+  PARTNER_ACCEPTED
+  PARTNER_DECLINED
   CONFIRMED
   DISPATCHED
   COMPLETED
   CANCELLED
+}
+
+enum BookingResponseAction {
+  ACCEPTED
+  DECLINED
+}
+
+model BookingResponseToken {
+  id         String                @id @default(auto()) @map("_id") @db.ObjectId
+  token      String                @unique @default(cuid())
+  bookingId  String                @db.ObjectId
+  booking    Booking               @relation(fields: [bookingId], references: [id])
+  partnerId  String                @db.ObjectId
+  partner    Partner               @relation(fields: [partnerId], references: [id])
+  expiresAt  DateTime
+  usedAt     DateTime?
+  response   BookingResponseAction?
+  createdAt  DateTime              @default(now())
+  notifiedAt DateTime?
+
+  @@index([bookingId])
+  @@index([partnerId])
+  @@map("booking_response_tokens")
 }
 
 type BookingLocation {
