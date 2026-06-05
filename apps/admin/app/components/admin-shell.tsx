@@ -9,6 +9,7 @@ import { PartnerBottomNav } from "./partner-bottom-nav";
 import { PartnerMobileHeader } from "./partner-mobile-header";
 import { AdminBottomNav } from "./admin-bottom-nav";
 import { AdminMobileHeader } from "./admin-mobile-header";
+import { isBookingResponseMagicLink } from "../../lib/booking-response-routes";
 
 interface AdminShellProps {
   readonly children: ReactNode;
@@ -37,6 +38,7 @@ export function AdminShell({
     if (!isAuthenticated || role !== "PARTNER") return;
     if (onboardingComplete) return;
     if (pathname === "/onboarding") return;
+    if (isBookingResponseMagicLink(pathname)) return;
     router.replace("/onboarding");
   }, [isAuthenticated, role, onboardingComplete, pathname, router]);
 
@@ -47,7 +49,7 @@ export function AdminShell({
     router.replace("/dashboard");
   }, [isAuthenticated, role, onboardingComplete, pathname, router]);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || isBookingResponseMagicLink(pathname)) {
     return <>{children}</>;
   }
 

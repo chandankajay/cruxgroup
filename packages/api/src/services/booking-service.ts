@@ -1,5 +1,5 @@
 import { calculateTransportFee, prisma } from "@repo/db";
-import { calculateDistanceKm } from "@repo/lib";
+import { calculateDistanceKm, notifyPartnersForBooking } from "@repo/lib";
 import {
   getPartnerServiceBase,
   isJobSiteWithinPartnerServiceArea,
@@ -11,6 +11,9 @@ const DEV_GUEST_USER_ID = "65f1a2b3c4d5e6f7a8b9c0d1";
 
 export type BookingStatus =
   | "PENDING"
+  | "PENDING_PARTNER"
+  | "PARTNER_ACCEPTED"
+  | "PARTNER_DECLINED"
   | "CONFIRMED"
   | "DISPATCHED"
   | "COMPLETED"
@@ -113,7 +116,7 @@ export async function createBooking(input: CreateBookingInput) {
   const equipmentSubtotalPaise = Math.round(chargeableDuration * selectedRatePaise);
   const totalPaise = equipmentSubtotalPaise + transportFee.totalFeePaise;
 
-  return prisma.booking.create({
+  const booking = await prisma.booking.create({
     data: {
       userId,
       equipmentId: input.equipmentId,
@@ -133,6 +136,23 @@ export async function createBooking(input: CreateBookingInput) {
       },
     },
   });
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, phoneNumber: true },
+  });
+
+  notifyPartnersForBooking(booking.id, input.lat, input.lng, {
+    equipmentName: equipment.name,
+    equipmentCategory: equipment.category,
+    customerName: user?.name || user?.phoneNumber || "Customer",
+    locationAddress: input.address || "Location on map",
+    startDate,
+    durationDays: isHourly ? undefined : dailyDays,
+    durationHours: isHourly ? input.duration : undefined,
+  }).catch((err) => console.error("[partner-notification] failed:", err));
+
+  return booking;
 }
 
 export async function listBookings() {

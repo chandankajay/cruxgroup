@@ -29,8 +29,14 @@ export type MyBookingCardData = {
   }[];
 };
 
-const ACTIVE: BookingStatus[] = ["PENDING", "CONFIRMED", "DISPATCHED"];
-const PAST: BookingStatus[] = ["COMPLETED", "CANCELLED"];
+const ACTIVE: BookingStatus[] = [
+  "PENDING",
+  "PENDING_PARTNER",
+  "PARTNER_ACCEPTED",
+  "CONFIRMED",
+  "DISPATCHED",
+];
+const PAST: BookingStatus[] = ["COMPLETED", "CANCELLED", "PARTNER_DECLINED"];
 
 function sortTimeMs(b: {
   trips: { scheduledDate: Date }[];

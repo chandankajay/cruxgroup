@@ -5,6 +5,9 @@ import { createBooking, listBookings, listBookingsByPartner } from "../services/
 
 const BookingStatusEnum = z.enum([
   "PENDING",
+  "PENDING_PARTNER",
+  "PARTNER_ACCEPTED",
+  "PARTNER_DECLINED",
   "CONFIRMED",
   "DISPATCHED",
   "COMPLETED",

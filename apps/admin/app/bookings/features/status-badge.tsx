@@ -14,6 +14,24 @@ const STATUS_CONFIG: Record<BookingStatus, StatusConfig> = {
     text: "#C2410C",
     dot: "#F97316",
   },
+  PENDING_PARTNER: {
+    label: "Awaiting Partner",
+    bg: "#FEF3C7",
+    text: "#B45309",
+    dot: "#F59E0B",
+  },
+  PARTNER_ACCEPTED: {
+    label: "Partner Accepted",
+    bg: "#ECFDF5",
+    text: "#047857",
+    dot: "#10B981",
+  },
+  PARTNER_DECLINED: {
+    label: "Partner Declined",
+    bg: "#FEF2F2",
+    text: "#B91C1C",
+    dot: "#EF4444",
+  },
   CONFIRMED: {
     label: "Confirmed",
     bg: "#F0FDF4",

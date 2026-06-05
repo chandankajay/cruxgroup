@@ -8,7 +8,8 @@
     "./aisensy": "./src/aisensy.ts",
     "./geo": "./src/geo.ts",
     "./invoice": "./src/invoice/index.ts",
-    "./legal/partner-terms": "./src/legal/partner-terms.ts"
+    "./legal/partner-terms": "./src/legal/partner-terms.ts",
+    "./partner-booking-notification": "./src/partner-booking-notification.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

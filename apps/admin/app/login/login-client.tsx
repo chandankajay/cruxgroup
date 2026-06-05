@@ -41,10 +41,16 @@ const ADMIN_SUBHEAD =
 interface LoginClientProps {
   readonly isAccessDenied: boolean;
   readonly isConfiguration: boolean;
+  readonly callbackUrl: string;
   readonly googleLoginAction: () => Promise<void>;
 }
 
-export function LoginClient({ isAccessDenied, isConfiguration, googleLoginAction }: LoginClientProps) {
+export function LoginClient({
+  isAccessDenied,
+  isConfiguration,
+  callbackUrl,
+  googleLoginAction,
+}: LoginClientProps) {
   const showError = isAccessDenied || isConfiguration;
 
   const logo = (
@@ -106,7 +112,7 @@ export function LoginClient({ isAccessDenied, isConfiguration, googleLoginAction
         <div className="h-px flex-1 bg-border" />
       </div>
 
-      <PhoneOtpForm />
+      <PhoneOtpForm callbackUrl={callbackUrl} />
       <TrustFooter />
 
       <p className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground">

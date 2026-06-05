@@ -4,7 +4,12 @@ import type { MyBookingCardData, TripStatus } from "../data";
 function statusBadgeClass(status: MyBookingCardData["status"]): string {
   switch (status) {
     case "PENDING":
+    case "PENDING_PARTNER":
       return "bg-amber-100 text-amber-900 ring-amber-400/35";
+    case "PARTNER_ACCEPTED":
+      return "bg-emerald-100 text-emerald-900 ring-emerald-500/30";
+    case "PARTNER_DECLINED":
+      return "bg-red-100 text-red-900 ring-red-400/30";
     case "CONFIRMED":
       return "bg-sky-100 text-sky-900 ring-sky-500/30";
     case "DISPATCHED":
@@ -20,6 +25,12 @@ function statusBadgeClass(status: MyBookingCardData["status"]): string {
 
 function statusLabel(status: MyBookingCardData["status"]): string {
   switch (status) {
+    case "PENDING_PARTNER":
+      return "Awaiting partner";
+    case "PARTNER_ACCEPTED":
+      return "Partner accepted";
+    case "PARTNER_DECLINED":
+      return "Partner declined";
     case "DISPATCHED":
       return "Dispatched";
     default:
