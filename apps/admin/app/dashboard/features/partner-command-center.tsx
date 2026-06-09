@@ -215,7 +215,7 @@ export function PartnerCommandCenter({
                   Add New Equipment
                 </Link>
                 <Link
-                  href="/settings/kyc"
+                  href="/settings/kyc?edit=true"
                   className="flex h-12 w-full touch-manipulation select-none items-center justify-center rounded-xl border-2 border-primary/40 bg-primary/10 px-4 text-center text-sm font-semibold text-foreground active:bg-primary/20 lg:hover:bg-primary/15"
                 >
                   Update KYC

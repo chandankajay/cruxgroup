@@ -1,0 +1,22 @@
+import { Button } from "../ui/Button";
+import { WHATSAPP_ORDER_URL } from "../../lib/env";
+
+export function WhatsAppCta({
+  message,
+  className,
+}: {
+  readonly message?: string;
+  readonly className?: string;
+}) {
+  const href = message
+    ? `${WHATSAPP_ORDER_URL}?text=${encodeURIComponent(message)}`
+    : WHATSAPP_ORDER_URL;
+
+  return (
+    <div className={className}>
+      <Button href={href} variant="primary" size="lg" external>
+        Book via WhatsApp — available 24/7
+      </Button>
+    </div>
+  );
+}

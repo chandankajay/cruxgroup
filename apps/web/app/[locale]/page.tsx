@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import type { SiteBlock } from "@prisma/client";
 import { Hero } from "../../components/sections/Hero";
 import { MachineSections } from "../../components/sections/MachineSections";
+import { ServiceAreas } from "../../components/sections/ServiceAreas";
+import { ContractorUseCases } from "../../components/sections/ContractorUseCases";
 import { StatsBar } from "../../components/sections/StatsBar";
 import { Fleet } from "../../components/sections/Fleet";
 import { ForPartners } from "../../components/sections/ForPartners";
@@ -15,6 +17,7 @@ import {
   getSiteSection,
 } from "../../lib/content";
 import { SITE_URL } from "../../lib/env";
+import { parseLocale } from "../../lib/locale";
 
 export const revalidate = 3600;
 
@@ -38,7 +41,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function HomePage(): Promise<React.ReactElement> {
+export default async function HomePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<React.ReactElement> {
+  const { locale: raw } = await params;
+  const locale = parseLocale(raw);
+
   const [
     heroCfg,
     statsSection,
@@ -112,6 +122,8 @@ export default async function HomePage(): Promise<React.ReactElement> {
         }}
       />
       <MachineSections />
+      <ServiceAreas locale={locale} />
+      <ContractorUseCases locale={locale} />
       <StatsBar blocks={statsBlocks} />
       <Fleet
         heading={{

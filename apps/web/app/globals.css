@@ -185,3 +185,28 @@ body {
   margin-bottom: 1rem;
   line-height: 1.7;
 }
+
+.prose-crux table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.prose-crux th,
+.prose-crux td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.prose-crux th {
+  background: var(--surface);
+  color: var(--offwhite);
+  font-weight: 600;
+}
+
+.prose-crux ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}

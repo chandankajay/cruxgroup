@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -50,7 +50,7 @@ export function WalkInBookingForm({
   rescheduleLoadError,
 }: WalkInBookingFormProps) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [submitting, setSubmitting] = useState(false);
   const [customers, setCustomers] = useState(initialCustomers);
   const [availability, setAvailability] = useState<"idle" | "ok" | "bad" | "checking">("idle");
   const [quickOpen, setQuickOpen] = useState(false);
@@ -155,8 +155,9 @@ export function WalkInBookingForm({
     }
   }, [equipmentId, startLocal, endLocal, reschedule]);
 
-  const onSubmit = (values: WalkInBookingValues) => {
-    startTransition(async () => {
+  const onSubmit = handleSubmit(async (values: WalkInBookingValues) => {
+    setSubmitting(true);
+    try {
       if (reschedule) {
         const res = await updateWalkInBookingScheduleAction({
           bookingId: reschedule.bookingId,
@@ -167,7 +168,7 @@ export function WalkInBookingForm({
         });
         if (res.ok) {
           toast.success("Schedule updated. Trip start/end and booking dates are aligned.");
-          router.push("/bookings");
+          router.push("/jobs");
           router.refresh();
         } else {
           toast.error(res.error);
@@ -186,13 +187,15 @@ export function WalkInBookingForm({
             "Walk-in booking created. Operator and customer notifications sent when templates are configured."
           );
         }
-        router.push("/bookings");
+        router.push("/jobs");
         router.refresh();
       } else {
         toast.error(res.error);
       }
-    });
-  };
+    } finally {
+      setSubmitting(false);
+    }
+  });
 
   async function onQuickAddCustomer() {
     if (!quickName.trim() || !quickPhone.trim()) {
@@ -262,7 +265,7 @@ export function WalkInBookingForm({
         </div>
       ) : null}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
+      <form onSubmit={onSubmit} className="space-y-10">
         <fieldset
           disabled={!!reschedule}
           className="m-0 space-y-10 border-0 p-0 disabled:opacity-60"
@@ -552,9 +555,9 @@ export function WalkInBookingForm({
         <Button
           type="submit"
           className="min-h-12 w-full sm:w-auto"
-          disabled={pending || equipment.length === 0 || !!rescheduleLoadError}
+          disabled={submitting || equipment.length === 0 || !!rescheduleLoadError}
         >
-          {pending
+          {submitting
             ? reschedule
               ? "Saving…"
               : "Creating…"

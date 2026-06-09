@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { auth } from "../../lib/auth";
 import { redirect } from "next/navigation";
 import { fetchPartnerBookings } from "./actions";
@@ -13,5 +14,9 @@ export default async function MyBookingsPage() {
 
   const bookings = await fetchPartnerBookings(userId);
 
-  return <MyBookingsContent initialData={bookings} />;
+  return (
+    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading bookings…</p>}>
+      <MyBookingsContent initialData={bookings} />
+    </Suspense>
+  );
 }

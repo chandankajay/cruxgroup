@@ -98,9 +98,11 @@ const sharedKycTextFields = {
 };
 
 export function buildKycTrustFormSchema(opts: {
-  /** Submitted/verified: no file required (read-only form). */
+  /** Submitted/verified (when not editing): no file required (read-only form). */
   readonly isReadOnly: boolean;
   readonly isRejectedResubmit: boolean;
+  /** Verified partner updating documents — may omit files when URLs exist. */
+  readonly isVerifiedUpdate?: boolean;
   readonly existingPanDocUrl: string | null;
   readonly existingAadhaarDocUrl: string | null;
   readonly existingChequeUrl: string | null;
@@ -113,20 +115,21 @@ export function buildKycTrustFormSchema(opts: {
       chequeDoc: optionalFileValueForDisplay,
     });
   }
-  const { isRejectedResubmit } = opts;
+  const canOmitExisting =
+    (opts.isRejectedResubmit || opts.isVerifiedUpdate) ?? false;
   return z.object({
     ...sharedKycTextFields,
     panDoc: fileFieldForContext(
       opts.existingPanDocUrl,
-      isRejectedResubmit && Boolean(opts.existingPanDocUrl)
+      canOmitExisting && Boolean(opts.existingPanDocUrl)
     ),
     aadhaarDoc: fileFieldForContext(
       opts.existingAadhaarDocUrl,
-      isRejectedResubmit && Boolean(opts.existingAadhaarDocUrl)
+      canOmitExisting && Boolean(opts.existingAadhaarDocUrl)
     ),
     chequeDoc: fileFieldForContext(
       opts.existingChequeUrl,
-      isRejectedResubmit && Boolean(opts.existingChequeUrl)
+      canOmitExisting && Boolean(opts.existingChequeUrl)
     ),
   });
 }

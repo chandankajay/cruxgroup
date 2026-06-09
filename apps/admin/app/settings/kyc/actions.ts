@@ -170,11 +170,15 @@ export async function uploadKycAction(formData: FormData): Promise<TrustCenterSu
       };
     }
 
-    if (partner.kycStatus !== "PENDING" && partner.kycStatus !== "REJECTED") {
+    if (
+      partner.kycStatus !== "PENDING" &&
+      partner.kycStatus !== "REJECTED" &&
+      partner.kycStatus !== "VERIFIED"
+    ) {
       return {
         success: false,
         code: "FORBIDDEN",
-        error: "KYC can only be submitted when your status is not yet received or you are correcting a rejection.",
+        error: "KYC can only be submitted when your status is not yet received, you are correcting a rejection, or you are updating verified documents.",
       };
     }
 
@@ -190,7 +194,8 @@ export async function uploadKycAction(formData: FormData): Promise<TrustCenterSu
     const ifsc = normalizeIfsc(bankIfscCode);
     const bankAccount = normalizeBankAccount(bankAccountNumber);
 
-    const canReuseOnResubmit = partner.kycStatus === "REJECTED";
+    const canReuseOnResubmit =
+      partner.kycStatus === "REJECTED" || partner.kycStatus === "VERIFIED";
     const panFile = formData.get("panDoc");
     const aadhaarFile = formData.get("aadhaarDoc");
     const chequeFile = formData.get("chequeDoc");

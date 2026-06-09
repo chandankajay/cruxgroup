@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { KycStatus } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -52,26 +53,46 @@ function duplicateCodeMessage(result: TrustCenterSubmitResult): string | null {
   return null;
 }
 
-export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnapshot }) {
+export function KycTrustCenterForm({
+  snapshot,
+  initialEditMode = false,
+}: {
+  snapshot: TrustCenterKycSnapshot;
+  initialEditMode?: boolean;
+}) {
+  const router = useRouter();
   const { kycStatus } = snapshot;
+  const [isEditing, setIsEditing] = useState(
+    initialEditMode && kycStatus === "VERIFIED"
+  );
   /**
    * Prisma: `PENDING` = not yet submitted; `SUBMITTED` = under review; `VERIFIED` = approved;
    * `REJECTED` = resubmit path.
    */
-  const isReadOnlyKyc = kycStatus === "SUBMITTED" || kycStatus === "VERIFIED";
-  const canEdit = kycStatus === "PENDING" || kycStatus === "REJECTED";
+  const isReadOnlyKyc =
+    (kycStatus === "SUBMITTED" || kycStatus === "VERIFIED") && !isEditing;
+  const canEdit = kycStatus === "PENDING" || kycStatus === "REJECTED" || isEditing;
   const showSubmit = canEdit;
+  const isVerifiedUpdate = kycStatus === "VERIFIED" && isEditing;
 
   const formSchema = useMemo(
     () =>
       buildKycTrustFormSchema({
         isReadOnly: isReadOnlyKyc,
         isRejectedResubmit: kycStatus === "REJECTED",
+        isVerifiedUpdate,
         existingPanDocUrl: snapshot.panDocUrl,
         existingAadhaarDocUrl: snapshot.aadhaarDocUrl,
         existingChequeUrl: snapshot.cancelledChequeUrl,
       }),
-    [isReadOnlyKyc, kycStatus, snapshot.panDocUrl, snapshot.aadhaarDocUrl, snapshot.cancelledChequeUrl]
+    [
+      isReadOnlyKyc,
+      kycStatus,
+      isVerifiedUpdate,
+      snapshot.panDocUrl,
+      snapshot.aadhaarDocUrl,
+      snapshot.cancelledChequeUrl,
+    ]
   );
 
   const defaultValues: KycTrustFormValues = useMemo(
@@ -160,7 +181,7 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
           </Alert>
         ) : null}
 
-        {kycStatus === "VERIFIED" ? (
+        {kycStatus === "VERIFIED" && !isEditing ? (
           <Alert
             className="border-emerald-500/60 bg-emerald-50/90 text-emerald-950 dark:border-emerald-500/50 dark:bg-emerald-950/30 dark:text-emerald-50 [&>svg]:text-emerald-700 dark:[&>svg]:text-emerald-200"
             role="status"
@@ -169,6 +190,18 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
             <AlertTitle>KYC approved</AlertTitle>
             <AlertDescription>
               Your KYC is complete. Fleet and payout features use this verified profile.
+              Upload new documents if your details have changed.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {kycStatus === "VERIFIED" && isEditing ? (
+          <Alert variant="amber" className="border-amber-500/60">
+            <Clock className="h-4 w-4" />
+            <AlertTitle>Updating verified KYC</AlertTitle>
+            <AlertDescription>
+              Submitting changes will send your documents back for review. You can keep
+              existing files or upload replacements.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -355,7 +388,20 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
         </Card>
 
         {showSubmit ? (
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            {kycStatus === "VERIFIED" && isEditing ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pending}
+                onClick={() => {
+                  setIsEditing(false);
+                  router.replace("/settings/kyc");
+                }}
+              >
+                Cancel
+              </Button>
+            ) : null}
             <Button
               type="submit"
               disabled={pending}
@@ -365,10 +411,23 @@ export function KycTrustCenterForm({ snapshot }: { snapshot: TrustCenterKycSnaps
               <span>
                 {pending
                   ? "Uploading documents…"
-                  : kycStatus === "REJECTED"
+                  : kycStatus === "REJECTED" || isVerifiedUpdate
                     ? "Resubmit KYC"
                     : "Submit for verification"}
               </span>
+            </Button>
+          </div>
+        ) : kycStatus === "VERIFIED" ? (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsEditing(true);
+                router.replace("/settings/kyc?edit=true");
+              }}
+            >
+              Edit documents
             </Button>
           </div>
         ) : null}

@@ -36,6 +36,9 @@ export function isShellNavItemActive(pathname: string, item: Pick<NavItem, "href
   if (item.href === "/bookings") {
     return pathname === "/bookings";
   }
+  if (item.href === "/my-bookings") {
+    return pathname === "/my-bookings" || pathname.startsWith("/my-bookings/");
+  }
   if (item.href === "/bookings/new") {
     return pathname === "/bookings/new" || pathname.startsWith("/bookings/new/");
   }
@@ -171,13 +174,11 @@ const NAV_ITEM_DEFINITIONS: readonly NavItemDefinition[] = [
     icon: <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />,
   },
   {
-    navId: "partner-requests",
-    href: "/requests",
-    label: "Inbound requests",
+    navId: "partner-bookings",
+    href: "/my-bookings",
+    label: "Bookings",
     roles: ["PARTNER"],
-    icon: (
-      <Icon d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    ),
+    icon: <Icon d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />,
   },
   {
     navId: "partner-fleet",
@@ -185,13 +186,6 @@ const NAV_ITEM_DEFINITIONS: readonly NavItemDefinition[] = [
     label: "Fleet & health",
     roles: ["PARTNER"],
     icon: <Icon d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />,
-  },
-  {
-    navId: "partner-my-bookings",
-    href: "/my-bookings",
-    label: "My bookings",
-    roles: ["PARTNER"],
-    icon: <Icon d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />,
   },
   {
     navId: "partner-payroll",

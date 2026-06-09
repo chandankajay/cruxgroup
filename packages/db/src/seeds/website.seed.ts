@@ -230,6 +230,15 @@ const SECTIONS: SectionSeed[] = [
         body_te: "ఇరుకు ప్రదేశాల కంపాక్షన్.",
         icon: "Layers",
       },
+      {
+        type: "EQUIPMENT_CARD",
+        order: 10,
+        heading_en: "Borewell Drilling",
+        heading_te: "బోర్వెల్ తవ్వకం",
+        body_en: "Residential and farm borewells via our verified partner network.",
+        body_te: "Ma verified partner network dwara residential mariyu farm borewells.",
+        icon: "Drill",
+      },
     ],
   },
   {
