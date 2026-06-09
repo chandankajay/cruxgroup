@@ -153,7 +153,7 @@ export async function operatorEndJobAction(
 
       const end = new Date();
       const totalBilledHours = billedHoursFromRange(actualStartTime, end);
-      const reviewToken = randomUUID();
+      const reviewToken = trip.reviewToken ?? randomUUID();
 
       let totalPaise = Math.round(totalBilledHours * trip.lockedHourlyRate);
       if (trip.booking?.pricing.unit === "daily") {
@@ -167,7 +167,7 @@ export async function operatorEndJobAction(
           actualEndTime: end,
           totalBilledHours,
           totalAmount: totalPaise,
-          reviewToken,
+          ...(trip.reviewToken ? {} : { reviewToken }),
         },
         select: { id: true },
       });

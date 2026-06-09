@@ -200,6 +200,7 @@ model Partner {
   equipment Equipment[]
   trips     Trip[]
   bookingResponseTokens BookingResponseToken[]
+  employees Employee[]
 
   @@index([panNumber])
   @@index([aadhaarNumber])
@@ -377,8 +378,8 @@ model Trip {
   endOtp        String     @default("")
   /// Magic-link token for operator actions (UUID)
   operatorToken String     @unique @default(uuid())
-  /// Customer review link (UUID); set when the trip is marked COMPLETED
-  reviewToken   String?    @unique
+  /// Customer review link (UUID); assigned at booking via @default(uuid())
+  reviewToken   String?    @unique @default(uuid())
 
   /// Locked unit rate: paise/hour when `booking.pricing.unit` is hourly, else paise/day
   lockedHourlyRate   Int
@@ -570,6 +571,46 @@ model PayrollEntry {
   @@unique([operatorId, year, month])
   @@index([operatorId])
   @@map("payroll_entries")
+}
+
+// ─── Partner OS: Staff payroll (employees) ─────────────────────────────────────
+
+model Employee {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  partnerId     String   @db.ObjectId
+  partner       Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  name          String
+  empId         String
+  dateOfJoining DateTime
+  /// Monthly base salary in paise
+  baseSalary    Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  payrollRecords PayrollRecord[]
+
+  @@unique([partnerId, empId])
+  @@index([partnerId])
+  @@map("employees")
+}
+
+model PayrollRecord {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  employeeId String   @db.ObjectId
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  month      Int
+  year       Int
+  basicPay   Int
+  incentives Int      @default(0)
+  deductions Int      @default(0)
+  netPay     Int
+  pdfUrl     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, year, month])
+  @@index([employeeId])
+  @@map("payroll_records")
 }
 
 // ─── Partner OS: Fleet maintenance & hour meters ─────────────────────────────

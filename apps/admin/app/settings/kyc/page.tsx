@@ -1,16 +1,24 @@
 import Link from "next/link";
-import { auth } from "../../../lib/auth";
+import { Suspense } from "react";
+import { auth } from "../../lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@repo/db";
 import { KycTrustCenterForm, type TrustCenterKycSnapshot } from "./kyc-trust-center-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function PartnerTrustCenterKycPage() {
+export default async function PartnerTrustCenterKycPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
   }
+
+  const sp = await searchParams;
+  const initialEditMode = sp.edit === "true";
 
   const role = (session.user as { role?: string }).role;
   if (role !== "PARTNER") {
@@ -106,10 +114,13 @@ export default async function PartnerTrustCenterKycPage() {
         </p>
       </div>
 
-      <KycTrustCenterForm
-        key={`kyc-trust-${snapshot.kycStatus}-${snapshot.updatedAtIso}`}
-        snapshot={snapshot}
-      />
+      <Suspense fallback={<p className="text-sm text-muted-foreground">Loading KYC form…</p>}>
+        <KycTrustCenterForm
+          key={`kyc-trust-${snapshot.kycStatus}-${snapshot.updatedAtIso}-${initialEditMode}`}
+          snapshot={snapshot}
+          initialEditMode={initialEditMode}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use server";
 
-import { randomInt } from "node:crypto";
+import { randomUUID, randomInt } from "node:crypto";
 import { prisma } from "@repo/db";
 import {
   sendBookingConfirmationWhatsApp,
@@ -59,6 +59,78 @@ function bookingsAppOrigin(): string {
     process.env["NEXT_PUBLIC_BOOKINGS_URL"] ??
     "http://localhost:3000"
   ).replace(/\/$/, "");
+}
+
+type WalkInCustomerInput = {
+  name: string;
+  phone: string;
+  company?: string;
+  gstin?: string;
+};
+
+/**
+ * Partner walk-in / quick-add CRM customer.
+ * Links each row to a platform `User` by phone so we never insert multiple `userId: null`
+ * rows (MongoDB unique indexes allow only one null).
+ */
+async function upsertWalkInCustomer(input: WalkInCustomerInput): Promise<{
+  id: string;
+  name: string;
+  phone: string;
+}> {
+  const phone = normalizeAdminPhone(input.phone);
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 10) {
+    throw new Error("Invalid phone number");
+  }
+
+  const platformUser = await prisma.user.upsert({
+    where: { phoneNumber: phone },
+    create: {
+      phoneNumber: phone,
+      name: input.name.trim(),
+      role: "USER",
+    },
+    update: { name: input.name.trim() },
+    select: { id: true },
+  });
+
+  const payload = {
+    name: input.name.trim(),
+    phone,
+    company: input.company?.trim() ?? "",
+    gstin: input.gstin?.trim() || null,
+  };
+
+  const byUser = await prisma.customer.findFirst({
+    where: { userId: platformUser.id },
+    select: { id: true },
+  });
+  if (byUser) {
+    return prisma.customer.update({
+      where: { id: byUser.id },
+      data: payload,
+      select: { id: true, name: true, phone: true },
+    });
+  }
+
+  const byPhone = await prisma.customer.findFirst({
+    where: { phone },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true },
+  });
+  if (byPhone) {
+    return prisma.customer.update({
+      where: { id: byPhone.id },
+      data: { ...payload, userId: platformUser.id },
+      select: { id: true, name: true, phone: true },
+    });
+  }
+
+  return prisma.customer.create({
+    data: { ...payload, userId: platformUser.id },
+    select: { id: true, name: true, phone: true },
+  });
 }
 
 export type WalkInEquipmentOption = {
@@ -213,22 +285,8 @@ export async function createQuickCustomerAction(input: {
   const actor = await requireWalkInDesk();
   if (!actor) return { ok: false, error: "Unauthorized" };
 
-  const phone = normalizeAdminPhone(input.phone);
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 10) {
-    return { ok: false, error: "Invalid phone number" };
-  }
-
   try {
-    const row = await prisma.customer.create({
-      data: {
-        name: input.name.trim(),
-        phone,
-        company: input.company?.trim() ?? "",
-        gstin: input.gstin?.trim() || null,
-      },
-      select: { id: true },
-    });
+    const row = await upsertWalkInCustomer(input);
     return { ok: true, id: row.id };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Could not create customer";
@@ -338,14 +396,11 @@ export async function createWalkInBookingAction(
     customerName = c.name;
     customerPhone = c.phone;
   } else {
-    const phone = normalizeAdminPhone(data.newPhone!);
-    const created = await prisma.customer.create({
-      data: {
-        name: data.newName!.trim(),
-        phone,
-        company: data.newCompany?.trim() ?? "",
-        gstin: data.newGstin?.trim() || null,
-      },
+    const created = await upsertWalkInCustomer({
+      name: data.newName!,
+      phone: data.newPhone!,
+      company: data.newCompany,
+      gstin: data.newGstin,
     });
     customerId = created.id;
     customerName = created.name;
@@ -416,6 +471,7 @@ export async function createWalkInBookingAction(
           status: "ENROUTE",
           startOtp,
           endOtp,
+          reviewToken: randomUUID(),
           lockedHourlyRate: quote.unitRatePaise,
           lockedTransportFee: quote.transportFeePaise,
           totalAmount: quote.totalPaise,

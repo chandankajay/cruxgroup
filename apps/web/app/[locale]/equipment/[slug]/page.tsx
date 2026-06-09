@@ -10,8 +10,17 @@ import {
   type MachineSlide,
 } from "../../../../components/sections/machine-sections-data";
 import { Button } from "../../../../components/ui/Button";
+import { WhatsAppCta } from "../../../../components/seo/whatsapp-cta";
+import { LOCATIONS } from "../../../../lib/seo/data/locations";
+import {
+  getUseCasesForEquipment,
+  type UseCase,
+} from "../../../../lib/seo/data/use-cases";
+import { fleetHeadingToEquipmentSlug } from "../../../../lib/seo/equipment-slugs";
 
 export const revalidate = 3600;
+
+export const dynamicParams = true;
 
 const EQUIPMENT_SLUGS = MACHINE_SLIDES.map((s) => s.id);
 
@@ -25,45 +34,26 @@ interface EquipmentData {
   cta: (locale: Locale) => string;
 }
 
-const SEO: Record<
-  string,
-  { title: string; description: string; keywords: string[] }
-> = {
+const SEO: Record<string, { title: string; description: string }> = {
   jcb: {
-    title: "JCB on Rent in Telangana | Crux Group",
+    title: "JCB Backhoe on Rent in Hyderabad & Telangana — Crux Group",
     description:
-      "Rent a JCB Backhoe Loader with trained operator across Telangana. Hourly & daily rates. Book online or via WhatsApp.",
-    keywords: [
-      "JCB rental Telangana",
-      "JCB on hire Hyderabad",
-      "JCB backhoe loader rent",
-      "JCB rent near me",
-      "earthmoving equipment Telangana",
-    ],
+      "Rent a JCB backhoe for site excavation, stone breaking, earthmoving, and site levelling across Hyderabad's ORR corridor and Telangana — trained operators, hourly and daily rates.",
   },
   posthole: {
-    title: "Post Hole Digger on Rent in Telangana | Crux Group",
+    title: "Post Hole Digger for Rent in Hyderabad & Telangana — Crux Group",
     description:
-      "Hire a Post Hole Digger for fencing, solar farms, and foundations. Available across Telangana with trained operators.",
-    keywords: [
-      "post hole digger rental Telangana",
-      "auger machine on hire Hyderabad",
-      "fencing drilling machine rent",
-      "post hole digger near me",
-      "solar farm auger Telangana",
-    ],
+      "Hire a post hole digger for hole digging, earthing rod pits, foundation holes, and auger work across Hyderabad and Telangana — fencing, solar, and telecom foundations with trained operators.",
   },
   crane: {
     title: "Crane on Rent in Telangana | Crux Group",
     description:
       "Book 16–100 ton cranes for steel erection, heavy lifts, and infrastructure projects across Telangana.",
-    keywords: [
-      "crane rental Telangana",
-      "crane on hire Hyderabad",
-      "heavy crane rent",
-      "mobile crane rental near me",
-      "construction crane Telangana",
-    ],
+  },
+  borewell: {
+    title: "Borewell Drilling in Hyderabad & Telangana — Crux Group Partner Network",
+    description:
+      "Borewell digging and water bore holes for residential plots, farms, and construction sites across Hyderabad and Telangana — fulfilled through our verified partner network.",
   },
 };
 
@@ -80,13 +70,13 @@ async function getEquipmentFromDB(
   const block = section.blocks.find(
     (b) =>
       b.type === "EQUIPMENT_CARD" &&
-      b.heading_en?.toLowerCase().includes(slug === "posthole" ? "post" : slug),
+      fleetHeadingToEquipmentSlug(b.heading_en) === slug,
   );
-  if (!block) return null;
+  if (!block?.imageUrl) return null;
 
   return {
     slug,
-    image: block.imageUrl ?? "",
+    image: block.imageUrl,
     imageAlt: block.heading_en ?? slug,
     title: (locale) =>
       (locale === "te" ? block.heading_te : block.heading_en) ??
@@ -118,6 +108,20 @@ function slideToEquipmentData(slide: MachineSlide): EquipmentData {
   };
 }
 
+function topLocationsForEquipment(slug: string, useCases: UseCase[]) {
+  const slugCounts = new Map<string, number>();
+  for (const uc of useCases) {
+    for (const loc of uc.locations) {
+      slugCounts.set(loc, (slugCounts.get(loc) ?? 0) + 1);
+    }
+  }
+  return [...slugCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([s]) => LOCATIONS.find((l) => l.slug === s))
+    .filter((l): l is NonNullable<typeof l> => l !== undefined);
+}
+
 export function generateStaticParams(): { locale: string; slug: string }[] {
   const locales = ["en", "te"] as const;
   return locales.flatMap((locale) =>
@@ -139,7 +143,6 @@ export async function generateMetadata({
   return {
     title: seo.title,
     description: seo.description,
-    keywords: seo.keywords,
     openGraph: {
       title: seo.title,
       description: seo.description,
@@ -169,9 +172,12 @@ export default async function EquipmentPage({
     notFound();
   }
 
-  const dbData = await getEquipmentFromDB(slug);
+  const isBorewell = slug === "borewell";
   const slide = getSlideData(slug);
-  const data = dbData ?? (slide ? slideToEquipmentData(slide) : null);
+  const slideData = slide ? slideToEquipmentData(slide) : null;
+  const dbData =
+    !isBorewell && slideData ? await getEquipmentFromDB(slug) : null;
+  const data = slideData ?? dbData;
 
   if (!data) notFound();
 
@@ -179,57 +185,13 @@ export default async function EquipmentPage({
   const description = data.description(locale);
   const specs = data.specs(locale);
   const cta = data.cta(locale);
+  const useCases = getUseCasesForEquipment(slug);
+  const topLocations = topLocationsForEquipment(slug, useCases);
+
   const coverageLabel =
     locale === "te"
       ? "తెలంగాణ అంతటా అందుబాటులో"
       : "Available across Telangana";
-
-  const useCases: Record<string, { en: string[]; te: string[] }> = {
-    jcb: {
-      en: [
-        "Foundation digging & trenching",
-        "Site leveling & grading",
-        "Loading & material handling",
-        "Road construction & drainage",
-      ],
-      te: [
-        "పునాది తవ్వకం & ట్రెంచింగ్",
-        "సైట్ లెవలింగ్ & గ్రేడింగ్",
-        "లోడింగ్ & మెటీరియల్ హ్యాండ్లింగ్",
-        "రోడ్ నిర్మాణం & డ్రెయినేజ్",
-      ],
-    },
-    posthole: {
-      en: [
-        "Farm fencing & boundary marking",
-        "Solar farm pole installation",
-        "Foundation piling for buildings",
-        "Plantation & tree planting holes",
-      ],
-      te: [
-        "వ్యవసాయ ఫెన్సింగ్ & హద్దు గుర్తింపు",
-        "సోలార్ ఫార్మ్ పోల్ ఇన్‌స్టాలేషన్",
-        "భవనాల పునాది పైలింగ్",
-        "మొక్కల & చెట్ల నాటడం గుంతలు",
-      ],
-    },
-    crane: {
-      en: [
-        "Steel structure erection",
-        "Heavy machinery installation",
-        "Bridge & flyover construction",
-        "Industrial plant maintenance",
-      ],
-      te: [
-        "ఉక్కు నిర్మాణం",
-        "భారీ యంత్రాల ఇన్‌స్టాలేషన్",
-        "బ్రిడ్జ్ & ఫ్లైఓవర్ నిర్మాణం",
-        "పారిశ్రామిక ప్లాంట్ నిర్వహణ",
-      ],
-    },
-  };
-
-  const currentUseCases = useCases[slug]?.[locale] ?? useCases[slug]?.en ?? [];
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -262,7 +224,6 @@ export default async function EquipmentPage({
         ← {locale === "te" ? "హోమ్‌కి తిరిగి" : "Back to Home"}
       </Link>
 
-      {/* Hero */}
       <div className="relative mt-8 aspect-[21/9] w-full overflow-hidden rounded-2xl">
         <Image
           src={data.image}
@@ -274,18 +235,36 @@ export default async function EquipmentPage({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-dark/80 to-transparent" />
         <div className="absolute bottom-0 left-0 p-6 sm:p-10">
-          <h1 className="text-3xl font-extrabold text-offwhite drop-shadow-lg md:text-5xl">
-            {title}
-          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-extrabold text-offwhite drop-shadow-lg md:text-5xl">
+              {title}
+            </h1>
+            {isBorewell ? (
+              <span className="rounded-full border border-amber-500/40 bg-amber-500/20 px-3 py-1 text-sm font-medium text-amber-300">
+                Partner Network
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      {/* Description */}
       <section className="mt-10">
         <p className="text-lg leading-relaxed text-muted">{description}</p>
       </section>
 
-      {/* Specs */}
+      {isBorewell ? (
+        <section className="mt-8 rounded-xl border border-amber-500/30 bg-amber-500/5 p-6">
+          <h2 className="text-lg font-bold text-amber-300">
+            {locale === "te" ? "పార్ట్నర్ నెట్‌వర్క్" : "Partner Network Service"}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Borewell drilling is fulfilled through our verified partner network.
+            Availability subject to location and depth requirements. WhatsApp us
+            for a quote — there is no self-serve booking for borewell rigs.
+          </p>
+        </section>
+      ) : null}
+
       {specs.length > 0 && (
         <section className="mt-8">
           <ul className="flex flex-wrap gap-3">
@@ -301,27 +280,69 @@ export default async function EquipmentPage({
         </section>
       )}
 
-      {/* Use cases */}
-      {currentUseCases.length > 0 && (
+      {useCases.length > 0 && (
         <section className="mt-12">
           <h2 className="text-xl font-bold text-offwhite">
-            {locale === "te" ? "ఉపయోగాలు" : "Use Cases"}
+            {locale === "te" ? "Common jobs we handle" : "Common jobs we handle"}
           </h2>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {currentUseCases.map((uc) => (
+          <ul className="mt-4 space-y-4">
+            {useCases.map((uc) => (
               <li
-                key={uc}
-                className="flex items-start gap-2 text-muted"
+                key={uc.slug}
+                className="rounded-xl border border-border bg-surface/30 p-4"
               >
-                <span className="mt-1 text-brand">✓</span>
-                <span>{uc}</span>
+                <h3 className="font-semibold text-offwhite">
+                  {locale === "te" ? uc.displayName_te : uc.displayName}
+                </h3>
+                <p className="mt-1 text-sm text-muted">
+                  {locale === "te" && uc.description_te
+                    ? uc.description_te.split(".")[0]
+                    : uc.description.split(".")[0]}
+                  .
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {uc.locations.slice(0, 3).map((locSlug) => {
+                    const loc = LOCATIONS.find((l) => l.slug === locSlug);
+                    if (!loc) return null;
+                    return (
+                      <Link
+                        key={locSlug}
+                        href={`/${locale}/${locSlug}`}
+                        className="text-xs text-brand hover:text-accent"
+                      >
+                        {loc.displayName}
+                      </Link>
+                    );
+                  })}
+                </div>
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      {/* Coverage */}
+      {topLocations.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-lg font-bold text-offwhite">
+            {locale === "te" ? "Top service areas" : "Top service areas"}
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {topLocations.map((loc) => (
+              <Link
+                key={loc.slug}
+                href={`/${locale}/${loc.slug}`}
+                className="rounded-xl border border-border bg-surface/30 p-4 transition-colors hover:border-brand/40"
+              >
+                <h3 className="font-semibold text-offwhite">{loc.displayName}</h3>
+                <p className="mt-1 text-xs text-muted">
+                  {loc.district} · {loc.distanceFromHyderabad}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="mt-12 rounded-xl border border-border bg-surface/30 p-6">
         <h2 className="text-lg font-bold text-offwhite">
           {locale === "te" ? "సేవా ప్రాంతం" : "Coverage Area"}
@@ -329,27 +350,35 @@ export default async function EquipmentPage({
         <p className="mt-2 text-muted">{coverageLabel}</p>
         <p className="mt-1 text-sm text-muted/70">
           {locale === "te"
-            ? "హైదరాబాద్, రంగారెడ్డి, మేడ్చల్, సంగారెడ్డి, నల్గొండ, వరంగల్, కరీంనగర్ మరియు మరిన్ని జిల్లాలు"
-            : "Hyderabad, Ranga Reddy, Medchal, Sangareddy, Nalgonda, Warangal, Karimnagar, and more districts"}
+            ? "Hyderabad prime locations, ORR corridor, mariyu Telangana districts motham"
+            : "Hyderabad prime locations, ORR corridor, and districts across Telangana"}
         </p>
       </section>
 
-      {/* CTA */}
       <section className="mt-12 flex flex-col items-center gap-4 sm:flex-row">
-        <Button
-          href={WHATSAPP_ORDER_URL}
-          external
-          variant="primary"
-          size="lg"
-          className="min-h-12 w-full sm:w-auto"
-        >
-          {cta}
-        </Button>
-        <span className="text-sm text-muted">
-          {locale === "te"
-            ? "WhatsApp ద్వారా బుక్ చేయండి — 24/7 అందుబాటులో"
-            : "Book via WhatsApp — available 24/7"}
-        </span>
+        {isBorewell ? (
+          <WhatsAppCta
+            className="w-full sm:w-auto"
+            message="Hi, I need borewell drilling. Please share partner availability and rates."
+          />
+        ) : (
+          <>
+            <Button
+              href={WHATSAPP_ORDER_URL}
+              external
+              variant="primary"
+              size="lg"
+              className="min-h-12 w-full sm:w-auto"
+            >
+              {cta}
+            </Button>
+            <span className="text-sm text-muted">
+              {locale === "te"
+                ? "WhatsApp ద్వారా బుక్ చేయండి — 24/7 అందుబాటులో"
+                : "Book via WhatsApp — available 24/7"}
+            </span>
+          </>
+        )}
       </section>
     </article>
   );

@@ -8,7 +8,7 @@ export const MACHINE_SLIDES = [
     title_en: "JCB Backhoe Loader",
     title_te: "JCB బ్యాక్‌హో లోడర్",
     body_en:
-      "The workhorse of every site. Ready for digging, loading, and grading — wherever you need it.",
+      "The workhorse of every site — ready for excavation, stone breaking with rock breaker attachments, earthmoving, and site levelling across Hyderabad's ORR corridor and beyond.",
     body_te:
       "ప్రతి సైట్‌కూ అవసరమైన యంత్రం. తవ్వకానికి, లోడింగ్‌కు, గ్రేడింగ్‌కు — మీకు కావలసిన చోటికి.",
     specs: [
@@ -28,7 +28,7 @@ export const MACHINE_SLIDES = [
     title_en: "Post Hole Digger",
     title_te: "పోస్ట్ హోల్ డిగ్గర్",
     body_en:
-      "Precise auger drilling for fencing, foundations, and solar farm installations. Fast. Clean. On time.",
+      "Precise auger drilling for hole digging, earthing rod pits, foundation holes, and precast compound wall pole work — fencing, solar, and telecom foundations across Telangana.",
     body_te:
       "కంచె, పునాది, సోలార్ ఫార్మ్ కోసం ఖచ్చితమైన డ్రిల్లింగ్. వేగంగా. నీట్‌గా. సమయానికి.",
     specs: [
@@ -58,6 +58,26 @@ export const MACHINE_SLIDES = [
     ],
     cta_en: "Book a Crane Now",
     cta_te: "ఇప్పుడే క్రేన్ బుక్ చేయండి",
+  },
+  {
+    id: "borewell",
+    image: "/images/borewell-section.jpg",
+    imageAlt: "Borewell drilling rig with crane and auger at a construction site in Telangana",
+    eyebrow: "PARTNER NETWORK",
+    eyebrow_te: "పార్ట్నర్ నెట్‌వర్క్",
+    title_en: "Borewell Drilling",
+    title_te: "బోర్వెల్ తవ్వకం",
+    body_en:
+      "Borewell digging for residential plots, farms, and construction sites — fulfilled through our verified partner network with transparent pricing and a single point of contact.",
+    body_te:
+      "Residential plots, farms, construction sites kosam borewell digging — ma verified partner network dwara transparent pricing mariyu single point of contact tho.",
+    specs: [
+      { label_en: "Verified partner contractors", label_te: "ధృవీకరించిన పార్ట్నర్ కాంట్రాక్టors" },
+      { label_en: "Residential & farm borewells", label_te: "Residential & farm borewells" },
+      { label_en: "WhatsApp inquiry — no self-serve booking", label_te: "WhatsApp inquiry" },
+    ],
+    cta_en: "Enquire on WhatsApp",
+    cta_te: "WhatsApp lo adagandi",
   },
 ] as const;
 

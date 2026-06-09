@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@repo/db";
 import { sendPartnerJobOverrunAlert } from "@repo/lib/aisensy";
@@ -23,6 +24,21 @@ const invoiceInclude = {
 } as const;
 
 export type { LiveJobsPayload, LiveTripJobDto };
+
+/** Legacy trips may have null reviewToken — backfill so reads and unique index stay valid. */
+export async function backfillTripReviewTokens(): Promise<void> {
+  const rows = await prisma.trip.findMany({
+    where: { reviewToken: null },
+    select: { id: true },
+    take: 200,
+  });
+  for (const row of rows) {
+    await prisma.trip.update({
+      where: { id: row.id },
+      data: { reviewToken: randomUUID() },
+    });
+  }
+}
 
 function jobLocationLabel(jobLocation: Prisma.JsonValue): string {
   if (jobLocation === null || typeof jobLocation !== "object" || Array.isArray(jobLocation)) {
@@ -159,6 +175,8 @@ export async function syncTripOverruns(): Promise<void> {
 }
 
 export async function getLiveJobsPayload(partnerId?: string): Promise<LiveJobsPayload> {
+  await backfillTripReviewTokens();
+
   const partnerFilter = partnerId ? { equipment: { partnerId } } : {};
 
   const [liveRows, recentRows] = await Promise.all([
