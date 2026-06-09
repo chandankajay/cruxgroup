@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { auth } from "../../lib/auth";
+import { auth } from "../../../lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@repo/db";
 import { KycTrustCenterForm, type TrustCenterKycSnapshot } from "./kyc-trust-center-form";
