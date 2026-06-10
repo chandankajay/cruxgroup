@@ -8,6 +8,7 @@ import { createBookingAction } from "../../actions/booking";
 import { fetchNearbyEquipment } from "../../actions/equipment";
 import { useLocationStore } from "../../stores/location-store";
 import { EquipmentGrid } from "./equipment-grid";
+import { WhatsAppFallbackCard } from "./whatsapp-fallback-card";
 import { BookingDrawer } from "./booking-drawer";
 import { BookingSuccess } from "./booking-success";
 import { LocationHeader } from "../location-header";
@@ -360,63 +361,8 @@ export function HomeContent({ fallbackEquipment }: HomeContentProps) {
                     />
                   ))}
                 </div>
-              ) : locationActive && filteredItems.length === 0 ? (
-                <div
-                  style={{
-                    padding: "48px 24px",
-                    textAlign: "center",
-                  }}
-                >
-                  <p
-                    style={{
-                      fontSize: "2.5rem",
-                      marginBottom: 12,
-                    }}
-                  >
-                    📍
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "1.05rem",
-                      fontWeight: 700,
-                      color: "#0f172a",
-                      marginBottom: 6,
-                    }}
-                  >
-                    No equipment available in your area
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "0.88rem",
-                      color: "#64748b",
-                      marginBottom: 20,
-                      maxWidth: 360,
-                      margin: "0 auto 20px",
-                    }}
-                  >
-                    Try changing your location or browse our full catalog.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNearbyFetched(false);
-                      useLocationStore.getState().clearLocation();
-                    }}
-                    style={{
-                      padding: "10px 24px",
-                      borderRadius: 10,
-                      border: "1.5px solid #d45800",
-                      backgroundColor: "#fff0e8",
-                      color: "#d45800",
-                      fontSize: "0.88rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      transition: "background 0.15s",
-                    }}
-                  >
-                    Browse all equipment
-                  </button>
-                </div>
+              ) : locationActive && gridItems.length === 0 ? (
+                <WhatsAppFallbackCard />
               ) : (
                 <EquipmentGrid
                   items={filteredItems}
