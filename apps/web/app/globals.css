@@ -25,12 +25,17 @@
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
 }
 
 body {
   background-color: var(--dark);
   color: var(--offwhite);
   font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-x: clip;
 }
 
 ::selection {

@@ -8,6 +8,7 @@ import {
   type LocationTier,
 } from "../../../lib/seo/data/locations";
 import { ADMIN_URL, BOOKINGS_URL, PHONE, SITE_URL } from "../../../lib/env";
+import { buildAlternates, metaDescription } from "../../../lib/seo/metadata-helpers";
 import { parseLocale } from "../../../lib/locale";
 
 export const revalidate = 86400;
@@ -27,8 +28,9 @@ export async function generateMetadata({
   const locale = parseLocale(raw);
 
   const title = "Heavy Equipment Rental Across Telangana";
-  const description =
-    "Book JCB, excavator, crane, post hole digger (auger), tractor and tipper across Telangana. Verified operators, WhatsApp booking, GST invoices. Kokapet to Warangal, Nizamabad to Khammam.";
+  const description = metaDescription(
+    "Book JCB, excavator, crane, post hole digger (auger), tractor and tipper across Telangana. Verified operators, WhatsApp booking, GST invoices. Kokapet to Warangal, Nizamabad to Khammam.",
+  );
 
   return {
     title,
@@ -39,13 +41,7 @@ export async function generateMetadata({
       url: `${SITE_URL}/${locale}/telangana`,
       type: "website",
     },
-    alternates: {
-      canonical: `${SITE_URL}/en/telangana`,
-      languages: {
-        en: `${SITE_URL}/en/telangana`,
-        te: `${SITE_URL}/te/telangana`,
-      },
-    },
+    alternates: buildAlternates(locale, "telangana"),
     robots: { index: true, follow: true },
   };
 }

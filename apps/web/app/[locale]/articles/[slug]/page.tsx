@@ -12,6 +12,7 @@ import {
 import { markdownToHtml } from "../../../../lib/seo/markdown";
 import { SEO_LOCALES } from "../../../../lib/seo/constants";
 import { SITE_URL } from "../../../../lib/env";
+import { buildAlternates, metaDescription } from "../../../../lib/seo/metadata-helpers";
 import { parseLocale } from "../../../../lib/locale";
 
 export const revalidate = 86400;
@@ -34,22 +35,16 @@ export async function generateMetadata({
 
   return {
     title: article.title,
-    description: article.excerpt,
+    description: metaDescription(article.excerpt),
     openGraph: {
       title: article.title,
-      description: article.excerpt,
+      description: metaDescription(article.excerpt),
       url: `${SITE_URL}/${locale}/articles/${slug}`,
       type: "article",
       publishedTime: article.date,
       authors: [article.author],
     },
-    alternates: {
-      canonical: `${SITE_URL}/en/articles/${slug}`,
-      languages: {
-        en: `${SITE_URL}/en/articles/${slug}`,
-        te: `${SITE_URL}/te/articles/${slug}`,
-      },
-    },
+    alternates: buildAlternates(locale, `articles/${slug}`),
     robots: { index: true, follow: true },
   };
 }

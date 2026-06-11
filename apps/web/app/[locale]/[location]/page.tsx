@@ -22,6 +22,11 @@ import {
   PHONE,
   SITE_URL,
 } from "../../../lib/env";
+import {
+  buildAlternates,
+  metaDescription,
+  seoTitle,
+} from "../../../lib/seo/metadata-helpers";
 import { parseLocale, type Locale } from "../../../lib/locale";
 
 export const revalidate = 86400;
@@ -57,8 +62,10 @@ export async function generateMetadata({
   const location = getLocationBySlug(slug);
   if (!location) return { title: "Location" };
 
-  const title = `Heavy Equipment Rental in ${location.displayName}, ${location.district}`;
-  const description = buildMetaDescription(location);
+  const title = seoTitle(
+    `Equipment Rental in ${location.displayName}, ${location.district}`,
+  );
+  const description = metaDescription(buildMetaDescription(location));
 
   return {
     title,
@@ -69,13 +76,7 @@ export async function generateMetadata({
       url: `${SITE_URL}${pagePath(locale, slug)}`,
       type: "website",
     },
-    alternates: {
-      canonical: `${SITE_URL}/en/${slug}`,
-      languages: {
-        en: `${SITE_URL}/en/${slug}`,
-        te: `${SITE_URL}/te/${slug}`,
-      },
-    },
+    alternates: buildAlternates(locale, slug),
     robots: { index: true, follow: true },
   };
 }

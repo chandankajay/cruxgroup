@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { PlayCircle, Share2 } from "lucide-react";
 import type { SiteConfigMap } from "../../lib/content";
+import { INSTAGRAM_URL, YOUTUBE_URL } from "../../lib/env";
 import type { Locale } from "../../lib/locale";
 import { BillingText } from "../ui/BillingText";
 
@@ -17,8 +18,8 @@ export function Footer({
   const phone = data["phone"] ?? "";
   const email = data["email"] ?? "";
   const address = data["address"] ?? "";
-  const instagram = data["instagram"] ?? "";
-  const youtube = data["youtube"] ?? "";
+  const instagram = (data["instagram"] ?? "").trim() || INSTAGRAM_URL;
+  const youtube = (data["youtube"] ?? "").trim() || YOUTUBE_URL;
   const tagEn = data["footerTagline_en"] ?? "";
   const tagTe = data["footerTagline_te"] ?? "";
 
@@ -35,18 +36,18 @@ export function Footer({
               className="h-9 w-auto max-w-[200px] object-contain object-left"
             />
           </Link>
-          <p className="mt-4 max-w-xs text-sm text-muted">
+          <p className="mt-4 max-w-xs text-base text-muted">
             <BillingText en={tagEn} te={tagTe} />
           </p>
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-offwhite">Quick links</p>
-          <ul className="mt-4 space-y-2 text-sm text-muted">
+          <p className="text-base font-semibold text-offwhite">Quick links</p>
+          <ul className="mt-4 space-y-2 text-base text-muted">
             <li>
               <Link
                 href={`/${locale}#fleet`}
-                className="hover:text-accent"
+                className="inline-block min-h-11 py-2 hover:text-accent"
               >
                 Fleet
               </Link>
@@ -54,7 +55,7 @@ export function Footer({
             <li>
               <Link
                 href={`/${locale}#partners`}
-                className="hover:text-accent"
+                className="inline-block min-h-11 py-2 hover:text-accent"
               >
                 Partners
               </Link>
@@ -62,46 +63,50 @@ export function Footer({
             <li>
               <Link
                 href={`/${locale}/blog`}
-                className="hover:text-accent"
+                className="inline-block min-h-11 py-2 hover:text-accent"
               >
                 Blog
               </Link>
             </li>
+            <li>
+              <Link
+                href={`/${locale}/telangana`}
+                className="inline-block min-h-11 py-2 hover:text-accent"
+              >
+                Service areas
+              </Link>
+            </li>
           </ul>
           <div className="mt-6 flex gap-3">
-            {instagram ? (
-              <a
-                href={instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full border border-border p-2 text-offwhite hover:border-brand hover:text-accent"
-                aria-label="Instagram"
-              >
-                <Share2 className="size-5" />
-              </a>
-            ) : null}
-            {youtube ? (
-              <a
-                href={youtube}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full border border-border p-2 text-offwhite hover:border-brand hover:text-accent"
-                aria-label="YouTube"
-              >
-                <PlayCircle className="size-5" />
-              </a>
-            ) : null}
+            <a
+              href={instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border text-offwhite transition-colors hover:border-brand hover:text-accent"
+              aria-label="Crux Group on Instagram"
+            >
+              <Share2 className="size-5" aria-hidden />
+            </a>
+            <a
+              href={youtube}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border text-offwhite transition-colors hover:border-brand hover:text-accent"
+              aria-label="Crux Group on YouTube"
+            >
+              <PlayCircle className="size-5" aria-hidden />
+            </a>
           </div>
         </div>
 
         <div>
-          <p className="text-sm font-semibold text-offwhite">Contact</p>
-          <ul className="mt-4 space-y-2 text-sm text-muted">
+          <p className="text-base font-semibold text-offwhite">Contact</p>
+          <ul className="mt-4 space-y-2 text-base text-muted">
             {phone ? (
               <li>
                 <a
                   href={`tel:+${phone.replace(/\D/g, "")}`}
-                  className="hover:text-accent"
+                  className="inline-block min-h-11 py-2 hover:text-accent"
                 >
                   +{phone.replace(/\D/g, "")}
                 </a>
@@ -109,7 +114,10 @@ export function Footer({
             ) : null}
             {email ? (
               <li>
-                <a href={`mailto:${email}`} className="hover:text-accent">
+                <a
+                  href={`mailto:${email}`}
+                  className="inline-block min-h-11 py-2 hover:text-accent"
+                >
                   {email}
                 </a>
               </li>
@@ -123,7 +131,7 @@ export function Footer({
         </div>
       </div>
 
-      <div className="border-t border-border py-4 text-center text-xs text-muted">
+      <div className="border-t border-border py-4 text-center text-sm text-muted">
         © {new Date().getFullYear()} Crux Group. Built with ♥ in Telangana.
       </div>
     </footer>

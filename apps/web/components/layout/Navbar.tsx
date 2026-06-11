@@ -91,7 +91,7 @@ export function Navbar({ locale }: { readonly locale: Locale }): React.ReactElem
 
         <button
           type="button"
-          className="rounded-md p-2 text-offwhite md:hidden"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-offwhite md:hidden"
           aria-label={open ? "Close menu" : "Open menu"}
           onClick={() => setOpen((v) => !v)}
         >
@@ -106,7 +106,7 @@ export function Navbar({ locale }: { readonly locale: Locale }): React.ReactElem
               <Link
                 key={item.label}
                 href={hrefFor(item)}
-                className="text-sm font-medium text-offwhite"
+                className="inline-flex min-h-11 items-center text-base font-medium text-offwhite"
                 onClick={() => setOpen(false)}
               >
                 {item.label}

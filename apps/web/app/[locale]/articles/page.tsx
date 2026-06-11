@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ARTICLES, getReadingTime } from "../../../lib/seo/data/articles";
 import { SITE_URL } from "../../../lib/env";
+import { buildAlternates, metaDescription } from "../../../lib/seo/metadata-helpers";
 import { parseLocale } from "../../../lib/locale";
 
 export const revalidate = 86400;
@@ -15,8 +16,9 @@ export async function generateMetadata({
   const locale = parseLocale(raw);
 
   const title = "Equipment Rental Guides & Telangana Infrastructure Insights";
-  const description =
-    "JCB rental rates, auger and post hole digger uses, GST invoicing, infrastructure trends, and the fleet partner income model.";
+  const description = metaDescription(
+    "JCB rental rates, auger and post hole digger uses, GST invoicing, infrastructure trends, and the fleet partner income model across Telangana.",
+  );
 
   return {
     title,
@@ -27,13 +29,7 @@ export async function generateMetadata({
       url: `${SITE_URL}/${locale}/articles`,
       type: "website",
     },
-    alternates: {
-      canonical: `${SITE_URL}/en/articles`,
-      languages: {
-        en: `${SITE_URL}/en/articles`,
-        te: `${SITE_URL}/te/articles`,
-      },
-    },
+    alternates: buildAlternates(locale, "articles"),
     robots: { index: true, follow: true },
   };
 }

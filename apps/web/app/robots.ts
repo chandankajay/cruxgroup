@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+const BASE_URL = "https://www.cruxgroup.in";
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -12,6 +14,10 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: "PerplexityBot", allow: "/" },
       { userAgent: "Applebot-Extended", allow: "/" },
     ],
-    sitemap: "https://www.cruxgroup.in/sitemap.xml",
+    sitemap: [
+      `${BASE_URL}/sitemap.xml`,
+      `${BASE_URL}/en/sitemap.xml`,
+      `${BASE_URL}/te/sitemap.xml`,
+    ],
   };
 }
