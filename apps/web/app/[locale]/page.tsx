@@ -17,29 +17,50 @@ import {
   getSiteSection,
 } from "../../lib/content";
 import { SITE_URL } from "../../lib/env";
+import {
+  buildAlternates,
+  metaDescription,
+  seoTitle,
+} from "../../lib/seo/metadata-helpers";
 import { parseLocale } from "../../lib/locale";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: "Heavy Equipment Rental, Telangana",
-  description:
-    "Book JCBs, Cranes, Excavators, Dozers and more across Telangana. One platform for contractors and fleet owners.",
-  keywords: [
-    "equipment rental telangana",
-    "JCB on rent hyderabad",
-    "crane rental",
-    "excavator hire telangana",
-  ],
-  openGraph: {
-    title: "Crux Group — Heavy Equipment Rental, Telangana",
-    description:
-      "Book JCBs, Cranes, Excavators, Dozers and more across Telangana.",
-    url: SITE_URL,
-    siteName: "Crux Group",
-    type: "website",
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: raw } = await params;
+  const locale = parseLocale(raw);
+
+  const title = seoTitle("JCB & Equipment Rental in Telangana");
+  const description = metaDescription(
+    "Hire JCB, crane, excavator and post hole digger across Telangana. Verified operators, WhatsApp booking and GST invoices. Hyderabad, Kokapet, Shadnagar and 30+ areas.",
+  );
+
+  return {
+    title,
+    description,
+    keywords: [
+      "equipment rental telangana",
+      "JCB on rent hyderabad",
+      "crane rental",
+      "excavator hire telangana",
+      "hole digging hyderabad",
+      "auger rental telangana",
+    ],
+    openGraph: {
+      title: `${title} | Crux Group`,
+      description,
+      url: `${SITE_URL}/${locale}`,
+      siteName: "Crux Group",
+      type: "website",
+    },
+    alternates: buildAlternates(locale),
+    robots: { index: true, follow: true },
+  };
+}
 
 export default async function HomePage({
   params,

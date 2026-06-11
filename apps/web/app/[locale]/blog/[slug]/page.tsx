@@ -7,6 +7,7 @@ import {
   getPublishedPostSlugs,
 } from "../../../../lib/content";
 import { SITE_URL } from "../../../../lib/env";
+import { buildAlternates, metaDescription } from "../../../../lib/seo/metadata-helpers";
 import { parseLocale } from "../../../../lib/locale";
 
 export const revalidate = 3600;
@@ -40,24 +41,24 @@ export async function generateMetadata({
     locale === "te" && post.excerpt_te
       ? post.excerpt_te
       : post.excerpt_en ?? post.seoDesc ?? undefined;
-  const base = {
-    title: post.seoTitle ?? title,
-    description: post.seoDesc ?? description,
+  const metaTitle = post.seoTitle ?? title;
+  const metaDesc = metaDescription(
+    post.seoDesc ?? description ?? metaTitle,
+  );
+
+  return {
+    title: metaTitle,
+    description: metaDesc,
     openGraph: {
-      title: post.seoTitle ?? title,
-      description: post.seoDesc ?? description,
+      title: metaTitle,
+      description: metaDesc,
       images: post.coverImage ? [{ url: post.coverImage }] : undefined,
       type: "article" as const,
+      url: `${SITE_URL}/${locale}/blog/${slug}`,
     },
-    alternates: {
-      canonical: `${SITE_URL}/${locale}/blog/${slug}`,
-      languages: {
-        en: `${SITE_URL}/en/blog/${slug}`,
-        te: `${SITE_URL}/te/blog/${slug}`,
-      },
-    },
+    alternates: buildAlternates(locale, `blog/${slug}`),
+    robots: { index: true, follow: true },
   };
-  return base;
 }
 
 export default async function BlogPostPage({

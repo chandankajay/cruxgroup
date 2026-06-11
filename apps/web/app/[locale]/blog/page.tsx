@@ -1,22 +1,39 @@
 import type { Metadata } from "next";
 import { getAllPublishedPosts } from "../../../lib/content";
 import { SITE_URL } from "../../../lib/env";
+import { buildAlternates, metaDescription } from "../../../lib/seo/metadata-helpers";
 import { parseLocale } from "../../../lib/locale";
 import { TagFilter } from "./components/TagFilter";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: "Blog",
-  description: "Insights from the field — equipment, operations, and safety.",
-  openGraph: {
-    title: "Blog — Crux Group",
-    description: "Insights from the field.",
-    url: `${SITE_URL}/en/blog`,
-    siteName: "Crux Group",
-    type: "website",
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: raw } = await params;
+  const locale = parseLocale(raw);
+
+  const title = "Blog";
+  const description = metaDescription(
+    "Field insights on JCB rental, post hole diggers, crane hire, safety and operations across Telangana — guides for contractors and fleet partners.",
+  );
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${title} | Crux Group`,
+      description,
+      url: `${SITE_URL}/${locale}/blog`,
+      siteName: "Crux Group",
+      type: "website",
+    },
+    alternates: buildAlternates(locale, "blog"),
+    robots: { index: true, follow: true },
+  };
+}
 
 export default async function BlogIndexPage({
   params,
@@ -26,15 +43,12 @@ export default async function BlogIndexPage({
   const { locale: raw } = await params;
   const locale = parseLocale(raw);
   const posts = await getAllPublishedPosts();
-  const allTags = Array.from(
-    new Set(posts.flatMap((p) => p.tags))
-  ).sort();
 
   return (
     <div className="mx-auto max-w-[1280px] px-4 py-16 sm:px-6 lg:px-8">
       <header className="mb-12 max-w-2xl">
         <h1 className="text-4xl font-bold text-offwhite">Insights from the Field</h1>
-        <p className="mt-3 text-muted">
+        <p className="mt-3 text-base text-muted">
           Stories from dispatch, fleet partners, and job sites across Telangana.
         </p>
       </header>

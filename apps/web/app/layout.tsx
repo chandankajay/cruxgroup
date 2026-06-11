@@ -1,8 +1,9 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { OrgJsonLd } from "../components/seo/org-json-ld";
+import { metaDescription } from "../lib/seo/metadata-helpers";
 import { SITE_URL } from "../lib/env";
 
 const geist = Geist({
@@ -15,23 +16,32 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: { default: "Crux Group", template: "%s — Crux Group" },
-  description: "Telangana's largest heavy equipment rental network",
+  title: { default: "JCB & Equipment Rental Telangana | Crux Group", template: "%s | Crux Group" },
+  description: metaDescription(
+    "Hire JCB, crane, excavator and post hole digger across Telangana. Verified operators, WhatsApp booking and GST invoices. Hyderabad, Kokapet, Shadnagar and 30+ areas.",
+  ),
   icons: {
     icon: "/icon.png",
     shortcut: "/favicon.ico",
     apple: "/apple-icon.png",
   },
   openGraph: {
-    title: "Crux Group",
-    description: "Telangana's largest heavy equipment rental network",
+    title: "JCB & Equipment Rental Telangana | Crux Group",
+    description: metaDescription(
+      "Hire JCB, crane, excavator and post hole digger across Telangana. Verified operators, WhatsApp booking and GST invoices. Hyderabad, Kokapet, Shadnagar and 30+ areas.",
+    ),
     siteName: "Crux Group",
     type: "website",
     locale: "en_IN",
   },
-  robots: { index: true, follow: true },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
 };
 
 export default async function RootLayout({

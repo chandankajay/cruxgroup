@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSiteSection } from "../../../../lib/content";
 import { SITE_URL, WHATSAPP_ORDER_URL } from "../../../../lib/env";
+import { buildAlternates, metaDescription, seoTitle } from "../../../../lib/seo/metadata-helpers";
 import { parseLocale, type Locale } from "../../../../lib/locale";
 import {
   MACHINE_SLIDES,
@@ -141,22 +142,17 @@ export async function generateMetadata({
   if (!seo) return { title: "Equipment | Crux Group" };
 
   return {
-    title: seo.title,
-    description: seo.description,
+    title: seoTitle(seo.title.replace(/ \| Crux Group$/, "")),
+    description: metaDescription(seo.description),
     openGraph: {
       title: seo.title,
-      description: seo.description,
+      description: metaDescription(seo.description),
       url: `${SITE_URL}/${locale}/equipment/${slug}`,
       siteName: "Crux Group",
       type: "website",
     },
-    alternates: {
-      canonical: `${SITE_URL}/${locale}/equipment/${slug}`,
-      languages: {
-        en: `${SITE_URL}/en/equipment/${slug}`,
-        te: `${SITE_URL}/te/equipment/${slug}`,
-      },
-    },
+    alternates: buildAlternates(locale, `equipment/${slug}`),
+    robots: { index: true, follow: true },
   };
 }
 
