@@ -1,5 +1,5 @@
 import { calculateTransportFee, prisma } from "@repo/db";
-import { calculateDistanceKm, notifyPartnersForBooking } from "@repo/lib";
+import { calculateDistanceKm, notifyPartnersForBooking, advanceBookingProgress } from "@repo/lib";
 import {
   getPartnerServiceBase,
   isJobSiteWithinPartnerServiceArea,
@@ -151,6 +151,10 @@ export async function createBooking(input: CreateBookingInput) {
     durationDays: isHourly ? undefined : dailyDays,
     durationHours: isHourly ? input.duration : undefined,
   }).catch((err) => console.error("[partner-notification] failed:", err));
+
+  void advanceBookingProgress(booking.id, "BOOKING_RECEIVED").catch((err) =>
+    console.error("[createBooking] progress_hook_failed", err),
+  );
 
   return booking;
 }

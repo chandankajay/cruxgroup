@@ -1,14 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@repo/ui/button";
 import { useLabels } from "@repo/ui/dictionary-provider";
 
 interface BookingSuccessProps {
+  readonly bookingId?: string;
   readonly onDismiss: () => void;
 }
 
-export function BookingSuccess({ onDismiss }: BookingSuccessProps) {
+export function BookingSuccess({ bookingId, onDismiss }: BookingSuccessProps) {
   const t = useLabels();
 
   return (
@@ -64,7 +66,16 @@ export function BookingSuccess({ onDismiss }: BookingSuccessProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.1 }}
+        className="flex flex-col items-center gap-3"
       >
+        {bookingId ? (
+          <Link
+            href={`/bookings/${bookingId}`}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            View booking progress
+          </Link>
+        ) : null}
         <Button onClick={onDismiss} variant="outline">
           {t("BOOKING_SUCCESS_BACK")}
         </Button>

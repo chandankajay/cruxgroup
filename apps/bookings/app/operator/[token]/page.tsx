@@ -79,6 +79,10 @@ export default async function OperatorMagicLinkPage({
     customerMasked: maskCustomerPhone(trip.user.phoneNumber),
     mapsUrl,
     actualStartTimeIso: trip.actualStartTime?.toISOString() ?? null,
+    startOtpUsedAtIso:
+      trip.startOtpUsedAt?.toISOString() ?? trip.actualStartTime?.toISOString() ?? null,
+    endOtpUsedAtIso:
+      trip.endOtpUsedAt?.toISOString() ?? trip.actualEndTime?.toISOString() ?? null,
     totalBilledHours: trip.totalBilledHours,
   };
 

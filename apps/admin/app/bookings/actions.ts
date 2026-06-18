@@ -3,6 +3,7 @@
 import { createCaller } from "@repo/api";
 import type { BookingStatus } from "@repo/api";
 import { prisma } from "@repo/db";
+import { advanceBookingProgress } from "@repo/lib";
 import {
   getAuthorizedWhereClause,
   requireAdminResourceAuthz,
@@ -38,6 +39,15 @@ export async function updateBookingStatusAction(
     if (result.count === 0) {
       return { success: false, error: "Booking not found." };
     }
+
+    if (status === "CONFIRMED" || status === "PARTNER_ACCEPTED") {
+      try {
+        await advanceBookingProgress(id, "BOOKING_CONFIRMED");
+      } catch (err) {
+        console.error("[updateBookingStatusAction] progress_hook_failed", err);
+      }
+    }
+
     return { success: true };
   } catch (error) {
     const message =

@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Check } from "lucide-react";
 import { operatorEndJobAction, operatorStartJobAction } from "../../actions/operator-trip";
 import type { TripStatus } from "@prisma/client";
+
+/** Minimum elapsed time after start OTP before end OTP can be submitted. */
+export const MIN_TRIP_DURATION_MINUTES = 30;
 
 export type OperatorTripPayload = {
   token: string;
@@ -15,71 +19,17 @@ export type OperatorTripPayload = {
   customerMasked: string;
   mapsUrl: string | null;
   actualStartTimeIso: string | null;
+  startOtpUsedAtIso: string | null;
+  endOtpUsedAtIso: string | null;
   totalBilledHours: number | null;
 };
 
-function OtpModal(props: {
-  title: string;
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (code: string) => void;
-  busy: boolean;
-  error: string | null;
-}) {
-  const [value, setValue] = useState("");
-
-  useEffect(() => {
-    if (!props.open) setValue("");
-  }, [props.open]);
-
-  if (!props.open) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-4 pb-8 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="otp-modal-title"
-    >
-      <div className="w-full max-w-md rounded-2xl border-2 border-neutral-700 bg-neutral-950 p-6 text-white shadow-2xl">
-        <h2 id="otp-modal-title" className="mb-4 text-center text-2xl font-bold tracking-tight">
-          {props.title}
-        </h2>
-        <input
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={4}
-          value={value}
-          onChange={(e) => setValue(e.target.value.replace(/\D/g, "").slice(0, 4))}
-          className="mb-4 w-full rounded-xl border-4 border-white/30 bg-black px-4 py-5 text-center text-5xl font-black tracking-[0.4em] text-white outline-none ring-0 focus:border-emerald-400"
-          placeholder="••••"
-          autoFocus
-        />
-        {props.error ? (
-          <p className="mb-4 text-center text-lg font-semibold text-red-400">{props.error}</p>
-        ) : null}
-        <div className="flex flex-col gap-3">
-          <button
-            type="button"
-            disabled={props.busy || value.length !== 4}
-            onClick={() => props.onSubmit(value)}
-            className="min-h-14 rounded-xl bg-white py-4 text-xl font-bold text-black disabled:opacity-40"
-          >
-            {props.busy ? "Checking…" : "Confirm"}
-          </button>
-          <button
-            type="button"
-            disabled={props.busy}
-            onClick={props.onClose}
-            className="min-h-12 rounded-xl border-2 border-white/40 py-3 text-lg font-semibold text-white"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+function formatTimestamp(iso: string): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(iso));
 }
 
 function LiveTimer({ startIso }: { startIso: string }) {
@@ -110,16 +60,87 @@ function LiveTimer({ startIso }: { startIso: string }) {
   );
 }
 
+function OtpStageForm(props: {
+  label: string;
+  submitLabel: string;
+  onSubmit: (code: string) => void;
+  busy: boolean;
+  error: string | null;
+  disabled?: boolean;
+  disabledMessage?: string;
+}) {
+  const [value, setValue] = useState("");
+
+  return (
+    <div className="rounded-2xl border-4 border-neutral-700 bg-neutral-950 p-6">
+      <label className="mb-4 block text-center text-xl font-bold text-white">{props.label}</label>
+      <input
+        type="text"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={4}
+        value={value}
+        disabled={props.disabled || props.busy}
+        onChange={(e) => setValue(e.target.value.replace(/\D/g, "").slice(0, 4))}
+        className="mb-4 w-full rounded-xl border-4 border-white/30 bg-black px-4 py-5 text-center text-5xl font-black tracking-[0.4em] text-white outline-none ring-0 focus:border-emerald-400 disabled:opacity-40"
+        placeholder="••••"
+      />
+      {props.error ? (
+        <p className="mb-4 text-center text-lg font-semibold text-red-400">{props.error}</p>
+      ) : null}
+      {props.disabled && props.disabledMessage ? (
+        <p className="mb-4 text-center text-base font-semibold text-amber-300">{props.disabledMessage}</p>
+      ) : null}
+      <button
+        type="button"
+        disabled={props.busy || props.disabled || value.length !== 4}
+        onClick={() => props.onSubmit(value)}
+        className="min-h-14 w-full rounded-xl bg-white py-4 text-xl font-bold text-black disabled:opacity-40"
+      >
+        {props.busy ? "Checking…" : props.submitLabel}
+      </button>
+    </div>
+  );
+}
+
+function useEndOtpEligibility(startOtpUsedAtIso: string | null) {
+  const [remainingMs, setRemainingMs] = useState(0);
+
+  useEffect(() => {
+    if (!startOtpUsedAtIso) {
+      setRemainingMs(0);
+      return;
+    }
+    const minMs = MIN_TRIP_DURATION_MINUTES * 60 * 1000;
+    const startMs = new Date(startOtpUsedAtIso).getTime();
+
+    const tick = () => {
+      const elapsed = Date.now() - startMs;
+      setRemainingMs(Math.max(0, minMs - elapsed));
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [startOtpUsedAtIso]);
+
+  const locked = remainingMs > 0;
+  const remainingMin = Math.ceil(remainingMs / 60_000);
+
+  return { locked, remainingMin };
+}
+
 export function OperatorJobClient({ initial }: { initial: OperatorTripPayload }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [startOpen, setStartOpen] = useState(false);
-  const [endOpen, setEndOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     router.refresh();
   }, [router]);
+
+  const startUsed = initial.startOtpUsedAtIso != null;
+  const endUsed = initial.endOtpUsedAtIso != null;
+  const { locked: endLocked, remainingMin } = useEndOtpEligibility(initial.startOtpUsedAtIso);
 
   const onStartSubmit = (code: string) => {
     setActionError(null);
@@ -131,7 +152,6 @@ export function OperatorJobClient({ initial }: { initial: OperatorTripPayload })
         else setActionError("Something went wrong.");
         return;
       }
-      setStartOpen(false);
       refresh();
     });
   };
@@ -144,17 +164,14 @@ export function OperatorJobClient({ initial }: { initial: OperatorTripPayload })
         setActionError(res.userMessage);
         return;
       }
-      setEndOpen(false);
       toast.success(res.payload.userMessage, { duration: 8000 });
       refresh();
     });
   };
 
-  const showPreStart = initial.status === "ENROUTE";
-  const onSiteOrOverrun =
-    initial.status === "ON_SITE" || initial.status === "OVERRUN";
-  const startIso = onSiteOrOverrun ? initial.actualStartTimeIso : null;
-  const showDone = initial.status === "COMPLETED";
+  const showDone = endUsed || initial.status === "COMPLETED";
+  const showStage1 = !startUsed && !showDone;
+  const showStage2 = startUsed && !endUsed && !showDone;
 
   return (
     <div className="min-h-dvh bg-black px-4 pb-12 pt-8 text-white">
@@ -169,35 +186,36 @@ export function OperatorJobClient({ initial }: { initial: OperatorTripPayload })
         </p>
       </header>
 
-      {showPreStart ? (
-        <div className="flex flex-col gap-6">
-          {initial.mapsUrl ? (
-            <a
-              href={initial.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex min-h-16 items-center justify-center rounded-2xl border-4 border-sky-400 bg-sky-500 px-4 py-5 text-center text-2xl font-black text-black shadow-lg active:scale-[0.98]"
-            >
-              Open in Google Maps
-            </a>
-          ) : (
-            <p className="text-center text-xl font-bold text-amber-400">Location not available for maps.</p>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              setActionError(null);
-              setStartOpen(true);
-            }}
-            className="min-h-[4.5rem] rounded-2xl bg-emerald-500 px-4 py-6 text-2xl font-black text-black shadow-lg active:scale-[0.98] sm:text-3xl"
-          >
-            START JOB (Enter OTP)
-          </button>
-        </div>
+      {initial.mapsUrl && !showDone ? (
+        <a
+          href={initial.mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-6 flex min-h-16 items-center justify-center rounded-2xl border-4 border-sky-400 bg-sky-500 px-4 py-5 text-center text-2xl font-black text-black shadow-lg active:scale-[0.98]"
+        >
+          Open in Google Maps
+        </a>
       ) : null}
 
-      {startIso ? (
-        <div className="flex flex-col gap-8">
+      {showStage1 ? (
+        <OtpStageForm
+          label="Enter Start OTP"
+          submitLabel="Submit"
+          onSubmit={onStartSubmit}
+          busy={pending}
+          error={actionError}
+        />
+      ) : null}
+
+      {showStage2 ? (
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-3 rounded-2xl border-2 border-emerald-600/60 bg-emerald-950/40 px-4 py-4">
+            <Check className="size-6 shrink-0 text-emerald-400" strokeWidth={2.5} />
+            <p className="text-lg font-bold text-emerald-200">
+              Trip Started {formatTimestamp(initial.startOtpUsedAtIso!)}
+            </p>
+          </div>
+
           {initial.isOverrun ? (
             <div
               className="rounded-2xl border-2 border-amber-500/70 bg-amber-950/40 px-4 py-4 text-center"
@@ -206,61 +224,44 @@ export function OperatorJobClient({ initial }: { initial: OperatorTripPayload })
               <p className="text-lg font-bold text-amber-300 sm:text-xl">
                 This job has exceeded the expected hours (overrun).
               </p>
-              <p className="mt-2 text-sm font-semibold text-amber-200/90">
-                End the job with your end code when work is finished — time billed runs from your
-                start time to when you submit the end code.
-              </p>
             </div>
           ) : null}
-          <LiveTimer startIso={startIso} />
-          <button
-            type="button"
-            onClick={() => {
-              setActionError(null);
-              setEndOpen(true);
-            }}
-            className="min-h-[4.5rem] rounded-2xl bg-red-600 px-4 py-6 text-2xl font-black text-white shadow-lg active:scale-[0.98] sm:text-3xl"
-          >
-            END JOB (Enter OTP)
-          </button>
+
+          {initial.actualStartTimeIso ? <LiveTimer startIso={initial.actualStartTimeIso} /> : null}
+
+          <OtpStageForm
+            label="Enter End OTP"
+            submitLabel="Submit"
+            onSubmit={onEndSubmit}
+            busy={pending}
+            error={actionError}
+            disabled={endLocked}
+            disabledMessage={
+              endLocked
+                ? `Available after ${MIN_TRIP_DURATION_MINUTES} minutes (${remainingMin} min remaining)`
+                : undefined
+            }
+          />
         </div>
-      ) : onSiteOrOverrun ? (
-        <p className="text-center text-2xl font-bold text-amber-400">
-          Start time is missing for this job. Please contact dispatch.
-        </p>
       ) : null}
 
       {showDone ? (
         <div className="rounded-2xl border-4 border-emerald-600/60 bg-emerald-950/40 px-4 py-10 text-center">
-          <p className="text-3xl font-black text-emerald-300 sm:text-4xl">Job complete!</p>
+          <p className="text-3xl font-black text-emerald-300 sm:text-4xl">Trip Completed</p>
+          {initial.endOtpUsedAtIso ? (
+            <p className="mt-4 text-xl font-semibold text-emerald-200/90">
+              at {formatTimestamp(initial.endOtpUsedAtIso)}
+            </p>
+          ) : null}
           <p className="mt-6 text-2xl font-bold text-white">
             Total time:{" "}
             <span className="text-emerald-200">
-              {initial.totalBilledHours != null
-                ? `${initial.totalBilledHours} hrs`
-                : "—"}
+              {initial.totalBilledHours != null ? `${initial.totalBilledHours} hrs` : "—"}
             </span>
           </p>
           <p className="mt-8 text-xl font-semibold text-neutral-300">You can close this window.</p>
         </div>
       ) : null}
-
-      <OtpModal
-        title="Enter start code"
-        open={startOpen}
-        onClose={() => !pending && setStartOpen(false)}
-        onSubmit={onStartSubmit}
-        busy={pending}
-        error={actionError}
-      />
-      <OtpModal
-        title="Enter end code"
-        open={endOpen}
-        onClose={() => !pending && setEndOpen(false)}
-        onSubmit={onEndSubmit}
-        busy={pending}
-        error={actionError}
-      />
     </div>
   );
 }

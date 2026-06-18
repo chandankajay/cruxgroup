@@ -6,6 +6,7 @@ const OBJECT_ID = /^[a-f\d]{24}$/i;
 
 export type LiveTripPayload = {
   id: string;
+  bookingId: string | null;
   status: import("@prisma/client").TripStatus;
   scheduledDate: string;
   expectedEndTime: string | null;
@@ -33,6 +34,7 @@ export async function fetchTripForCustomer(
     where: { id: tripId, userId },
     select: {
       id: true,
+      bookingId: true,
       status: true,
       scheduledDate: true,
       expectedEndTime: true,
@@ -57,6 +59,7 @@ export async function fetchTripForCustomer(
 
   return {
     id: trip.id,
+    bookingId: trip.bookingId,
     status: trip.status,
     scheduledDate: trip.scheduledDate.toISOString(),
     expectedEndTime: trip.expectedEndTime?.toISOString() ?? null,

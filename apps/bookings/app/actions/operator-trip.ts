@@ -3,6 +3,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@repo/db";
+import { advanceBookingProgress } from "@repo/lib";
 import { revalidatePath } from "next/cache";
 import { generateInvoiceForCompletedTrip } from "@repo/lib/invoice";
 import {
@@ -89,14 +90,21 @@ export async function operatorStartJobAction(
         data: {
           status: "ON_SITE",
           actualStartTime: new Date(),
+          startOtpUsedAt: new Date(),
         },
       });
-      return { type: "ok" as const };
+      return { type: "ok" as const, bookingId: trip.bookingId };
     });
 
     if (result.type === "NOT_FOUND") return { ok: false, error: "NOT_FOUND" };
     if (result.type === "BAD_STATE") return { ok: false, error: "BAD_STATE" };
     if (result.type === "BAD_OTP") return { ok: false, error: "BAD_OTP" };
+
+    if (result.bookingId) {
+      void advanceBookingProgress(result.bookingId, "ON_SITE").catch((err) =>
+        console.error("[operatorStartJobAction] progress_hook_failed", err),
+      );
+    }
 
     revalidatePath(`/operator/${operatorToken}`);
     return { ok: true };
@@ -165,16 +173,18 @@ export async function operatorEndJobAction(
         data: {
           status: "COMPLETED",
           actualEndTime: end,
+          endOtpUsedAt: end,
           totalBilledHours,
           totalAmount: totalPaise,
           ...(trip.reviewToken ? {} : { reviewToken }),
         },
-        select: { id: true },
+        select: { id: true, bookingId: true },
       });
 
       return {
         type: "ok" as const,
         tripId: updated.id,
+        bookingId: updated.bookingId,
         totalBilledHours,
         completedAtIso: end.toISOString(),
         reviewToken,
@@ -210,9 +220,15 @@ export async function operatorEndJobAction(
       };
     }
 
-    const { totalBilledHours, completedAtIso, reviewToken, tripId } = result;
+    const { totalBilledHours, completedAtIso, reviewToken, tripId, bookingId } = result;
     const reviewLinkForWhatsApp = `https://bookings.cruxgroup.in/review/${reviewToken}`;
     void reviewLinkForWhatsApp;
+
+    if (bookingId) {
+      void advanceBookingProgress(bookingId, "JOB_COMPLETED").catch((err) =>
+        console.error("[operatorEndJobAction] progress_hook_failed", err),
+      );
+    }
 
     try {
       await generateInvoiceForCompletedTrip(tripId);
