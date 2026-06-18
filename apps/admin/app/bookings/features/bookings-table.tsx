@@ -73,6 +73,9 @@ export function BookingsTable({
           <TableHead className="text-xs font-semibold uppercase tracking-wide text-charcoal">
             Status
           </TableHead>
+          <TableHead className="text-xs font-semibold uppercase tracking-wide text-charcoal">
+            Sales
+          </TableHead>
           <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-charcoal">
             Actions
           </TableHead>
@@ -130,6 +133,15 @@ export function BookingsTable({
             {/* Status */}
             <TableCell>
               <StatusBadge status={booking.status as BookingStatus} />
+            </TableCell>
+
+            {/* Sales person */}
+            <TableCell>
+              <p className="text-sm text-charcoal">
+                {booking.salesPerson?.name ||
+                  booking.salesPerson?.phoneNumber ||
+                  "—"}
+              </p>
             </TableCell>
 
             {/* Actions */}

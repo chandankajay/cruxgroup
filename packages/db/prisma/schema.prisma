@@ -33,6 +33,8 @@ model User {
   lockoutUntil  DateTime?
   /// First-login welcome WhatsApp (`welcome_note` template) sent at most once.
   welcomeNoteSentAt DateTime?
+  /// Set when a phone OTP user picks Partner vs Sales on first admin login.
+  adminRoleChosenAt DateTime?
 
   accounts         Account[]
   sessions         Session[]
@@ -45,6 +47,11 @@ model User {
   payrollEntries   PayrollEntry[]
   /// When set, links this login to a CRM `Customer` row (B2C saved sites, unified billing context).
   customerProfile  Customer?
+  /// Leads owned by this sales person (`role = SALES`).
+  salesLeads       Lead[]         @relation("SalesLeads")
+  leadNotes        LeadNote[]
+  notifications    Notification[] @relation("UserNotifications")
+  attributedBookings Booking[]    @relation("SalesAttributedBookings")
 
   @@index([email])
   @@map("users")
@@ -54,6 +61,7 @@ enum UserRole {
   USER
   ADMIN
   PARTNER
+  SALES
 }
 
 enum KycStatus {
@@ -305,6 +313,9 @@ model Booking {
   userId      String             @db.ObjectId
   equipmentId String             @db.ObjectId
   partnerId   String?            @db.ObjectId
+  /// Sales person credited when a lead is manually converted and linked to this booking.
+  salesPersonId String?          @db.ObjectId
+  salesPerson   User?            @relation("SalesAttributedBookings", fields: [salesPersonId], references: [id])
   /// Optional CRM customer (B2B); distinct from `userId` (platform user placing the request)
   customerId  String?            @db.ObjectId
   customer    Customer?          @relation(fields: [customerId], references: [id])
@@ -333,8 +344,10 @@ model Booking {
   trips     Trip[]
   responseTokens BookingResponseToken[]
   progressLogs BookingProgressLog[]
+  leads     Lead[]
 
   @@index([customerId])
+  @@index([salesPersonId])
   @@map("bookings")
 }
 
@@ -357,6 +370,71 @@ model BookingProgressLog {
 
   @@index([bookingId])
   @@map("booking_progress_logs")
+}
+
+// ─── Sales CRM: Leads ────────────────────────────────────────────────────────
+
+enum LeadType {
+  FLEET_PARTNER
+  CUSTOMER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  CONVERTED
+  DEAD
+}
+
+model Lead {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  salesPersonId String     @db.ObjectId
+  salesPerson   User       @relation("SalesLeads", fields: [salesPersonId], references: [id], onDelete: Cascade)
+  name          String
+  phoneNumber   String
+  leadType      LeadType
+  source        String     @default("")
+  status        LeadStatus @default(NEW)
+  bookingId     String?    @db.ObjectId
+  booking       Booking?   @relation(fields: [bookingId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  notes         LeadNote[]
+
+  @@index([salesPersonId])
+  @@index([status])
+  @@index([leadType])
+  @@map("leads")
+}
+
+model LeadNote {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  leadId    String   @db.ObjectId
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorId  String   @db.ObjectId
+  author    User     @relation(fields: [authorId], references: [id])
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@map("lead_notes")
+}
+
+// ─── In-app notifications (sales person bell) ────────────────────────────────
+
+model Notification {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  recipientId String   @db.ObjectId
+  recipient   User     @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  message     String
+  read        Boolean  @default(false)
+  bookingId   String?  @db.ObjectId
+  leadId      String?  @db.ObjectId
+  createdAt   DateTime @default(now())
+
+  @@index([recipientId, read])
+  @@map("notifications")
 }
 
 // ─── Trip (operational job lifecycle; rates locked at booking) ───────────────

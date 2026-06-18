@@ -217,8 +217,7 @@ export function PhoneOtpForm({ callbackUrl = "/" }: PhoneOtpFormProps) {
                 <p className="mt-3 text-center text-xs text-muted-foreground">
                   Dev OTP{" "}
                   <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-amber-500/90">4242</code>
-                  . Any 10-digit number works — missing users are created as PARTNER; existing USER rows are promoted to
-                  PARTNER (dev only).
+                  . New numbers choose Partner or Sales on first login.
                 </p>
               )}
             </div>
