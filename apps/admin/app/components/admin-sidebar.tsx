@@ -9,10 +9,12 @@ import { ThemeToggle } from "../../components/theme-toggle";
 import type { HTMLAttributes, ReactNode } from "react";
 
 /** Roles that use the admin app shell (layout + sidebar). */
-export type AppShellRole = "PARTNER" | "ADMIN";
+export type AppShellRole = "PARTNER" | "ADMIN" | "SALES";
 
 export function toAppShellRole(role: string): AppShellRole {
-  return role === "PARTNER" ? "PARTNER" : "ADMIN";
+  if (role === "PARTNER") return "PARTNER";
+  if (role === "SALES") return "SALES";
+  return "ADMIN";
 }
 
 export interface NavItem {
@@ -50,6 +52,9 @@ export function isShellNavItemActive(pathname: string, item: Pick<NavItem, "href
   }
   if (item.href === "/payroll") {
     return pathname === "/payroll" || pathname.startsWith("/payroll/");
+  }
+  if (item.href === "/sales-overview") {
+    return pathname === "/sales-overview" || pathname.startsWith("/sales-overview/");
   }
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
@@ -132,6 +137,13 @@ const NAV_ITEM_DEFINITIONS: readonly NavItemDefinition[] = [
     label: "Global bookings",
     roles: ["ADMIN"],
     icon: <Icon d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />,
+  },
+  {
+    navId: "admin-sales-overview",
+    href: "/sales-overview",
+    label: "Sales overview",
+    roles: ["ADMIN"],
+    icon: <Icon d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M20 8v6M23 11h-6" />,
   },
   {
     navId: "admin-website-cms",
@@ -233,17 +245,22 @@ export const ADMIN_NAV: NavItem[] = getNavItemsForShellRole("ADMIN");
 
 // Role badge shown at the top of the nav
 function RoleBadge({ role }: { role: string }) {
-  const isPartner = role === "PARTNER";
+  const label =
+    role === "PARTNER" ? "Partner" : role === "SALES" ? "Sales" : "Admin";
+  const styles =
+    role === "PARTNER"
+      ? "bg-amber-500/15 text-amber-800 dark:text-amber-200"
+      : role === "SALES"
+        ? "bg-sky-500/15 text-sky-800 dark:text-sky-200"
+        : "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200";
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
-        isPartner
-          ? "bg-amber-500/15 text-amber-800 dark:text-amber-200"
-          : "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
+        styles,
       )}
     >
-      {isPartner ? "Partner" : "Admin"}
+      {label}
     </span>
   );
 }

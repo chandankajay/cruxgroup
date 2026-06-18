@@ -10,6 +10,10 @@ import { PartnerMobileHeader } from "./partner-mobile-header";
 import { AdminBottomNav } from "./admin-bottom-nav";
 import { AdminMobileHeader } from "./admin-mobile-header";
 import { isBookingResponseMagicLink } from "../../lib/booking-response-routes";
+import { isChooseRolePath } from "../../lib/role-routes";
+import { SalesBottomNav } from "./sales-bottom-nav";
+import { SalesMobileHeader, SalesSidebar } from "./sales-sidebar";
+import { NotificationBell } from "./notification-bell";
 
 interface AdminShellProps {
   readonly children: ReactNode;
@@ -53,6 +57,10 @@ export function AdminShell({
     return <>{children}</>;
   }
 
+  if (isChooseRolePath(pathname)) {
+    return <>{children}</>;
+  }
+
   if (pathname === "/onboarding") {
     return (
       <div className="min-h-screen overflow-y-auto bg-background p-6 md:p-10">{children}</div>
@@ -60,6 +68,25 @@ export function AdminShell({
   }
 
   const isPartner = role === "PARTNER";
+  const isSales = role === "SALES";
+
+  if (isSales) {
+    return (
+      <div className="flex min-h-dvh flex-col bg-background lg:h-screen lg:flex-row lg:overflow-hidden">
+        <SalesSidebar className="hidden lg:flex" userName={userName} />
+        <div className="relative flex min-h-dvh flex-1 flex-col lg:min-h-0">
+          <SalesMobileHeader userName={userName} />
+          <div className="hidden items-center justify-end gap-2 border-b border-border px-6 py-2 lg:flex">
+            <NotificationBell />
+          </div>
+          <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-20 pt-4 lg:px-8 lg:pb-8 lg:pt-6">
+            <PageWrapper>{children}</PageWrapper>
+          </main>
+          <SalesBottomNav />
+        </div>
+      </div>
+    );
+  }
 
   if (isPartner) {
     return (

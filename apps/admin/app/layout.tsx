@@ -7,6 +7,7 @@ import { DictionaryProvider } from "@repo/ui/dictionary-provider";
 import { ThemeProvider } from "../components/theme-provider";
 import { getAdminLabels } from "./lib/get-labels";
 import { AdminShell } from "./components/admin-shell";
+import { AuthProvider } from "./providers/auth-provider";
 import { auth } from "../lib/auth";
 import { prisma } from "@repo/db";
 
@@ -56,7 +57,8 @@ export default async function RootLayout({
       <body className={geist.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <DictionaryProvider labels={labels}>
-            <AdminShell
+            <AuthProvider>
+              <AdminShell
               isAuthenticated={!!session}
               userName={session?.user?.name ?? null}
               userEmail={session?.user?.email ?? null}
@@ -66,6 +68,7 @@ export default async function RootLayout({
             >
               {children}
             </AdminShell>
+            </AuthProvider>
             <Toaster richColors position="top-right" />
           </DictionaryProvider>
         </ThemeProvider>

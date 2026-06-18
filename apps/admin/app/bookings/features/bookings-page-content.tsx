@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useMemo, useState, useTransition, useCallback } from "react";
+import { Select } from "@repo/ui/select";
 import { BookingsTable } from "./bookings-table";
 import { SiteDetailModal } from "./site-detail-modal";
 import { updateBookingStatusAction } from "../actions";
@@ -27,8 +28,30 @@ export function BookingsPageContent({ initialData }: BookingsPageContentProps) {
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [salesFilter, setSalesFilter] = useState<string>("all");
 
-  const pendingCount = bookings.filter((b) => b.status === "PENDING").length;
+  const salesPeople = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of bookings) {
+      if (b.salesPerson?.id) {
+        map.set(
+          b.salesPerson.id,
+          b.salesPerson.name || b.salesPerson.phoneNumber || "Sales",
+        );
+      }
+    }
+    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [bookings]);
+
+  const filteredBookings = useMemo(() => {
+    if (salesFilter === "all") return bookings;
+    if (salesFilter === "none") {
+      return bookings.filter((b) => !b.salesPerson?.id);
+    }
+    return bookings.filter((b) => b.salesPerson?.id === salesFilter);
+  }, [bookings, salesFilter]);
+
+  const pendingCount = filteredBookings.filter((b) => b.status === "PENDING").length;
 
   const handleStatusChange = useCallback(
     (id: string, status: BookingStatus) => {
@@ -86,9 +109,25 @@ export function BookingsPageContent({ initialData }: BookingsPageContentProps) {
       </div>
 
       {/* Status Summary Strip */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Select
+          value={salesFilter}
+          onChange={(e) => setSalesFilter(e.target.value)}
+          className="w-52"
+        >
+          <option value="all">All bookings</option>
+          <option value="none">No sales link</option>
+          {salesPeople.map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </Select>
+      </div>
+
       <div className="mb-6 flex flex-wrap gap-3">
         {STATUS_COUNTS.map((status) => {
-          const count = bookings.filter((b) => b.status === status).length;
+          const count = filteredBookings.filter((b) => b.status === status).length;
           return (
             <div
               key={status}
@@ -106,7 +145,7 @@ export function BookingsPageContent({ initialData }: BookingsPageContentProps) {
       {/* Table Card */}
       <div className="overflow-hidden rounded-xl bg-card shadow-sm">
         <BookingsTable
-          bookings={bookings}
+          bookings={filteredBookings}
           updatingId={isPending ? updatingId : null}
           onViewSite={handleViewSite}
           onStatusChange={handleStatusChange}

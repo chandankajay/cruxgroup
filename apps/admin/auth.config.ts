@@ -5,6 +5,13 @@ import {
   isBookingResponseMagicLink,
   safeCallbackPath,
 } from "./lib/booking-response-routes";
+import {
+  CHOOSE_ROLE_PATH,
+  homePathForRole,
+  isChooseRolePath,
+  isSalesPath,
+  needsAdminRoleSelection,
+} from "./lib/role-routes";
 
 const PARTNER_ONLY = ["/fleet", "/my-bookings", "/service-area", "/earnings"];
 
@@ -25,6 +32,9 @@ function isPartnerBlockedFromPath(pathname: string): boolean {
     return true;
   }
   if (pathname.startsWith("/website-cms")) {
+    return true;
+  }
+  if (pathname.startsWith("/sales-overview")) {
     return true;
   }
   return false;
@@ -66,11 +76,12 @@ export const authConfig: NextAuthConfig = {
       if (isBookingResponseMagicLink(pathname)) return true;
       if (isBookingResponseApi(pathname)) return true;
 
-      // Plain USERs should never be in the admin app.
-      if (isLoggedIn && role === "USER") {
-        return Response.redirect(
-          new URL("https://bookings.cruxgroup.in", nextUrl)
-        );
+      // Phone OTP users pick Partner vs Sales once before entering the app.
+      if (isLoggedIn && needsAdminRoleSelection(role)) {
+        if (!isChooseRolePath(pathname)) {
+          return Response.redirect(new URL(CHOOSE_ROLE_PATH, nextUrl));
+        }
+        return true;
       }
 
       // Redirect to correct home if visiting a wrong-role section.
@@ -79,9 +90,21 @@ export const authConfig: NextAuthConfig = {
           pathname.startsWith(p)
         );
         if (isPartnerRoute) return Response.redirect(new URL("/dashboard", nextUrl));
+        if (isSalesPath(pathname)) {
+          return Response.redirect(new URL("/dashboard", nextUrl));
+        }
+      }
+
+      if (isLoggedIn && role === "SALES") {
+        if (!isSalesPath(pathname) && !isChooseRolePath(pathname)) {
+          return Response.redirect(new URL(homePathForRole(role), nextUrl));
+        }
       }
 
       if (isLoggedIn && role === "PARTNER") {
+        if (isSalesPath(pathname)) {
+          return Response.redirect(new URL("/fleet", nextUrl));
+        }
         if (isPartnerBlockedFromPath(pathname)) {
           return Response.redirect(new URL("/fleet", nextUrl));
         }
@@ -89,11 +112,10 @@ export const authConfig: NextAuthConfig = {
 
       if (isLoggedIn && isLoginPage) {
         const callback = safeCallbackPath(nextUrl.searchParams.get("callbackUrl"));
-        if (callback) {
+        if (callback && !needsAdminRoleSelection(role)) {
           return Response.redirect(new URL(callback, nextUrl));
         }
-        const home = role === "PARTNER" ? "/fleet" : "/dashboard";
-        return Response.redirect(new URL(home, nextUrl));
+        return Response.redirect(new URL(homePathForRole(role), nextUrl));
       }
 
       if (!isLoggedIn && !isLoginPage) {

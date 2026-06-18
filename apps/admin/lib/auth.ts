@@ -66,17 +66,14 @@ const nextAuth: NextAuthResult = NextAuth({
           select: partnerUserSelect,
         });
 
-        // After valid master OTP: same behaviour as local — new numbers self-register
-        // as PARTNER (then onboarding creates the Partner profile). Existing USERs
-        // logging in via phone are promoted to PARTNER so they are not sent to the
-        // public bookings app (middleware treats USER as bookings-only).
+        // New numbers self-register as USER and pick Partner vs Sales on first login.
         if (!user) {
           try {
             user = await prisma.user.create({
               data: {
                 phoneNumber,
                 name: "",
-                role: "PARTNER",
+                role: "USER",
               },
               select: partnerUserSelect,
             });
@@ -86,15 +83,10 @@ const nextAuth: NextAuthResult = NextAuth({
               select: partnerUserSelect,
             });
           }
-        } else if (user.role === "USER") {
-          user = await prisma.user.update({
-            where: { id: user.id },
-            data: { role: "PARTNER" },
-            select: partnerUserSelect,
-          });
         }
 
-        if (!user || (user.role !== "PARTNER" && user.role !== "ADMIN")) {
+        const allowedRoles = ["USER", "PARTNER", "SALES", "ADMIN"] as const;
+        if (!user || !allowedRoles.includes(user.role as (typeof allowedRoles)[number])) {
           return null;
         }
 
@@ -124,7 +116,9 @@ const nextAuth: NextAuthResult = NextAuth({
       });
 
       // Existing elevated roles always pass.
-      if (dbUser?.role === "PARTNER" || dbUser?.role === "ADMIN") return true;
+      if (dbUser?.role === "PARTNER" || dbUser?.role === "ADMIN" || dbUser?.role === "SALES") {
+        return true;
+      }
 
       // Regular USERs are not allowed into the admin app.
       if (dbUser?.role === "USER" && !isAllowedAdmin(email)) return false;
@@ -135,39 +129,36 @@ const nextAuth: NextAuthResult = NextAuth({
 
     // ── jwt ───────────────────────────────────────────────────────────────
     // Runs on sign-in and token refresh. Persists id + role into the JWT.
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      if (trigger === "update" && session && typeof session === "object") {
+        const patch = session as { role?: string };
+        if (patch.role) {
+          token.role = patch.role;
+          return token;
+        }
+      }
+
       if (user?.id) {
         token.id = user.id;
 
         if ("phoneNumber" in user && user.phoneNumber) {
           token.phoneNumber = user.phoneNumber as string;
         }
+      }
 
-        // For Credentials the role is already in the user object returned by
-        // authorize(). For Google we need to look it up.
-        if ("role" in user && user.role) {
-          const email = (user as { email?: string }).email ?? "";
-          const rawRole = user.role as string;
-          // Bootstrap: allowlisted Google users not yet promoted → ADMIN.
-          if (rawRole === "USER" && isAllowedAdmin(email)) {
-            token.role = "ADMIN";
-          } else {
-            token.role = rawRole;
-          }
+      if (token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, email: true, phoneNumber: true },
+        });
+        const email = dbUser?.email ?? "";
+        if ((!dbUser?.role || dbUser.role === "USER") && isAllowedAdmin(email)) {
+          token.role = "ADMIN";
         } else {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: user.id },
-            select: { role: true, email: true, phoneNumber: true },
-          });
-          const email = dbUser?.email ?? "";
-          if ((!dbUser?.role || dbUser.role === "USER") && isAllowedAdmin(email)) {
-            token.role = "ADMIN";
-          } else {
-            token.role = dbUser?.role ?? "USER";
-          }
-          if (dbUser?.phoneNumber) {
-            token.phoneNumber = dbUser.phoneNumber;
-          }
+          token.role = dbUser?.role ?? "USER";
+        }
+        if (dbUser?.phoneNumber) {
+          token.phoneNumber = dbUser.phoneNumber;
         }
       }
       return token;

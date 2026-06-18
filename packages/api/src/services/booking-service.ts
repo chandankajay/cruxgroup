@@ -164,6 +164,7 @@ export async function listBookings() {
     include: {
       user: { select: { id: true, name: true, phoneNumber: true } },
       equipment: { select: { id: true, name: true, category: true } },
+      salesPerson: { select: { id: true, name: true, phoneNumber: true } },
     },
     orderBy: { createdAt: "desc" },
   });
