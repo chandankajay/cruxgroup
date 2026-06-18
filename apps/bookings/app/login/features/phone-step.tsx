@@ -211,7 +211,7 @@ export function PhoneStep({ onSubmit, isLoading, error, lockout }: PhoneStepProp
               Sending…
             </>
           ) : (
-            "GET OTP →"
+            "Continue →"
           )}
         </button>
 
@@ -224,7 +224,7 @@ export function PhoneStep({ onSubmit, isLoading, error, lockout }: PhoneStepProp
             marginTop: 10,
           }}
         >
-          We&apos;ll send a one-time code on WhatsApp
+          We&apos;ll send OTP or ask for your PIN
         </p>
       </form>
     </motion.div>

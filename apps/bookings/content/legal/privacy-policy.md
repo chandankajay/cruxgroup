@@ -34,7 +34,7 @@ We collect personal data **fairly**, for **specified purposes**, and to the exte
 | Category | Examples | Primary contexts |
 |----------|----------|------------------|
 | **Identity & contact** | Name, phone number, email (if provided), company / trade name, GSTIN or billing details | Bookings App, Partner OS |
-| **Authentication data** | Phone number used for OTP, OTP session metadata, device/session identifiers | Bookings App, Partner OS (phone-first flows) |
+| **Authentication data** | Phone number used for OTP, OTP session metadata, **hashed 4-digit PIN** (for quick login on your devices; stored in non-readable form), device/session identifiers | Bookings App, Partner OS (phone-first flows) |
 | **KYC & payout (Partners)** | PAN, Aadhaar reference / document images as permitted, bank account details, IFSC, cancelled cheque images, incorporation/partnership proofs where collected | Partner OS Trust Center |
 | **Booking & operations** | Job descriptions, schedules, equipment types, site instructions, status updates | Bookings App, Partner OS |
 | **Location data** | Precise coordinates from map pins, fleet yard locations, live job tracking where enabled | Bookings App, Partner OS |

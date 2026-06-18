@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
 import { prisma } from "@repo/db";
 import { ProfileForm } from "./features/profile-form";
+import { ChangePinSection } from "./features/change-pin-section";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -43,6 +44,9 @@ export default async function ProfilePage() {
         initialEmail={user.email ?? ""}
         initialCompanyName={user.companyName}
       />
+      <div className="mt-10">
+        <ChangePinSection />
+      </div>
     </main>
   );
 }

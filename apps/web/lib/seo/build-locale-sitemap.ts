@@ -35,6 +35,12 @@ export function buildLocaleSitemap(locale: string): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
+      url: `${prefix}/founder`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: `${prefix}/telangana`,
       lastModified: now,
       changeFrequency: "weekly",
