@@ -56,12 +56,17 @@ export const authConfig: NextAuthConfig = {
       if (token.phoneNumber) {
         session.user.phoneNumber = token.phoneNumber as string;
       }
+      if (typeof token.pinSet === "boolean") {
+        session.user.pinSet = token.pinSet;
+      }
       return session;
     },
 
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const role = (auth?.user?.role as string | undefined) ?? "USER";
+      const phoneNumber = auth?.user?.phoneNumber as string | undefined;
+      const pinSet = auth?.user?.pinSet as boolean | undefined;
       const pathname = nextUrl.pathname;
 
       const isAuthRoute = pathname.startsWith("/api/auth");
@@ -75,6 +80,16 @@ export const authConfig: NextAuthConfig = {
       // Public booking response magic links — token is the credential.
       if (isBookingResponseMagicLink(pathname)) return true;
       if (isBookingResponseApi(pathname)) return true;
+
+      // Phone users must set PIN before using the app (OTP → Set PIN → role picker).
+      if (isLoggedIn && phoneNumber && pinSet === false) {
+        if (!isLoginPage) {
+          const url = new URL("/login", nextUrl);
+          url.searchParams.set("setup", "pin");
+          return Response.redirect(url);
+        }
+        return true;
+      }
 
       // Phone OTP users pick Partner vs Sales once before entering the app.
       if (isLoggedIn && needsAdminRoleSelection(role)) {

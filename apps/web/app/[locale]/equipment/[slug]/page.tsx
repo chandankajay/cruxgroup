@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSiteSection } from "../../../../lib/content";
-import { SITE_URL, WHATSAPP_ORDER_URL } from "../../../../lib/env";
+import { SITE_URL, BOOKINGS_URL } from "../../../../lib/env";
 import { buildAlternates, metaDescription, seoTitle } from "../../../../lib/seo/metadata-helpers";
 import { parseLocale, type Locale } from "../../../../lib/locale";
 import {
@@ -351,7 +351,7 @@ export default async function EquipmentPage({
         </p>
       </section>
 
-      <section className="mt-12 flex flex-col items-center gap-4 sm:flex-row">
+      <section className="mt-12 flex flex-col items-center gap-4">
         {isBorewell ? (
           <WhatsAppCta
             className="w-full sm:w-auto"
@@ -359,19 +359,25 @@ export default async function EquipmentPage({
           />
         ) : (
           <>
-            <Button
-              href={WHATSAPP_ORDER_URL}
-              external
-              variant="primary"
-              size="lg"
-              className="min-h-12 w-full sm:w-auto"
-            >
-              {cta}
-            </Button>
+            <div className="flex w-full flex-col items-center gap-4 sm:flex-row sm:justify-center">
+              <Button
+                href={BOOKINGS_URL}
+                external
+                variant="primary"
+                size="lg"
+                className="min-h-12 w-full sm:w-auto"
+              >
+                {cta}
+              </Button>
+              <WhatsAppCta
+                className="w-full sm:w-auto"
+                message={`Hi, I need ${title}. Please share availability and rates.`}
+              />
+            </div>
             <span className="text-sm text-muted">
               {locale === "te"
-                ? "WhatsApp ద్వారా బుక్ చేయండి — 24/7 అందుబాటులో"
-                : "Book via WhatsApp — available 24/7"}
+                ? "ఆన్‌లైన్‌లో బుక్ చేయండి — లైవ్ ట్రాకింగ్ మరియు GST ఇన్‌వాయిస్"
+                : "Book online with live tracking and GST invoice"}
             </span>
           </>
         )}

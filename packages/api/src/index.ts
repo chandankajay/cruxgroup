@@ -17,4 +17,19 @@ export {
   sendAdminOtpWithWhatsApp,
   type VerifyOtpResult,
 } from "./services/otp-service";
+export {
+  resolveLoginStep,
+  verifyPin,
+  setPin,
+  resetPinAfterOtp,
+  clearPinLockout,
+  isPinLocked,
+  hashPin,
+  validatePinForSet,
+  isWeakPin,
+  WEAK_PINS,
+  type LoginStep,
+  type PinVerifyError,
+  type PinValidationError,
+} from "./services/pin-service";
 export type { BookingStatus } from "./services/booking-service";

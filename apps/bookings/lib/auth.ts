@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import type { NextAuthConfig, NextAuthResult } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { verifyOtp } from "@repo/api";
+import { verifyOtp, verifyPin, isPinLocked } from "@repo/api";
 import { enterpriseAuthSecurity } from "@repo/auth";
 import { prisma } from "@repo/db";
 import { sendWhatsAppMessage } from "@repo/lib";
@@ -16,6 +16,8 @@ const userSelect = {
   role: true,
   phoneNumber: true,
   welcomeNoteSentAt: true,
+  pinHash: true,
+  pinLockoutUntil: true,
 } as const;
 
 function toSessionUser(u: {
@@ -126,6 +128,45 @@ const authConfig = {
         }
       },
     }),
+
+    Credentials({
+      id: "pin",
+      name: "Phone PIN",
+      credentials: {
+        phoneNumber: { label: "Phone Number", type: "text" },
+        pin: { label: "PIN", type: "text" },
+      },
+      async authorize(credentials) {
+        try {
+          const rawPhone = credentials?.phoneNumber as string | undefined;
+          const pin = credentials?.pin as string | undefined;
+
+          if (!rawPhone || !pin) return null;
+
+          const phoneNumber = normalizeBookingsPhone(rawPhone);
+          if (!E164_LIKE.test(phoneNumber)) return null;
+
+          const row = await prisma.user.findUnique({
+            where: { phoneNumber },
+            select: userSelect,
+          });
+
+          if (!row?.pinHash) return null;
+          if (isPinLocked(row)) return null;
+
+          const pinResult = await verifyPin(row.id, pin);
+          if (!pinResult.ok) return null;
+
+          return toSessionUser(row);
+        } catch (err) {
+          console.error(
+            "[auth.pin.authorize]",
+            err instanceof Error ? err.stack ?? err.message : err,
+          );
+          return null;
+        }
+      },
+    }),
   ],
 
   callbacks: {
@@ -138,15 +179,24 @@ const authConfig = {
           }
           if ("role" in user && user.role) {
             token.role = user.role as string;
-          } else if (token.id) {
-            const dbUser = await prisma.user.findUnique({
-              where: { id: token.id as string },
-              select: { role: true, phoneNumber: true },
-            });
+          }
+          if ("phoneNumber" in user && user.phoneNumber) {
+            token.pinSet = "pinSet" in user ? !!user.pinSet : undefined;
+          }
+        }
+        if (token.id) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true, phoneNumber: true, pinHash: true },
+          });
+          if (dbUser?.role) {
+            token.role = dbUser.role;
+          } else if (!token.role) {
             token.role = dbUser?.role ?? "USER";
-            if (dbUser?.phoneNumber) {
-              token.phoneNumber = dbUser.phoneNumber;
-            }
+          }
+          if (dbUser?.phoneNumber) {
+            token.phoneNumber = dbUser.phoneNumber;
+            token.pinSet = !!dbUser.pinHash;
           }
         }
         return token;
@@ -164,6 +214,9 @@ const authConfig = {
       if (token.role) session.user.role = token.role as string;
       if (token.phoneNumber) {
         session.user.phoneNumber = token.phoneNumber as string;
+      }
+      if (typeof token.pinSet === "boolean") {
+        session.user.pinSet = token.pinSet;
       }
       return session;
     },

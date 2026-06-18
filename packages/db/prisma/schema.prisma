@@ -35,6 +35,11 @@ model User {
   welcomeNoteSentAt DateTime?
   /// Set when a phone OTP user picks Partner vs Sales on first admin login.
   adminRoleChosenAt DateTime?
+  /// bcrypt hash of 4-digit login PIN; null until user completes mandatory setup
+  pinHash           String?
+  pinSetAt          DateTime?
+  pinAttempts       Int       @default(0)
+  pinLockoutUntil   DateTime?
 
   accounts         Account[]
   sessions         Session[]

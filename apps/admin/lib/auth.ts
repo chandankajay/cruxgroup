@@ -2,7 +2,7 @@ import NextAuth, { type NextAuthResult } from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { verifyOtp } from "@repo/api";
+import { verifyOtp, verifyPin, isPinLocked } from "@repo/api";
 import { prisma } from "@repo/db";
 import { authConfig } from "../auth.config";
 import { ADMIN_PHONE_E164, normalizeAdminPhone } from "./phone";
@@ -12,6 +12,8 @@ const partnerUserSelect = {
   name: true,
   role: true,
   phoneNumber: true,
+  pinHash: true,
+  pinLockoutUntil: true,
 } as const;
 
 // Comma-separated list of explicitly allowed email addresses.
@@ -98,6 +100,47 @@ const nextAuth: NextAuthResult = NextAuth({
         };
       },
     }),
+
+    Credentials({
+      id: "pin",
+      name: "Phone PIN",
+      credentials: {
+        phoneNumber: { label: "Phone Number", type: "text" },
+        pin: { label: "PIN", type: "text" },
+      },
+      async authorize(credentials) {
+        const rawPhone = credentials?.phoneNumber as string | undefined;
+        const pin = credentials?.pin as string | undefined;
+
+        if (!rawPhone || !pin) return null;
+
+        const phoneNumber = normalizeAdminPhone(rawPhone);
+        if (!ADMIN_PHONE_E164.test(phoneNumber)) return null;
+
+        const user = await prisma.user.findUnique({
+          where: { phoneNumber },
+          select: partnerUserSelect,
+        });
+
+        if (!user?.pinHash) return null;
+        if (isPinLocked(user)) return null;
+
+        const pinResult = await verifyPin(user.id, pin);
+        if (!pinResult.ok) return null;
+
+        const allowedRoles = ["USER", "PARTNER", "SALES", "ADMIN"] as const;
+        if (!allowedRoles.includes(user.role as (typeof allowedRoles)[number])) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          name: user.name ?? "",
+          role: user.role,
+          phoneNumber: user.phoneNumber ?? phoneNumber,
+        };
+      },
+    }),
   ],
 
   callbacks: {
@@ -149,7 +192,7 @@ const nextAuth: NextAuthResult = NextAuth({
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, email: true, phoneNumber: true },
+          select: { role: true, email: true, phoneNumber: true, pinHash: true },
         });
         const email = dbUser?.email ?? "";
         if ((!dbUser?.role || dbUser.role === "USER") && isAllowedAdmin(email)) {
@@ -159,6 +202,7 @@ const nextAuth: NextAuthResult = NextAuth({
         }
         if (dbUser?.phoneNumber) {
           token.phoneNumber = dbUser.phoneNumber;
+          token.pinSet = !!dbUser.pinHash;
         }
       }
       return token;
@@ -172,6 +216,9 @@ const nextAuth: NextAuthResult = NextAuth({
       if (token.role) session.user.role = token.role as string;
       if (token.phoneNumber) {
         session.user.phoneNumber = token.phoneNumber as string;
+      }
+      if (typeof token.pinSet === "boolean") {
+        session.user.pinSet = token.pinSet;
       }
       return session;
     },
