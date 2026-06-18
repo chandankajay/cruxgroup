@@ -22,6 +22,7 @@ export type MyBookingCardData = {
   readonly dateLabel: string;
   readonly tripStatus: TripStatus | null;
   readonly trackUrl: string | null;
+  readonly detailUrl: string;
   readonly invoices: readonly {
     readonly invoiceNumber: string;
     readonly paymentStatus: string;
@@ -123,6 +124,7 @@ function toCardData(b: {
     dateLabel: formatDateIst(primaryDate),
     tripStatus: (latestTrip?.status as TripStatus) ?? null,
     trackUrl: latestTrip ? `/track/${latestTrip.id}` : null,
+    detailUrl: `/bookings/${b.id}`,
     invoices,
   };
 }

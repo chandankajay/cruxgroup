@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@repo/db";
+import { advanceBookingProgress } from "@repo/lib";
 
 export async function POST(req: NextRequest) {
   let body: { token?: string; action?: string };
@@ -46,6 +47,12 @@ export async function POST(req: NextRequest) {
         status: "PARTNER_ACCEPTED",
       },
     });
+
+    try {
+      await advanceBookingProgress(responseToken.bookingId, "BOOKING_CONFIRMED");
+    } catch (err) {
+      console.error("[booking-response] progress_hook_failed", err);
+    }
 
     await prisma.bookingResponseToken.updateMany({
       where: {

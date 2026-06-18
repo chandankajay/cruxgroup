@@ -81,6 +81,13 @@ export type BookingStatus =
   | "COMPLETED"
   | "CANCELLED";
 
+export type BookingProgressStage =
+  | "BOOKING_RECEIVED"
+  | "BOOKING_CONFIRMED"
+  | "MACHINE_ASSIGNED"
+  | "ON_SITE"
+  | "JOB_COMPLETED";
+
 export interface BookingLocation {
   address: string;
   coordinates: { lat: number; lng: number };

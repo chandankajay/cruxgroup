@@ -323,6 +323,8 @@ model Booking {
   expectedShift  String?
   /// Quoted amount in paise
   quoteAmount    Int?
+  /// Customer-facing progress stage (additive layer; internal `status` unchanged)
+  progressStage BookingProgressStage @default(BOOKING_RECEIVED)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -330,9 +332,31 @@ model Booking {
   equipment Equipment @relation(fields: [equipmentId], references: [id])
   trips     Trip[]
   responseTokens BookingResponseToken[]
+  progressLogs BookingProgressLog[]
 
   @@index([customerId])
   @@map("bookings")
+}
+
+/// Customer-facing booking progress stages (distinct from internal `BookingStatus` / `TripStatus`).
+enum BookingProgressStage {
+  BOOKING_RECEIVED
+  BOOKING_CONFIRMED
+  MACHINE_ASSIGNED
+  ON_SITE
+  JOB_COMPLETED
+}
+
+model BookingProgressLog {
+  id        String               @id @default(auto()) @map("_id") @db.ObjectId
+  bookingId String               @db.ObjectId
+  booking   Booking              @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  stage     BookingProgressStage
+  timestamp DateTime             @default(now())
+  note      String?
+
+  @@index([bookingId])
+  @@map("booking_progress_logs")
 }
 
 // ─── Trip (operational job lifecycle; rates locked at booking) ───────────────
@@ -376,6 +400,8 @@ model Trip {
   startOtp      String     @default("")
   /// 4-digit OTP to authorize completion
   endOtp        String     @default("")
+  startOtpUsedAt DateTime?
+  endOtpUsedAt   DateTime?
   /// Magic-link token for operator actions (UUID)
   operatorToken String     @unique @default(uuid())
   /// Customer review link (UUID); assigned at booking via @default(uuid())

@@ -82,7 +82,9 @@ export function BookingCard({ booking }: { readonly booking: MyBookingCardData }
             id={`booking-title-${booking.id}`}
             className="truncate text-base font-bold tracking-tight text-brand-navy sm:text-lg"
           >
-            {booking.equipmentName}
+            <Link href={booking.detailUrl} className="hover:underline">
+              {booking.equipmentName}
+            </Link>
           </h2>
           <p className="text-sm text-brand-navy/70">{booking.dateLabel}</p>
           {booking.yardLabel ? (
@@ -104,7 +106,7 @@ export function BookingCard({ booking }: { readonly booking: MyBookingCardData }
         </div>
       </div>
 
-      {booking.tripStatus && (
+      {booking.tripStatus ? (
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-brand-navy/8 bg-slate-50/80 px-3 py-2">
           <span
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ring-inset ${tripStatusBadgeClass(booking.tripStatus)}`}
@@ -120,6 +122,15 @@ export function BookingCard({ booking }: { readonly booking: MyBookingCardData }
               Track →
             </Link>
           )}
+        </div>
+      ) : (
+        <div className="mt-3">
+          <Link
+            href={booking.detailUrl}
+            className="text-xs font-semibold text-[#d45800] hover:underline"
+          >
+            View progress →
+          </Link>
         </div>
       )}
 

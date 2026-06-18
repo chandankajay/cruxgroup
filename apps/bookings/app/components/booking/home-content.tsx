@@ -102,6 +102,7 @@ export function HomeContent({ fallbackEquipment }: HomeContentProps) {
   const t = useLabels();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [lastBookingId, setLastBookingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [activeCategory, setActiveCategory] = useState("All");
   const [nearbyItems, setNearbyItems] = useState<NearbyEquipmentItem[]>([]);
@@ -229,6 +230,7 @@ export function HomeContent({ fallbackEquipment }: HomeContentProps) {
           });
           setSelectedId(null);
           setSelectedPartner(null);
+          setLastBookingId(result.bookingId);
           setShowSuccess(true);
         } else {
           const err =
@@ -259,7 +261,10 @@ export function HomeContent({ fallbackEquipment }: HomeContentProps) {
       <AnimatePresence mode="wait">
         {showSuccess ? (
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-            <BookingSuccess onDismiss={handleDismissSuccess} />
+            <BookingSuccess
+              bookingId={lastBookingId ?? undefined}
+              onDismiss={handleDismissSuccess}
+            />
           </div>
         ) : (
           <>

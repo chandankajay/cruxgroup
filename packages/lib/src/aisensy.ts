@@ -336,3 +336,54 @@ export async function sendPartnerMachineServiceDueWhatsApp(params: {
     ],
   });
 }
+
+/** Customer booking progress tracker stages — one template per stage for Meta approval. */
+export type BookingProgressWhatsAppStage =
+  | "BOOKING_RECEIVED"
+  | "BOOKING_CONFIRMED"
+  | "MACHINE_ASSIGNED"
+  | "ON_SITE"
+  | "JOB_COMPLETED";
+
+const BOOKING_PROGRESS_TEMPLATE_ENV: Record<BookingProgressWhatsAppStage, string> = {
+  BOOKING_RECEIVED: "AISENSY_PROGRESS_BOOKING_RECEIVED_TEMPLATE",
+  BOOKING_CONFIRMED: "AISENSY_PROGRESS_BOOKING_CONFIRMED_TEMPLATE",
+  MACHINE_ASSIGNED: "AISENSY_PROGRESS_MACHINE_ASSIGNED_TEMPLATE",
+  ON_SITE: "AISENSY_PROGRESS_ON_SITE_TEMPLATE",
+  JOB_COMPLETED: "AISENSY_PROGRESS_JOB_COMPLETED_TEMPLATE",
+};
+
+/**
+ * Customer progress notification at each booking stage.
+ * Template body copy (submit each to Meta for approval):
+ *
+ * 1. BOOKING_RECEIVED — "Your booking request for {{machineType}} on {{date}} has been received. We will confirm shortly."
+ * 2. BOOKING_CONFIRMED — "Good news! Your booking for {{machineType}} on {{date}} is confirmed."
+ * 3. MACHINE_ASSIGNED — "Machine and operator assigned for your booking. {{operatorName}} will be your operator."
+ * 4. ON_SITE — "Your machine has arrived on site. Work is starting now."
+ * 5. JOB_COMPLETED — "Job completed! Thank you for using Crux. Your invoice will be sent shortly."
+ */
+export async function sendBookingProgressWhatsApp(params: {
+  customerPhone: string;
+  stage: BookingProgressWhatsAppStage;
+  machineType: string;
+  date: string;
+  operatorName: string;
+}): Promise<boolean> {
+  const envKey = BOOKING_PROGRESS_TEMPLATE_ENV[params.stage];
+  const campaignName = process.env[envKey];
+  if (!campaignName) return true;
+
+  const templateParams =
+    params.stage === "MACHINE_ASSIGNED"
+      ? [params.machineType, params.operatorName]
+      : params.stage === "ON_SITE" || params.stage === "JOB_COMPLETED"
+        ? [params.machineType]
+        : [params.machineType, params.date];
+
+  return sendAisensyCampaign({
+    destination: params.customerPhone,
+    campaignName,
+    templateParams,
+  });
+}

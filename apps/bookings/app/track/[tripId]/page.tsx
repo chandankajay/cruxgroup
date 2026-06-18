@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "../../../lib/auth";
+import { fetchBookingProgress } from "@repo/lib";
+import { BookingProgressPoller } from "../../bookings/[id]/booking-progress-poller";
 import { fetchTripForCustomer } from "./data";
 import { LiveTripTracking } from "./live-trip-tracking";
 
@@ -21,6 +23,11 @@ export default async function TrackTripPage({ params }: PageProps) {
     notFound();
   }
 
+  const progress =
+    trip.bookingId != null
+      ? await fetchBookingProgress(trip.bookingId, userId)
+      : null;
+
   return (
     <main className="mx-auto min-h-[60vh] max-w-lg px-4 py-8 sm:max-w-xl sm:px-6 sm:py-10">
       <div className="mb-8">
@@ -37,6 +44,19 @@ export default async function TrackTripPage({ params }: PageProps) {
           Follow your job from dispatch to completion.
         </p>
       </div>
+
+      {progress && trip.bookingId ? (
+        <div className="mb-6">
+          <BookingProgressPoller
+            bookingId={trip.bookingId}
+            initial={{
+              progressStage: progress.progressStage,
+              bookingStatus: progress.bookingStatus,
+              progressHistory: progress.progressHistory,
+            }}
+          />
+        </div>
+      ) : null}
 
       <LiveTripTracking trip={trip} />
     </main>

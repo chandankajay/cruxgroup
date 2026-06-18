@@ -6,6 +6,7 @@ import {
   sendBookingConfirmationWhatsApp,
   sendOperatorMagicLink,
 } from "@repo/lib/aisensy";
+import { advanceBookingProgress } from "@repo/lib";
 import { auth } from "../../../../lib/auth";
 import {
   getAuthorizedWhereClause,
@@ -491,6 +492,13 @@ export async function createWalkInBookingAction(
   const operatorLink = `${origin}/operator/${result.trip.operatorToken}`;
   const jobLabel = `${equipment.category} ${equipment.name}`.trim();
 
+  void advanceBookingProgress(result.booking.id, "BOOKING_RECEIVED").catch((err) =>
+    console.error("[walk-in] progress_received_failed", err),
+  );
+  void advanceBookingProgress(result.booking.id, "BOOKING_CONFIRMED").catch((err) =>
+    console.error("[walk-in] progress_confirmed_failed", err),
+  );
+
   let notifyFailed = false;
   try {
     if (equipment.operatorPhone?.trim()) {
@@ -501,6 +509,11 @@ export async function createWalkInBookingAction(
         startOtp,
       });
       if (!ok) notifyFailed = true;
+      else {
+        void advanceBookingProgress(result.booking.id, "MACHINE_ASSIGNED").catch((err) =>
+          console.error("[walk-in] progress_machine_assigned_failed", err),
+        );
+      }
     }
 
     const okCustomer = await sendBookingConfirmationWhatsApp({
