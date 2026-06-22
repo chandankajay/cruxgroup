@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
+import { requirePinSetup } from "../../lib/require-pin-setup";
 import { fetchMyBookingsForUser } from "./data";
 import { MyBookingsDashboard } from "./features/my-bookings-dashboard";
 
@@ -10,6 +11,7 @@ export default async function DashboardPage() {
   if (!userId) {
     redirect("/login");
   }
+  await requirePinSetup();
 
   const { active, past } = await fetchMyBookingsForUser(userId);
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "../../lib/auth";
+import { requirePinSetup } from "../../lib/require-pin-setup";
 import { prisma } from "@repo/db";
 import { ProfileForm } from "./features/profile-form";
 
@@ -9,6 +10,7 @@ export default async function ProfilePage() {
   if (!session?.user?.id) {
     redirect("/login");
   }
+  await requirePinSetup();
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
