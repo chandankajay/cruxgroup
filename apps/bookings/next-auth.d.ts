@@ -10,6 +10,7 @@ declare module "next-auth" {
       image?: string | null;
       role?: string | null;
       phoneNumber?: string | null;
+      pinSet?: boolean;
     };
   }
 }
@@ -19,5 +20,15 @@ declare module "next-auth/jwt" {
     id?: string;
     role?: string;
     phoneNumber?: string;
+    pinSet?: boolean;
+  }
+}
+
+declare module "@auth/core/jwt" {
+  interface JWT {
+    id?: string;
+    role?: string;
+    phoneNumber?: string;
+    pinSet?: boolean;
   }
 }

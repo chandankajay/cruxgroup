@@ -11,15 +11,17 @@
     "lint": "eslint src --max-warnings 0"
   },
   "dependencies": {
-    "@repo/lib": "workspace:*",
     "@repo/db": "workspace:*",
+    "@repo/lib": "workspace:*",
     "@trpc/server": "11.13.0",
+    "bcryptjs": "^3.0.3",
     "superjson": "^2.2.2",
     "zod": "^3.25.67"
   },
   "devDependencies": {
     "@prisma/client": "6.19.3",
     "@repo/typescript-config": "workspace:*",
+    "@types/bcryptjs": "^3.0.0",
     "typescript": "5.9.2"
   }
 }
