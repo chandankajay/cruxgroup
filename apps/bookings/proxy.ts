@@ -3,7 +3,8 @@ import { authConfig } from "./auth.config";
 
 const nextAuth: NextAuthResult = NextAuth(authConfig);
 
-export default nextAuth.auth;
+const auth: NextAuthResult["auth"] = nextAuth.auth;
+export default auth;
 
 export const config = {
   matcher: [
