@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAllArticleSlugs } from "./data/articles";
+import { getTechnicalGuideSlugs } from "./data/technical-guides";
 import {
   getAllLocationSlugs,
   getLocationBySlug,
@@ -65,6 +66,15 @@ export function buildLocaleSitemap(locale: string): MetadataRoute.Sitemap {
   }
 
   for (const slug of getAllArticleSlugs()) {
+    entries.push({
+      url: `${prefix}/articles/${slug}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    });
+  }
+
+  for (const slug of getTechnicalGuideSlugs()) {
     entries.push({
       url: `${prefix}/articles/${slug}`,
       lastModified: now,
