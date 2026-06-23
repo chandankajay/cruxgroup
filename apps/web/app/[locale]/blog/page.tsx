@@ -4,6 +4,7 @@ import { SITE_URL } from "../../../lib/env";
 import { buildAlternates, metaDescription } from "../../../lib/seo/metadata-helpers";
 import { parseLocale } from "../../../lib/locale";
 import { TagFilter } from "./components/TagFilter";
+import { TechnicalGuides } from "./components/TechnicalGuides";
 
 export const revalidate = 3600;
 
@@ -53,6 +54,8 @@ export default async function BlogIndexPage({
         </p>
       </header>
 
+      <TechnicalGuides locale={locale} />
+
       {posts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-surface/60 px-8 py-16 text-center">
           <p className="text-lg text-muted">
@@ -60,7 +63,10 @@ export default async function BlogIndexPage({
           </p>
         </div>
       ) : (
-        <TagFilter posts={posts} locale={locale} />
+        <>
+          <h2 className="mb-8 text-2xl font-bold text-offwhite">Latest posts</h2>
+          <TagFilter posts={posts} locale={locale} />
+        </>
       )}
     </div>
   );

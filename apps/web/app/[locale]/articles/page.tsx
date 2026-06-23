@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ARTICLES, getReadingTime } from "../../../lib/seo/data/articles";
+import { getTechnicalGuidesByPillar } from "../../../lib/seo/data/technical-guides";
 import { SITE_URL } from "../../../lib/env";
 import { buildAlternates, metaDescription } from "../../../lib/seo/metadata-helpers";
 import { parseLocale } from "../../../lib/locale";
 
 export const revalidate = 86400;
+
+const landDevelopmentGuides = getTechnicalGuidesByPillar("land-development");
+const perimeterGuides = getTechnicalGuidesByPillar("perimeter");
 
 export async function generateMetadata({
   params,
@@ -65,32 +69,111 @@ export default async function ArticlesIndexPage({
         compliance, infrastructure trends, and how digital booking works.
       </p>
 
-      <ul className="mt-8 space-y-6">
-        {ARTICLES.map((article) => (
-          <li key={article.slug}>
-            <Link
-              href={`/${locale}/articles/${article.slug}`}
-              className="block rounded-xl border border-border bg-surface p-5 transition-colors hover:border-brand/40"
-            >
-              <h2 className="text-lg font-semibold text-offwhite">
-                {article.title}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                {article.excerpt}
-              </p>
-              <p className="mt-3 text-xs text-muted">
-                {article.author} ·{" "}
-                {new Date(article.date).toLocaleDateString("en-IN", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}{" "}
-                · {getReadingTime(article.content)} min read
-              </p>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <section className="mt-10">
+        <h2 className="text-xl font-bold text-offwhite">
+          Engineering Reference Library
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          Civil specifications for site engineers — land development, levelling,
+          perimeter systems. No pricing, no sales copy.
+        </p>
+
+        <h3 className="mt-6 text-sm font-semibold uppercase tracking-wide text-brand">
+          Land development &amp; levelling
+        </h3>
+        <ul className="mt-4 space-y-4">
+          {landDevelopmentGuides.map((guide) => (
+            <li key={guide.slug}>
+              <Link
+                href={`/${locale}/articles/${guide.slug}`}
+                className="block rounded-xl border border-border bg-surface p-5 transition-colors hover:border-brand/40"
+              >
+                <span className="text-xs font-semibold uppercase tracking-wide text-brand">
+                  {guide.tag}
+                </span>
+                <h4 className="mt-1 text-lg font-semibold text-offwhite">
+                  {guide.title}
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  {guide.excerpt}
+                </p>
+                <p className="mt-3 text-xs text-muted">
+                  Crux Agri &amp; Rural Services LLP ·{" "}
+                  {new Date(guide.datePublished).toLocaleDateString("en-IN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}{" "}
+                  · {guide.readMinutes} min read
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        <h3 className="mt-8 text-sm font-semibold uppercase tracking-wide text-brand">
+          Compound wall &amp; boundary
+        </h3>
+        <ul className="mt-4 space-y-4">
+          {perimeterGuides.map((guide) => (
+            <li key={guide.slug}>
+              <Link
+                href={`/${locale}/articles/${guide.slug}`}
+                className="block rounded-xl border border-border bg-surface p-5 transition-colors hover:border-brand/40"
+              >
+                <span className="text-xs font-semibold uppercase tracking-wide text-brand">
+                  {guide.tag}
+                </span>
+                <h4 className="mt-1 text-lg font-semibold text-offwhite">
+                  {guide.title}
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  {guide.excerpt}
+                </p>
+                <p className="mt-3 text-xs text-muted">
+                  Crux Agri &amp; Rural Services LLP ·{" "}
+                  {new Date(guide.datePublished).toLocaleDateString("en-IN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}{" "}
+                  · {guide.readMinutes} min read
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-xl font-bold text-offwhite">Equipment &amp; operations</h2>
+        <ul className="mt-5 space-y-6">
+          {ARTICLES.map((article) => (
+            <li key={article.slug}>
+              <Link
+                href={`/${locale}/articles/${article.slug}`}
+                className="block rounded-xl border border-border bg-surface p-5 transition-colors hover:border-brand/40"
+              >
+                <h3 className="text-lg font-semibold text-offwhite">
+                  {article.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  {article.excerpt}
+                </p>
+                <p className="mt-3 text-xs text-muted">
+                  {article.author} ·{" "}
+                  {new Date(article.date).toLocaleDateString("en-IN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}{" "}
+                  · {getReadingTime(article.content)} min read
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }
