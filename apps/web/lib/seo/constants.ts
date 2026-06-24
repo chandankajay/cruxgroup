@@ -1,6 +1,7 @@
 /** Route segments that must not be treated as location slugs. */
 export const RESERVED_LOCATION_SLUGS = new Set([
   "equipment",
+  "services",
   "blog",
   "articles",
   "telangana",
