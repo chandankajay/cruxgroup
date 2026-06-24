@@ -4,6 +4,7 @@ import { Hero } from "../../components/sections/Hero";
 import { MachineSections } from "../../components/sections/MachineSections";
 import { ServiceAreas } from "../../components/sections/ServiceAreas";
 import { ContractorUseCases } from "../../components/sections/ContractorUseCases";
+import { SiteServices } from "../../components/sections/SiteServices";
 import { StatsBar } from "../../components/sections/StatsBar";
 import { Fleet } from "../../components/sections/Fleet";
 import { ForPartners } from "../../components/sections/ForPartners";
@@ -145,6 +146,7 @@ export default async function HomePage({
       <MachineSections />
       <ServiceAreas locale={locale} />
       <ContractorUseCases locale={locale} />
+      <SiteServices locale={locale} />
       <StatsBar blocks={statsBlocks} />
       <Fleet
         heading={{
