@@ -11,5 +11,3 @@ export {
   type PartnerTopCustomerRow,
 } from "./partnerDashboardMetrics";
 export * from "./types";
-export { consumeRateLimit } from "./rate-limit";
-export { logLeadActivity } from "./lead-activity";

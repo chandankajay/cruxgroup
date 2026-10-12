@@ -457,6 +457,90 @@ export async function requestQuoteAdminHandoffSalesAction(
   return { success: true };
 }
 
+export async function markQuotationSentSalesAction(input: {
+  leadId: string;
+  amountPaise: number;
+  sentAt: Date;
+  billbookRef: string;
+}): Promise<{ success: boolean; error?: string }> {
+  if (!(await sessionCanSendQuotes())) {
+    return { success: false, error: "You cannot mark quotations sent." };
+  }
+
+  const admin = await requireAdminSession();
+  const sales = await requireSalesSession();
+  const actorId = admin?.userId ?? sales?.userId;
+  if (!actorId) return { success: false, error: "Forbidden" };
+
+  const ref = input.billbookRef.trim();
+  if (!ref) return { success: false, error: "Billbook reference is required." };
+  if (input.amountPaise <= 0) {
+    return { success: false, error: "Enter a valid quoted amount." };
+  }
+
+  const lead = await prisma.lead.findFirst({
+    where: {
+      id: input.leadId,
+      leadType: "SERVICE",
+      ...(sales ? { salesPersonId: sales.userId } : {}),
+    },
+    select: { id: true },
+  });
+  if (!lead) return { success: false, error: "Lead not found." };
+
+  await prisma.lead.update({
+    where: { id: input.leadId },
+    data: {
+      serviceStage: "QUOTATION_SENT",
+      quoteAmountPaise: input.amountPaise,
+      quoteSentAt: input.sentAt,
+      billbookRef: ref,
+      quoteHandoffRequested: false,
+    },
+  });
+
+  await logLeadActivity({
+    leadId: input.leadId,
+    actorId,
+    kind: "QUOTATION_SENT",
+    message: `Quotation sent · BB ${ref}`,
+    meta: { amountPaise: input.amountPaise, billbookRef: ref },
+  });
+
+  revalidateSales();
+  revalidatePath("/services-leads");
+  revalidatePath(`/sales/leads/${input.leadId}`);
+  return { success: true };
+}
+
+export async function requestQuoteAdminHandoffSalesAction(
+  leadId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const sales = await requireSalesSession();
+  if (!sales) return { success: false, error: "Forbidden" };
+  if (sales.canSendQuotes) {
+    return { success: false, error: "You can mark the quotation yourself." };
+  }
+
+  const updated = await prisma.lead.updateMany({
+    where: { id: leadId, leadType: "SERVICE", salesPersonId: sales.userId },
+    data: { quoteHandoffRequested: true },
+  });
+  if (updated.count === 0) return { success: false, error: "Lead not found." };
+
+  await logLeadActivity({
+    leadId,
+    actorId: sales.userId,
+    kind: "QUOTE_HANDOFF",
+    message: "Requested admin to send quotation",
+  });
+
+  revalidateSales();
+  revalidatePath("/services-leads");
+  revalidatePath(`/sales/leads/${leadId}`);
+  return { success: true };
+}
+
 export async function updateLeadStatusAction(
   leadId: string,
   status: LeadStatus,

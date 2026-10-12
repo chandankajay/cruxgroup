@@ -2,7 +2,9 @@
 
 import { headers } from "next/headers";
 import { z } from "zod";
-import { prisma, consumeRateLimit, logLeadActivity } from "@repo/db";
+import { prisma } from "@repo/db";
+import { consumeRateLimit } from "@repo/db/rate-limit";
+import { logLeadActivity } from "@repo/db/lead-activity";
 import {
   calculateDistanceKm,
   findVillageById,

@@ -19,9 +19,12 @@ export default async function CmsProjectsPage() {
             spoke pages.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/website-cms/projects/new">Add project</Link>
-        </Button>
+        <Link
+          href="/website-cms/projects/new"
+          className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
+          Add project
+        </Link>
       </div>
       <ul className="divide-y rounded-xl border">
         {projects.map((p) => (
@@ -32,9 +35,12 @@ export default async function CmsProjectsPage() {
                 {p.serviceSlug} · {p.villageLabel ?? p.areaSlug ?? "—"}
               </p>
             </div>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href={`/website-cms/projects/${p.id}/edit`}>Edit</Link>
-            </Button>
+            <Link
+              href={`/website-cms/projects/${p.id}/edit`}
+              className="text-sm text-amber-600 hover:underline"
+            >
+              Edit
+            </Link>
           </li>
         ))}
       </ul>
