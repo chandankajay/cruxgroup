@@ -52,9 +52,13 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
 }
 
 export async function getPublishedPostSlugs(): Promise<string[]> {
-  const rows = await prisma.blogPost.findMany({
-    where: { published: true },
-    select: { slug: true },
-  });
-  return rows.map((r) => r.slug);
+  try {
+    const rows = await prisma.blogPost.findMany({
+      where: { published: true },
+      select: { slug: true },
+    });
+    return rows.map((r) => r.slug);
+  } catch {
+    return [];
+  }
 }

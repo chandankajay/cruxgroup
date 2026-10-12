@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@repo/db";
 import { consumeRateLimit } from "@repo/db/rate-limit";
 import { logLeadActivity } from "@repo/db/lead-activity";
+import { uploadPublicSiteImage } from "../blob-upload";
 import {
   calculateDistanceKm,
   findVillageById,
@@ -24,6 +25,25 @@ const quoteRequestSchema = z
     photoUrls: z.array(z.string().url()).max(5).optional(),
   })
   .strict();
+
+export async function uploadQuoteSitePhotoAction(
+  formData: FormData,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const hdrs = await headers();
+  const ip =
+    hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    hdrs.get("x-real-ip") ??
+    "unknown";
+  const rate = await consumeRateLimit(`service-quote-upload:${ip}`, 15, 15 * 60 * 1000);
+  if (!rate.ok) {
+    return { ok: false, error: "Too many uploads. Try again later." };
+  }
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return { ok: false, error: "No file provided." };
+  }
+  return uploadPublicSiteImage("service-quotes", file);
+}
 
 export type QuoteRequestResult =
   | { ok: true; leadId: string; beyondServiceArea: boolean; distanceKm: number }

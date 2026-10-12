@@ -69,9 +69,9 @@ export function isStepCompleted(
 export function isStepActive(
   index: number,
   state: TripTimelineState,
-  _status: TripStatus
+  status: TripStatus
 ): boolean {
-  void _status;
+  if (status === "CANCELLED") return false;
   if (state.suppressPulse || state.terminal) return false;
   return index === state.activeStep;
 }

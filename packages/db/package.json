@@ -8,10 +8,7 @@
     "./client": "./src/client.ts",
     "./types": "./src/types.ts",
     "./transport-fee": "./src/transportFee.ts",
-<<<<<<< HEAD
-=======
     "./rate-limit": "./src/rate-limit.ts",
->>>>>>> c333eb8 (fix(admin): build fixes for imports, Button asChild, and db server exports)
     "./lead-activity": "./src/lead-activity.ts"
   },
   "scripts": {

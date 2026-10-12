@@ -3,11 +3,24 @@
  * Run: pnpm --filter @repo/db exec tsx scripts/seed-services-seo.ts
  */
 import { prisma } from "../src/client";
-import { calculateDistanceKm, getClustersData, getHomeBaseHub } from "@repo/lib";
+import { calculateDistanceKm } from "../../lib/src/geo";
+import clustersJson from "../../lib/src/data/clusters-data.json";
+import type { ClustersData } from "../../lib/src/clusters.types";
+
+const SERVICE_SLUGS = [
+  "land-levelling",
+  "earthworks-excavation",
+  "precast-wall",
+  "farmhouse-construction",
+  "compound-fencing",
+  "debris-rock-breaking",
+] as const;
+
+const data = clustersJson as ClustersData;
 
 async function main(): Promise<void> {
-  const data = getClustersData();
-  const hub = getHomeBaseHub();
+  const hub = data.clusters.find((c) => c.isHomeBase);
+  if (!hub) throw new Error("Home base cluster missing");
 
   for (const cluster of data.clusters) {
     const villages = data.villages.filter((v) => v.clusterId === cluster.id);
@@ -22,7 +35,10 @@ async function main(): Promise<void> {
         displayName: cluster.displayName,
         clusterId: cluster.id,
         roadKmFromBase: roadKm,
-        straightLineKmFromBase: calculateStraight(cluster, hub),
+        straightLineKmFromBase: calculateDistanceKm(
+          hub.hub.coordinates,
+          cluster.hub.coordinates,
+        ),
         demandDrivers: [cluster.whyHere],
         villages: villages.slice(0, 50).map((v) => ({
           id: v.id,
@@ -34,18 +50,50 @@ async function main(): Promise<void> {
       update: {
         displayName: cluster.displayName,
         roadKmFromBase: roadKm,
-        straightLineKmFromBase: calculateStraight(cluster, hub),
+        straightLineKmFromBase: calculateDistanceKm(
+          hub.hub.coordinates,
+          cluster.hub.coordinates,
+        ),
         published: cluster.isFirstBatch,
       },
     });
   }
-}
 
-function calculateStraight(
-  cluster: { hub: { coordinates: { lat: number; lng: number } } },
-  home: { hub: { coordinates: { lat: number; lng: number } } },
-): number {
-  return calculateDistanceKm(home.hub.coordinates, cluster.hub.coordinates);
+  for (const slug of SERVICE_SLUGS) {
+    await prisma.servicesSeoService.upsert({
+      where: { slug },
+      create: {
+        slug,
+        unitLabel: "See website",
+        process_en: "Site visit → quotation → mobilisation → completion",
+        published: true,
+      },
+      update: { published: true },
+    });
+  }
+
+  const firstBatch = data.clusters.filter((c) => c.isFirstBatch);
+  for (const cluster of firstBatch) {
+    for (const serviceSlug of SERVICE_SLUGS) {
+      await prisma.serviceAreaPage.upsert({
+        where: {
+          serviceSlug_areaSlug: { serviceSlug, areaSlug: cluster.slug },
+        },
+        create: {
+          serviceSlug,
+          areaSlug: cluster.slug,
+          published: true,
+          thinContent: false,
+          lastReviewed: new Date(),
+        },
+        update: {
+          published: true,
+          thinContent: false,
+          lastReviewed: new Date(),
+        },
+      });
+    }
+  }
 }
 
 main()

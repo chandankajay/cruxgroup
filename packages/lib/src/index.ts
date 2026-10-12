@@ -7,6 +7,12 @@ export {
 } from "./sales-permissions";
 export type { ClustersData, ClusterVillage, ServiceCluster } from "./clusters.types";
 export {
+  serviceAreaPageTag,
+  serviceAreaPagesListTag,
+  projectsListTag,
+  projectsForSpokeTag,
+} from "./services-revalidate";
+export {
   getClustersData,
   getHomeBaseHub,
   getClusterVillages,

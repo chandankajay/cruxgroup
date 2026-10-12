@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button } from "@repo/ui/button";
 import { fetchProjects } from "./actions";
 
 export const dynamic = "force-dynamic";

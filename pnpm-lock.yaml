@@ -313,6 +313,9 @@ importers:
       '@repo/lib':
         specifier: workspace:*
         version: link:../../packages/lib
+      '@vercel/blob':
+        specifier: ^2.3.3
+        version: 2.3.3
       clsx:
         specifier: ^2.1.1
         version: 2.1.1

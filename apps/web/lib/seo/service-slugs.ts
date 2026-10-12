@@ -1,13 +1,14 @@
 export const SERVICE_PAGE_SLUGS = [
-  "compound-fence",
-  "ground-levelling",
   "land-levelling",
   "earthworks-excavation",
   "precast-wall",
   "farmhouse-construction",
   "compound-fencing",
-  "debris-clearing",
   "debris-rock-breaking",
+  /** Legacy URLs still generated for redirects / static paths */
+  "ground-levelling",
+  "compound-fence",
+  "debris-clearing",
   "silent-rock-breaking",
 ] as const;
 

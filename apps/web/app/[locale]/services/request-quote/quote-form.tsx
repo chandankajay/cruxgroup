@@ -7,7 +7,10 @@ import {
   findVillageById,
   getClustersData,
 } from "@repo/lib";
-import { submitServiceQuoteRequest } from "../../../../lib/services/quote-request-action";
+import {
+  submitServiceQuoteRequest,
+  uploadQuoteSitePhotoAction,
+} from "../../../../lib/services/quote-request-action";
 
 const TIMELINES = [
   "Within 1 week",
@@ -29,6 +32,8 @@ export function QuoteRequestForm() {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const village = villageId ? findVillageById(villageId) : undefined;
   const distanceOk =
@@ -49,6 +54,7 @@ export function QuoteRequestForm() {
         name,
         phone,
         whatsappOptIn,
+        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
       });
       if (!result.ok) {
         setError(result.error);
@@ -156,6 +162,43 @@ export function QuoteRequestForm() {
             onChange={(e) => setLandType(e.target.value)}
             className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-3"
           />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Site photos (optional, up to 5)</p>
+        <div className="rounded-xl border border-dashed border-zinc-700 p-4">
+          {photoUrls.length > 0 ? (
+            <ul className="mb-3 flex flex-wrap gap-2">
+              {photoUrls.map((url) => (
+                <li key={url} className="text-xs text-zinc-400 truncate max-w-[120px]">
+                  {url.split("/").pop()}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={uploadingPhoto || photoUrls.length >= 5}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setUploadingPhoto(true);
+              setError(undefined);
+              const fd = new FormData();
+              fd.set("file", file);
+              const result = await uploadQuoteSitePhotoAction(fd);
+              setUploadingPhoto(false);
+              if (!result.ok) {
+                setError(result.error);
+                return;
+              }
+              setPhotoUrls((prev) => [...prev, result.url].slice(0, 5));
+              e.target.value = "";
+            }}
+          />
+          <p className="mt-1 text-xs text-zinc-500">JPG or PNG, max 10 MB each</p>
         </div>
       </div>
 

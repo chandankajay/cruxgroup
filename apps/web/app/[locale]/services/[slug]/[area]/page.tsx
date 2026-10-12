@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { prisma } from "@repo/db";
 import { resolveServiceSlug, SERVICE_CATALOG_LABELS } from "@repo/lib";
+import { SpokeProjectsStrip } from "../../../../../components/services/spoke-projects-strip";
+import {
+  getPublishedServiceAreaPageTagged,
+  getPublishedSpokeProjects,
+  listPublishedServiceAreaPageParams,
+} from "../../../../../lib/services/cached-content";
 
 export const revalidate = 86400;
 
@@ -14,11 +19,7 @@ export async function generateStaticParams(): Promise<
 > {
   if (!process.env.DATABASE_URL) return [];
   try {
-    const pages = await prisma.serviceAreaPage.findMany({
-      where: { published: true, thinContent: false },
-      take: 500,
-      select: { serviceSlug: true, areaSlug: true },
-    });
+    const pages = await listPublishedServiceAreaPageParams();
     return pages.map((p) => ({
       slug: p.serviceSlug,
       area: p.areaSlug,
@@ -34,10 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const serviceSlug = resolveServiceSlug(slug);
   if (!serviceSlug) return { title: "Service" };
 
-  const page = await prisma.serviceAreaPage.findUnique({
-    where: { serviceSlug_areaSlug: { serviceSlug, areaSlug: area } },
-    include: { area: true },
-  });
+  const page = await getPublishedServiceAreaPageTagged(serviceSlug, area);
 
   const serviceName = SERVICE_CATALOG_LABELS[serviceSlug];
   const areaName = page?.area.displayName ?? area;
@@ -51,17 +49,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ServiceAreaPage({ params }: Props) {
-  const { slug, area } = await params;
+  const { slug, area, locale } = await params;
   const serviceSlug = resolveServiceSlug(slug);
   if (!serviceSlug) notFound();
 
-  const page = await prisma.serviceAreaPage.findUnique({
-    where: { serviceSlug_areaSlug: { serviceSlug, areaSlug: area } },
-    include: { area: true, service: true },
-  });
-
+  const page = await getPublishedServiceAreaPageTagged(serviceSlug, area);
   if (!page?.published) notFound();
 
+  const projects = await getPublishedSpokeProjects(serviceSlug, area);
   const serviceName = SERVICE_CATALOG_LABELS[serviceSlug];
 
   return (
@@ -76,11 +71,12 @@ export default async function ServiceAreaPage({ params }: Props) {
           : ""}
       </p>
       <a
-        href="/en/services/request-quote"
+        href={`/${locale}/services/request-quote`}
         className="mt-8 inline-block rounded-xl bg-amber-500 px-6 py-3 font-semibold text-black"
       >
         Request a site visit
       </a>
+      <SpokeProjectsStrip projects={projects} locale={locale} />
     </main>
   );
 }
