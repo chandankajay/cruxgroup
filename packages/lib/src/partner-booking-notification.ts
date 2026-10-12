@@ -64,6 +64,7 @@ export async function findEligiblePartners(
   bookingLng: number,
   _equipmentCategory?: string,
 ): Promise<EligiblePartner[]> {
+  void _equipmentCategory;
   const partners = await prisma.partner.findMany({
     where: {
       kycStatus: "VERIFIED",

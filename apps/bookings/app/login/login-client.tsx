@@ -23,14 +23,6 @@ type Step = "phone" | "otp" | "pin" | "set_pin";
 type OtpMode = "login" | "reset_pin";
 type PinSetupMode = "setup" | "reset";
 
-const ease = [0.16, 1, 0.3, 1] as const;
-
-const FEATURES = [
-  { icon: "✓", text: "Verified machines & trained operators" },
-  { icon: "✓", text: "Book in under 2 minutes" },
-  { icon: "✓", text: "Available across Telangana" },
-];
-
 function TrustBadges() {
   return (
     <div

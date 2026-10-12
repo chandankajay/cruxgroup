@@ -168,6 +168,7 @@ export function AddEquipmentForm({ catalog }: AddEquipmentFormProps) {
 
             {selected && selected.imageUrl ? (
               <div className="overflow-hidden rounded-lg border border-border bg-muted/20">
+                {/* eslint-disable-next-line @next/next/no-img-element -- catalog image URLs may be arbitrary partner blob origins */}
                 <img
                   src={selected.imageUrl}
                   alt={selected.name}

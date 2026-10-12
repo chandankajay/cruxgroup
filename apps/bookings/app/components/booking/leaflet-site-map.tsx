@@ -28,9 +28,11 @@ function ensureLeafletIcons(): void {
 
 function MapViewSync({ center }: { readonly center: [number, number] }) {
   const map = useMap();
+  const lat = center[0];
+  const lng = center[1];
   useEffect(() => {
     map.setView(center, Math.max(map.getZoom(), 13), { animate: true });
-  }, [center[0], center[1], map]);
+  }, [center, lat, lng, map]);
   return null;
 }
 

@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "../../../../components/seo/json-ld";
 import { WhatsAppCta } from "../../../../components/seo/whatsapp-cta";
 import {
-  ARTICLES,
   getAllArticleSlugs,
   getArticleBySlug,
   getReadingTime,
