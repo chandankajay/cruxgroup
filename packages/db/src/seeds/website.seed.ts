@@ -1,4 +1,4 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient, SiteBlockType } from "@prisma/client";
 
 const SITE_CONFIG_ROWS: { key: string; value: string }[] = [
   { key: "phone", value: "9182054293" },
@@ -73,7 +73,7 @@ const SITE_CONFIG_ROWS: { key: string; value: string }[] = [
 ];
 
 type BlockSeed = {
-  type: Prisma.SiteBlockType;
+  type: SiteBlockType;
   order: number;
   heading_en?: string | null;
   heading_te?: string | null;

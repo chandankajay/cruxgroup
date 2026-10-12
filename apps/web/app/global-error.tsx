@@ -7,12 +7,13 @@ import Link from "next/link";
 const geist = Geist({ subsets: ["latin"] });
 
 export default function GlobalError({
-  error,
+  error: _error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }): React.ReactElement {
+  void _error;
   return (
     <html lang="en">
       <body className={`${geist.className} bg-[#0f0e0d] text-[#f5f0eb]`}>

@@ -66,7 +66,6 @@ export async function sendWhatsAppMessage(
   }
 
   if (!apiKey) {
-    // eslint-disable-next-line no-console
     console.log("[aisensy] sendWhatsAppMessage (no AISENSY_API_KEY):", {
       ...payload,
       apiKeyPresent: false,

@@ -155,6 +155,7 @@ export default function BookingResponseClient({
         {/* Equipment image */}
         {equipmentImage && (
           <div style={{ marginBottom: 16, borderRadius: 12, overflow: "hidden" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- partner-supplied equipment photo URL */}
             <img
               src={equipmentImage}
               alt={equipmentName}

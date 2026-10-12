@@ -236,7 +236,11 @@ const NAV_ITEM_DEFINITIONS: readonly NavItemDefinition[] = [
 export function getNavItemsForShellRole(role: string): NavItem[] {
   const shell = toAppShellRole(role);
   return NAV_ITEM_DEFINITIONS.filter((def) => def.roles.includes(shell)).map(
-    ({ roles: _r, ...item }) => item
+    (def) => {
+      const { roles: _roles, ...item } = def;
+      void _roles;
+      return item;
+    },
   );
 }
 
