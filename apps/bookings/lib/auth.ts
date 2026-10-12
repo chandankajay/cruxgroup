@@ -153,6 +153,45 @@ const authConfig = {
         }
       },
     }),
+
+    Credentials({
+      id: "pin",
+      name: "Phone PIN",
+      credentials: {
+        phoneNumber: { label: "Phone Number", type: "text" },
+        pin: { label: "PIN", type: "text" },
+      },
+      async authorize(credentials) {
+        try {
+          const rawPhone = credentials?.phoneNumber as string | undefined;
+          const pin = credentials?.pin as string | undefined;
+
+          if (!rawPhone || !pin) return null;
+
+          const phoneNumber = normalizeBookingsPhone(rawPhone);
+          if (!E164_LIKE.test(phoneNumber)) return null;
+
+          const row = await prisma.user.findUnique({
+            where: { phoneNumber },
+            select: userSelect,
+          });
+
+          if (!row?.pinHash) return null;
+          if (isPinLocked(row)) return null;
+
+          const pinResult = await verifyPin(row.id, pin);
+          if (!pinResult.ok) return null;
+
+          return toSessionUser(row);
+        } catch (err) {
+          console.error(
+            "[auth.pin.authorize]",
+            err instanceof Error ? err.stack ?? err.message : err,
+          );
+          return null;
+        }
+      },
+    }),
   ],
 
   callbacks: {

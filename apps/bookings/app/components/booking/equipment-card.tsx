@@ -10,7 +10,7 @@ interface EquipmentCardProps {
   readonly name: string;
   readonly category: string;
   readonly subType?: string | null;
-  readonly dailyRate: number;
+  readonly hourlyRate: number;
   readonly image?: string;
   readonly specifications: Record<string, unknown>;
   readonly onSelect: (
@@ -64,7 +64,7 @@ export function EquipmentCard({
   name,
   category,
   subType,
-  dailyRate,
+  hourlyRate,
   image,
   specifications,
   onSelect,
@@ -85,12 +85,12 @@ export function EquipmentCard({
 
   const hasRange =
     priceRange &&
-    priceRange.minDaily !== priceRange.maxDaily;
+    priceRange.minHourly !== priceRange.maxHourly;
 
   const handleBook = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (partners.length > 0) {
-      const cheapest = [...partners].sort((a, b) => a.dailyRate - b.dailyRate)[0]!;
+      const cheapest = [...partners].sort((a, b) => a.hourlyRate - b.hourlyRate)[0]!;
       onSelect(id, {
         equipmentId: cheapest.equipmentId,
         partnerId: cheapest.partnerId,
@@ -294,8 +294,8 @@ export function EquipmentCard({
                     color: "#d45800",
                   }}
                 >
-                  ₹{formatPaise(priceRange.minDaily)} – ₹
-                  {formatPaise(priceRange.maxDaily)}
+                  ₹{formatPaise(priceRange.minHourly)} – ₹
+                  {formatPaise(priceRange.maxHourly)}
                 </span>
                 <span
                   style={{
@@ -304,7 +304,7 @@ export function EquipmentCard({
                     fontWeight: 400,
                   }}
                 >
-                  {t("EQUIPMENT_PER_DAY")}
+                  {t("EQUIPMENT_PER_HOUR")}
                 </span>
               </>
             ) : (
@@ -316,7 +316,7 @@ export function EquipmentCard({
                     color: "#d45800",
                   }}
                 >
-                  ₹{formatPaise(dailyRate)}
+                  ₹{formatPaise(hourlyRate)}
                 </span>
                 <span
                   style={{
@@ -325,7 +325,7 @@ export function EquipmentCard({
                     fontWeight: 400,
                   }}
                 >
-                  {t("EQUIPMENT_PER_DAY")}
+                  {t("EQUIPMENT_PER_HOUR")}
                 </span>
               </>
             )}

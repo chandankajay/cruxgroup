@@ -46,6 +46,14 @@ export function Footer({
           <ul className="mt-4 space-y-2 text-base text-muted">
             <li>
               <Link
+                href={`/${locale}/founder`}
+                className="inline-block min-h-11 py-2 hover:text-accent"
+              >
+                Founder
+              </Link>
+            </li>
+            <li>
+              <Link
                 href={`/${locale}#fleet`}
                 className="inline-block min-h-11 py-2 hover:text-accent"
               >

@@ -64,7 +64,7 @@ export function BookingDrawer({
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [priceType, setPriceType] = useState<"daily" | "hourly">("daily");
+  const [priceType, setPriceType] = useState<"daily" | "hourly">("hourly");
   const [hours, setHours] = useState("1");
   // null = not yet fetched / fetching in progress; number = resolved km distance
   const [partnerDistanceKm, setPartnerDistanceKm] = useState<number | null>(null);
@@ -92,7 +92,7 @@ export function BookingDrawer({
       setAddress("");
       setPincode("");
       setCoords(null);
-      setPriceType("daily");
+      setPriceType("hourly");
       setHours("1");
       setPartnerDistanceKm(null);
       setSelectedSavedId(null);
@@ -196,18 +196,6 @@ export function BookingDrawer({
             <div className="grid grid-cols-2 gap-2 rounded-lg bg-amber-50 p-1">
               <Button
                 type="button"
-                variant={priceType === "daily" ? "default" : "ghost"}
-                className={
-                  priceType === "daily"
-                    ? "bg-amber-500 text-white hover:bg-amber-600"
-                    : "text-amber-700 hover:bg-amber-100"
-                }
-                onClick={() => setPriceType("daily")}
-              >
-                Daily
-              </Button>
-              <Button
-                type="button"
                 variant={priceType === "hourly" ? "default" : "ghost"}
                 className={
                   priceType === "hourly"
@@ -217,6 +205,18 @@ export function BookingDrawer({
                 onClick={() => setPriceType("hourly")}
               >
                 Hourly
+              </Button>
+              <Button
+                type="button"
+                variant={priceType === "daily" ? "default" : "ghost"}
+                className={
+                  priceType === "daily"
+                    ? "bg-amber-500 text-white hover:bg-amber-600"
+                    : "text-amber-700 hover:bg-amber-100"
+                }
+                onClick={() => setPriceType("daily")}
+              >
+                Daily
               </Button>
             </div>
           </div>

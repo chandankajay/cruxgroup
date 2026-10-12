@@ -5,9 +5,22 @@ const BCRYPT_ROUNDS = 10;
 const MAX_PIN_FAILS_BEFORE_LOCKOUT = 5;
 const PIN_LOCKOUT_MINUTES = 15;
 
+/** Common weak 4-digit PINs rejected at set/reset time. */
 export const WEAK_PINS = new Set([
-  "0000", "1111", "2222", "3333", "4444", "5555", "6666", "7777", "8888", "9999",
-  "1234", "4321", "1212", "1010",
+  "0000",
+  "1111",
+  "2222",
+  "3333",
+  "4444",
+  "5555",
+  "6666",
+  "7777",
+  "8888",
+  "9999",
+  "1234",
+  "4321",
+  "1212",
+  "1010",
 ]);
 
 export type LoginStep = "otp" | "pin";

@@ -167,7 +167,7 @@ export function EquipmentGrid({ items, onSelect, locationAware }: EquipmentGridP
                 name={item.name}
                 category={item.category}
                 subType={item.subType}
-                dailyRate={item.pricing.daily}
+                hourlyRate={item.pricing.hourly ?? item.priceRange?.minHourly ?? 0}
                 image={item.images[0]}
                 specifications={item.specifications}
                 onSelect={onSelect}

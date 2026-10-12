@@ -43,6 +43,7 @@ interface LoginClientProps {
   readonly isConfiguration: boolean;
   readonly callbackUrl: string;
   readonly googleLoginAction: () => Promise<void>;
+  readonly pinSetupRequired?: boolean;
 }
 
 export function LoginClient({
@@ -50,6 +51,7 @@ export function LoginClient({
   isConfiguration,
   callbackUrl,
   googleLoginAction,
+  pinSetupRequired = false,
 }: LoginClientProps) {
   const showError = isAccessDenied || isConfiguration;
 
@@ -112,7 +114,11 @@ export function LoginClient({
         <div className="h-px flex-1 bg-border" />
       </div>
 
-      <PhoneOtpForm callbackUrl={callbackUrl} />
+      <PhoneOtpForm
+        callbackUrl={callbackUrl}
+        initialStep={pinSetupRequired ? "set_pin" : "phone"}
+        initialPinMode="setup"
+      />
       <TrustFooter />
 
       <p className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground">
