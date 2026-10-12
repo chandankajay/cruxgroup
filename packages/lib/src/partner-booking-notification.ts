@@ -1,3 +1,5 @@
+import "server-only";
+
 import { prisma, parseLatLngFromPartnerBaseLocation } from "@repo/db";
 import type { Prisma } from "@repo/db";
 import { calculateDistanceKm } from "./geo";

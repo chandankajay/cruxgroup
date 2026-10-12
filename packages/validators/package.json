@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./salesperson": "./src/salesperson.ts",
-    "./admin-role": "./src/admin-role.ts"
+    "./admin-role": "./src/admin-role.ts",
+    "./service-lead-stage": "./src/service-lead-stage.ts",
+    "./create-lead": "./src/create-lead.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

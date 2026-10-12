@@ -17,7 +17,7 @@ export default async function SalesLeadsPage({
 }) {
   const sp = await searchParams;
   const status = sp.status as LeadStatus | undefined;
-  const leadType = sp.leadType as LeadType | undefined;
+  const leadType = (sp.leadType as LeadType | undefined) ?? "SERVICE";
   const search = sp.search;
   const page = sp.page ? Number(sp.page) : 1;
 
