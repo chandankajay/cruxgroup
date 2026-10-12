@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { SERVICE_CATALOG_LABELS, SERVICE_LEAD_STAGE_LABELS } from "@repo/lib";
-import { Button } from "@repo/ui/button";
 import type { ServiceLeadCard } from "../actions";
 
 type Props = {
