@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { serviceLeadTypeSchema, serviceSlugSchema } from "./service-lead-stage.js";
+import {
+  serviceLeadTypeSchema,
+  serviceSlugSchema,
+} from "@repo/validators/service-lead-stage";
 
 export const createLeadSchema = z
   .object({
