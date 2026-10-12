@@ -1,0 +1,131 @@
+name: _deploy-app
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        description: "web | admin | bookings"
+        type: string
+        required: true
+      vercel_org_id:
+        description: "Vercel team id (repo variable)"
+        type: string
+        required: true
+      vercel_project_id:
+        description: "Vercel project id (repo variable)"
+        type: string
+        required: true
+      github_environment:
+        description: "GitHub Environment for secrets + approval gates"
+        type: string
+        required: true
+      mode:
+        description: "dev | prod-build | promote"
+        type: string
+        required: true
+      alias_domain:
+        description: "Stable dev subdomain (dev mode only)"
+        type: string
+        required: false
+        default: ""
+      deployment_url:
+        description: "Production deployment URL to promote (promote mode)"
+        type: string
+        required: false
+        default: ""
+    secrets:
+      VERCEL_TOKEN:
+        required: false
+    outputs:
+      dev_deployment_url:
+        value: ${{ jobs.run.outputs.dev_deployment_url }}
+      prod_deployment_url:
+        value: ${{ jobs.run.outputs.prod_deployment_url }}
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.github_environment }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ inputs.vercel_org_id }}
+      VERCEL_PROJECT_ID: ${{ inputs.vercel_project_id }}
+    outputs:
+      dev_deployment_url: ${{ steps.deploy_dev.outputs.deployment_url }}
+      prod_deployment_url: ${{ steps.deploy_prod.outputs.deployment_url }}
+    steps:
+      - name: Checkout
+        if: inputs.mode != 'promote'
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      - name: Setup pnpm
+        if: inputs.mode != 'promote'
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+      - name: Setup Node
+        if: inputs.mode != 'promote'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install
+        if: inputs.mode != 'promote'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@50.44.0
+
+      - name: Pull Vercel env (Preview / dev)
+        if: inputs.mode == 'dev'
+        run: vercel pull --yes --environment=preview
+
+      - name: Build dev (Preview)
+        if: inputs.mode == 'dev'
+        run: vercel build
+
+      - name: Deploy prebuilt to dev and alias
+        if: inputs.mode == 'dev'
+        id: deploy_dev
+        env:
+          DOMAIN: ${{ inputs.alias_domain }}
+        run: |
+          URL=$(vercel deploy --prebuilt --archive=tgz)
+          echo "deployment_url=$URL" >> "$GITHUB_OUTPUT"
+          if [ -z "$DOMAIN" ]; then
+            echo "alias_domain input is required for dev deploy"
+            exit 1
+          fi
+          ORIGIN_MAIN="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$ORIGIN_MAIN" != "$GITHUB_SHA" ]; then
+            echo "main has moved past this commit; skipping alias"
+            exit 0
+          fi
+          vercel alias set "$URL" "$DOMAIN" --scope "$VERCEL_ORG_ID"
+
+      - name: Pull Vercel env (Production)
+        if: inputs.mode == 'prod-build'
+        run: vercel pull --yes --environment=production
+
+      - name: Build production artifact
+        if: inputs.mode == 'prod-build'
+        run: vercel build --prod
+
+      - name: Upload production prebuilt (skip domain)
+        if: inputs.mode == 'prod-build'
+        id: deploy_prod
+        run: |
+          url=$(vercel deploy --prebuilt --prod --skip-domain --archive=tgz)
+          echo "deployment_url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Promote production deployment
+        if: inputs.mode == 'promote'
+        run: |
+          if [ -z "${{ inputs.deployment_url }}" ]; then
+            echo "deployment_url is required for promote"
+            exit 1
+          fi
+          vercel promote "${{ inputs.deployment_url }}" --yes

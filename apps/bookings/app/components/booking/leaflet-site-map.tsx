@@ -31,8 +31,8 @@ function MapViewSync({ center }: { readonly center: [number, number] }) {
   const lat = center[0];
   const lng = center[1];
   useEffect(() => {
-    map.setView(center, Math.max(map.getZoom(), 13), { animate: true });
-  }, [center, lat, lng, map]);
+    map.setView([lat, lng], Math.max(map.getZoom(), 13), { animate: true });
+  }, [lat, lng, map]);
   return null;
 }
 

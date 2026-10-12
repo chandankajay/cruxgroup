@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
 import { DictionaryProvider } from "@repo/ui/dictionary-provider";
+import { NonProdEnvironmentBanner } from "./components/non-prod-environment-banner";
 import { ConditionalHeader } from "./components/conditional-header";
 import { BottomNav } from "./components/bottom-nav";
 import { PageTransition } from "./components/page-transition";
@@ -33,6 +34,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={geist.className}>
+        <NonProdEnvironmentBanner />
         <DictionaryProvider labels={labels}>
           <ConditionalHeader />
           <PageTransition>{children}</PageTransition>

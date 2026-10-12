@@ -3,6 +3,8 @@
  * @see https://faq.aisensy.com/en/articles/11501840-api-documentation
  */
 
+import { isAisensyDestinationAllowed } from "@repo/env";
+
 const AISENSY_API_URL = "https://backend.aisensy.com/campaign/t1/api/v2";
 
 export interface AisensyButtonParam {
@@ -67,13 +69,20 @@ export async function sendWhatsAppMessage(
 
   if (!apiKey) {
     console.log("[aisensy] sendWhatsAppMessage (no AISENSY_API_KEY):", {
-      ...payload,
+      campaignName: templateName,
       apiKeyPresent: false,
     });
     return true;
   }
 
   if (!destination || destination.length < 8) {
+    return true;
+  }
+
+  if (!isAisensyDestinationAllowed(destination)) {
+    console.log("[aisensy] skipped (non-prod allowlist)", {
+      campaignName: templateName,
+    });
     return true;
   }
 
