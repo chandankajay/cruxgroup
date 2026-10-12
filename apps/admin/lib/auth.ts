@@ -14,6 +14,8 @@ const partnerUserSelect = {
   phoneNumber: true,
   pinHash: true,
   pinLockoutUntil: true,
+  isActive: true,
+  canSendQuotes: true,
 } as const;
 
 // Comma-separated list of explicitly allowed email addresses.
@@ -92,11 +94,17 @@ const nextAuth: NextAuthResult = NextAuth({
           return null;
         }
 
+        if (user.role === "SALES" && user.isActive === false) {
+          return null;
+        }
+
         return {
           id: user.id,
           name: user.name ?? "",
           role: user.role,
           phoneNumber: user.phoneNumber ?? phoneNumber,
+          canSendQuotes: user.canSendQuotes,
+          isActive: user.isActive,
         };
       },
     }),
@@ -133,11 +141,17 @@ const nextAuth: NextAuthResult = NextAuth({
           return null;
         }
 
+        if (user.role === "SALES" && user.isActive === false) {
+          return null;
+        }
+
         return {
           id: user.id,
           name: user.name ?? "",
           role: user.role,
           phoneNumber: user.phoneNumber ?? phoneNumber,
+          canSendQuotes: user.canSendQuotes,
+          isActive: user.isActive,
         };
       },
     }),
@@ -192,7 +206,14 @@ const nextAuth: NextAuthResult = NextAuth({
       if (token.id) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true, email: true, phoneNumber: true, pinHash: true },
+          select: {
+            role: true,
+            email: true,
+            phoneNumber: true,
+            pinHash: true,
+            canSendQuotes: true,
+            isActive: true,
+          },
         });
         const email = dbUser?.email ?? "";
         if ((!dbUser?.role || dbUser.role === "USER") && isAllowedAdmin(email)) {
@@ -204,6 +225,8 @@ const nextAuth: NextAuthResult = NextAuth({
           token.phoneNumber = dbUser.phoneNumber;
           token.pinSet = !!dbUser.pinHash;
         }
+        token.canSendQuotes = dbUser?.canSendQuotes ?? false;
+        token.isActive = dbUser?.isActive ?? true;
       }
       return token;
     },
@@ -219,6 +242,12 @@ const nextAuth: NextAuthResult = NextAuth({
       }
       if (typeof token.pinSet === "boolean") {
         session.user.pinSet = token.pinSet;
+      }
+      if (typeof token.canSendQuotes === "boolean") {
+        session.user.canSendQuotes = token.canSendQuotes;
+      }
+      if (typeof token.isActive === "boolean") {
+        session.user.isActive = token.isActive;
       }
       return session;
     },

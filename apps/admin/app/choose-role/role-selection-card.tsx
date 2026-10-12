@@ -9,11 +9,11 @@ export function RoleSelectionCard() {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
 
-  function choose(role: "PARTNER" | "SALES") {
+  function choosePartner() {
     setError(undefined);
     startTransition(async () => {
       try {
-        const result = await selectAdminRoleAction(role);
+        const result = await selectAdminRoleAction("PARTNER");
         if (!result.ok) {
           setError(result.error);
           return;
@@ -38,10 +38,12 @@ export function RoleSelectionCard() {
         Welcome to Crux Admin
       </h1>
       <p className="mt-2 text-center text-sm text-muted-foreground">
-        Are you joining as a Fleet Owner (Partner) or as a Sales Person?
+        You are joining as a Fleet Owner (Partner). Manage fleet, jobs, and partner tools from
+        here.
       </p>
       <p className="mt-1 text-center text-xs text-muted-foreground">
-        This is a one-time choice for your account.
+        Need a sales login? Ask your Crux admin to create a salesperson account for your phone
+        number.
       </p>
 
       {error ? (
@@ -50,27 +52,16 @@ export function RoleSelectionCard() {
         </p>
       ) : null}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="mt-8">
         <button
           type="button"
           disabled={pending}
-          onClick={() => choose("PARTNER")}
-          className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-6 text-left transition-colors hover:bg-amber-500/20 disabled:opacity-50"
+          onClick={choosePartner}
+          className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-6 text-left transition-colors hover:bg-amber-500/20 disabled:opacity-50"
         >
-          <p className="text-lg font-bold text-foreground">Fleet Owner</p>
+          <p className="text-lg font-bold text-foreground">Continue as Fleet Owner</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage fleet, jobs, walk-in bookings, and partner tools.
-          </p>
-        </button>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => choose("SALES")}
-          className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-6 text-left transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
-        >
-          <p className="text-lg font-bold text-foreground">Sales Person</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Track leads, follow-ups, and conversions you bring to Crux.
           </p>
         </button>
       </div>

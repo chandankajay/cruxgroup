@@ -56,6 +56,9 @@ export function isShellNavItemActive(pathname: string, item: Pick<NavItem, "href
   if (item.href === "/sales-overview") {
     return pathname === "/sales-overview" || pathname.startsWith("/sales-overview/");
   }
+  if (item.href === "/salespeople") {
+    return pathname === "/salespeople" || pathname.startsWith("/salespeople/");
+  }
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
@@ -144,6 +147,13 @@ const NAV_ITEM_DEFINITIONS: readonly NavItemDefinition[] = [
     label: "Sales overview",
     roles: ["ADMIN"],
     icon: <Icon d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M20 8v6M23 11h-6" />,
+  },
+  {
+    navId: "admin-salespeople",
+    href: "/salespeople",
+    label: "Salespeople",
+    roles: ["ADMIN"],
+    icon: <Icon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8" />,
   },
   {
     navId: "admin-website-cms",

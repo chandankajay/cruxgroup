@@ -33,8 +33,14 @@ model User {
   lockoutUntil  DateTime?
   /// First-login welcome WhatsApp (`welcome_note` template) sent at most once.
   welcomeNoteSentAt DateTime?
-  /// Set when a phone OTP user picks Partner vs Sales on first admin login.
+  /// Set when a phone OTP user picks Partner on first admin login (Sales is admin-assigned only).
   adminRoleChosenAt DateTime?
+  /// Sales-only: may mark quotation sent (CWA-41). Admins always can.
+  canSendQuotes     Boolean   @default(false)
+  /// When false, salesperson cannot sign in; leads stay assigned until reassigned.
+  isActive          Boolean   @default(true)
+  /// Cluster slugs / area labels suggested when assigning service leads (e.g. shadnagar, kothur).
+  assignedAreaSlugs String[]  @default([])
   /// bcrypt hash of 4-digit login PIN; null until user completes mandatory setup
   pinHash           String?
   pinSetAt          DateTime?

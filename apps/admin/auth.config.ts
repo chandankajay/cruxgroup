@@ -37,6 +37,9 @@ function isPartnerBlockedFromPath(pathname: string): boolean {
   if (pathname.startsWith("/sales-overview")) {
     return true;
   }
+  if (pathname.startsWith("/salespeople")) {
+    return true;
+  }
   return false;
 }
 
@@ -58,6 +61,12 @@ export const authConfig: NextAuthConfig = {
       }
       if (typeof token.pinSet === "boolean") {
         session.user.pinSet = token.pinSet;
+      }
+      if (typeof token.canSendQuotes === "boolean") {
+        session.user.canSendQuotes = token.canSendQuotes;
+      }
+      if (typeof token.isActive === "boolean") {
+        session.user.isActive = token.isActive;
       }
       return session;
     },
@@ -91,7 +100,7 @@ export const authConfig: NextAuthConfig = {
         return true;
       }
 
-      // Phone OTP users pick Partner vs Sales once before entering the app.
+      // Phone OTP users pick Partner once before entering the app (Sales is admin-assigned).
       if (isLoggedIn && needsAdminRoleSelection(role)) {
         if (!isChooseRolePath(pathname)) {
           return Response.redirect(new URL(CHOOSE_ROLE_PATH, nextUrl));
@@ -111,6 +120,12 @@ export const authConfig: NextAuthConfig = {
       }
 
       if (isLoggedIn && role === "SALES") {
+        const salesActive = auth?.user?.isActive !== false;
+        if (!salesActive) {
+          const loginUrl = new URL("/login", nextUrl);
+          loginUrl.searchParams.set("error", "AccountInactive");
+          return Response.redirect(loginUrl);
+        }
         if (!isSalesPath(pathname) && !isChooseRolePath(pathname)) {
           return Response.redirect(new URL(homePathForRole(role), nextUrl));
         }

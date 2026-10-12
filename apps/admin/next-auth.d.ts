@@ -11,6 +11,8 @@ declare module "next-auth" {
       role?: string | null;
       phoneNumber?: string | null;
       pinSet?: boolean;
+      canSendQuotes?: boolean;
+      isActive?: boolean;
     };
   }
 }
@@ -21,5 +23,7 @@ declare module "next-auth/jwt" {
     role?: string;
     phoneNumber?: string;
     pinSet?: boolean;
+    canSendQuotes?: boolean;
+    isActive?: boolean;
   }
 }

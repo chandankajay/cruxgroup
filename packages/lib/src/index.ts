@@ -1,6 +1,11 @@
 export * from "./aisensy";
 export { calculateDistanceKm, type LatLng } from "./geo";
 export {
+  canMarkQuotationSent,
+  assertSalesRoleSelectable,
+  type SalesUserPermissions,
+} from "./sales-permissions";
+export {
   findEligiblePartners,
   createBookingResponseTokens,
   sendPartnerBookingNotification,
