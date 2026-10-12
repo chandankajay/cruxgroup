@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@repo/db";
 import type { LeadStatus, LeadType } from "@prisma/client";
 import type { ServiceLeadStage } from "@prisma/client";
-import { SERVICE_LEAD_STAGES } from "@repo/lib";
+import { canSalesMoveToStage } from "@repo/lib/service-lead-stage-rules";
+import { SERVICE_LEAD_STAGES } from "@repo/lib/service-leads";
+import {
+  markQuotationSentSchema,
+  updateServiceLeadStageSchema,
+} from "@repo/validators/service-lead-stage";
 import { logLeadActivity } from "../../lib/lead-activity";
 import { createSalesBookingNotification } from "../../lib/sales-notifications";
 import {
@@ -320,28 +325,42 @@ export async function updateServiceLeadStageSalesAction(
   const sales = await requireSalesSession();
   if (!sales) return { success: false, error: "Forbidden" };
 
-  if (stage === "LOST" && !lostReason?.trim()) {
+  const parsed = updateServiceLeadStageSchema.safeParse({
+    leadId,
+    stage,
+    lostReason,
+  });
+  if (!parsed.success) {
+    return { success: false, error: "Invalid stage update." };
+  }
+
+  if (parsed.data.stage === "LOST" && !parsed.data.lostReason?.trim()) {
     return { success: false, error: "Add a lost reason." };
   }
-  if (!(SERVICE_LEAD_STAGES as readonly string[]).includes(stage)) {
-    return { success: false, error: "Invalid stage." };
+
+  const canQuote = await sessionCanSendQuotes();
+  const allowed = canSalesMoveToStage(parsed.data.stage, canQuote);
+  if (!allowed.ok) {
+    return { success: false, error: allowed.reason };
   }
 
   const updated = await prisma.lead.updateMany({
-    where: { id: leadId, leadType: "SERVICE", salesPersonId: sales.userId },
+    where: { id: parsed.data.leadId, leadType: "SERVICE", salesPersonId: sales.userId },
     data: {
-      serviceStage: stage,
-      ...(stage === "LOST" ? { lostReason: lostReason?.trim() } : {}),
+      serviceStage: parsed.data.stage,
+      ...(parsed.data.stage === "LOST"
+        ? { lostReason: parsed.data.lostReason?.trim() }
+        : {}),
     },
   });
   if (updated.count === 0) return { success: false, error: "Lead not found." };
 
   await logLeadActivity({
-    leadId,
+    leadId: parsed.data.leadId,
     actorId: sales.userId,
     kind: "STAGE",
-    message: `Stage → ${stage}`,
-    meta: { stage },
+    message: `Stage → ${parsed.data.stage}`,
+    meta: { stage: parsed.data.stage },
   });
 
   revalidateSales();
@@ -350,14 +369,16 @@ export async function updateServiceLeadStageSalesAction(
   return { success: true };
 }
 
-export async function markQuotationSentSalesAction(input: {
-  leadId: string;
-  amountPaise: number;
-  sentAt: Date;
-  billbookRef: string;
-}): Promise<{ success: boolean; error?: string }> {
+export async function markQuotationSentSalesAction(
+  input: unknown,
+): Promise<{ success: boolean; error?: string }> {
   if (!(await sessionCanSendQuotes())) {
     return { success: false, error: "You cannot mark quotations sent." };
+  }
+
+  const parsed = markQuotationSentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Please check the quotation fields." };
   }
 
   const admin = await requireAdminSession();
@@ -365,15 +386,9 @@ export async function markQuotationSentSalesAction(input: {
   const actorId = admin?.userId ?? sales?.userId;
   if (!actorId) return { success: false, error: "Forbidden" };
 
-  const ref = input.billbookRef.trim();
-  if (!ref) return { success: false, error: "Billbook reference is required." };
-  if (input.amountPaise <= 0) {
-    return { success: false, error: "Enter a valid quoted amount." };
-  }
-
   const lead = await prisma.lead.findFirst({
     where: {
-      id: input.leadId,
+      id: parsed.data.leadId,
       leadType: "SERVICE",
       ...(sales ? { salesPersonId: sales.userId } : {}),
     },
@@ -382,27 +397,30 @@ export async function markQuotationSentSalesAction(input: {
   if (!lead) return { success: false, error: "Lead not found." };
 
   await prisma.lead.update({
-    where: { id: input.leadId },
+    where: { id: parsed.data.leadId },
     data: {
       serviceStage: "QUOTATION_SENT",
-      quoteAmountPaise: input.amountPaise,
-      quoteSentAt: input.sentAt,
-      billbookRef: ref,
+      quoteAmountPaise: parsed.data.amountPaise,
+      quoteSentAt: parsed.data.sentAt,
+      billbookRef: parsed.data.billbookRef,
       quoteHandoffRequested: false,
     },
   });
 
   await logLeadActivity({
-    leadId: input.leadId,
+    leadId: parsed.data.leadId,
     actorId,
     kind: "QUOTATION_SENT",
-    message: `Quotation sent · BB ${ref}`,
-    meta: { amountPaise: input.amountPaise, billbookRef: ref },
+    message: `Quotation sent · BB ${parsed.data.billbookRef}`,
+    meta: {
+      amountPaise: parsed.data.amountPaise,
+      billbookRef: parsed.data.billbookRef,
+    },
   });
 
   revalidateSales();
   revalidatePath("/services-leads");
-  revalidatePath(`/sales/leads/${input.leadId}`);
+  revalidatePath(`/sales/leads/${parsed.data.leadId}`);
   return { success: true };
 }
 

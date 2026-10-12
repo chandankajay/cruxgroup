@@ -1,3 +1,5 @@
+import "server-only";
+
 import { prisma } from "@repo/db";
 import type { BookingProgressStage, BookingStatus } from "@repo/db";
 import {

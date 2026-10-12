@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { SERVICE_CATALOG_LABELS, SERVICE_LEAD_STAGE_LABELS } from "@repo/lib";
+import {
+  SERVICE_CATALOG_LABELS,
+  SERVICE_LEAD_STAGE_LABELS,
+} from "@repo/lib/service-leads";
 import type { ServiceLeadCard } from "../actions";
 
 type Props = {

@@ -10,7 +10,9 @@
     "./invoice": "./src/invoice/index.ts",
     "./legal/partner-terms": "./src/legal/partner-terms.ts",
     "./partner-booking-notification": "./src/partner-booking-notification.ts",
-    "./sales-permissions": "./src/sales-permissions.ts"
+    "./sales-permissions": "./src/sales-permissions.ts",
+    "./service-leads": "./src/service-leads.ts",
+    "./service-lead-stage-rules": "./src/service-lead-stage-rules.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

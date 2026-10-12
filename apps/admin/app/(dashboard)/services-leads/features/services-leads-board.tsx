@@ -8,7 +8,7 @@ import {
   SERVICE_LEAD_STAGES,
   SERVICE_CATALOG_LABELS,
   type ServiceLeadStageId,
-} from "@repo/lib";
+} from "@repo/lib/service-leads";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";

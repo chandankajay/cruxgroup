@@ -6,7 +6,11 @@ import { prisma } from "@repo/db";
 import {
   SERVICE_LEAD_STAGES,
   type ServiceLeadStageId,
-} from "@repo/lib";
+} from "@repo/lib/service-leads";
+import {
+  markQuotationSentSchema,
+  updateServiceLeadStageSchema,
+} from "@repo/validators/service-lead-stage";
 import { logLeadActivity } from "../../../lib/lead-activity";
 import {
   requireAdminSession,
@@ -212,38 +216,54 @@ export async function updateServiceLeadStageAction(
   const admin = await requireAdminSession();
   if (!admin) return { ok: false, error: "Forbidden" };
 
-  if (stage === "LOST" && !lostReason?.trim()) {
+  const parsed = updateServiceLeadStageSchema.safeParse({
+    leadId,
+    stage,
+    lostReason,
+  });
+  if (!parsed.success) {
+    return { ok: false, error: "Invalid stage update." };
+  }
+
+  if (parsed.data.stage === "LOST" && !parsed.data.lostReason?.trim()) {
     return { ok: false, error: "Lost reason is required." };
   }
 
-  await prisma.lead.updateMany({
-    where: { id: leadId, leadType: "SERVICE" },
+  const updated = await prisma.lead.updateMany({
+    where: { id: parsed.data.leadId, leadType: "SERVICE" },
     data: {
-      serviceStage: stage,
-      ...(stage === "LOST" ? { lostReason: lostReason?.trim() } : {}),
+      serviceStage: parsed.data.stage,
+      ...(parsed.data.stage === "LOST"
+        ? { lostReason: parsed.data.lostReason?.trim() }
+        : {}),
     },
   });
+  if (updated.count === 0) {
+    return { ok: false, error: "Lead not found." };
+  }
 
   await logLeadActivity({
-    leadId,
+    leadId: parsed.data.leadId,
     actorId: admin.userId,
     kind: "STAGE",
-    message: `Stage → ${stage}`,
-    meta: { stage, lostReason },
+    message: `Stage → ${parsed.data.stage}`,
+    meta: { stage: parsed.data.stage, lostReason: parsed.data.lostReason },
   });
 
   revalidateServicesLeads();
   return { ok: true };
 }
 
-export async function markQuotationSentAdminAction(input: {
-  leadId: string;
-  amountPaise: number;
-  sentAt: Date;
-  billbookRef: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function markQuotationSentAdminAction(
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!(await sessionCanSendQuotes())) {
     return { ok: false, error: "You cannot mark quotations sent." };
+  }
+
+  const parsed = markQuotationSentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "Please check the quotation fields." };
   }
 
   const admin = await requireAdminSession();
@@ -251,15 +271,9 @@ export async function markQuotationSentAdminAction(input: {
   const actorId = admin?.userId ?? sales?.userId;
   if (!actorId) return { ok: false, error: "Forbidden" };
 
-  const ref = input.billbookRef.trim();
-  if (!ref) return { ok: false, error: "Billbook reference is required." };
-  if (input.amountPaise <= 0) {
-    return { ok: false, error: "Enter a valid quoted amount." };
-  }
-
   const lead = await prisma.lead.findFirst({
     where: {
-      id: input.leadId,
+      id: parsed.data.leadId,
       leadType: "SERVICE",
       ...(sales ? { salesPersonId: sales.userId } : {}),
     },
@@ -268,26 +282,29 @@ export async function markQuotationSentAdminAction(input: {
   if (!lead) return { ok: false, error: "Lead not found." };
 
   await prisma.lead.update({
-    where: { id: input.leadId },
+    where: { id: parsed.data.leadId },
     data: {
       serviceStage: "QUOTATION_SENT",
-      quoteAmountPaise: input.amountPaise,
-      quoteSentAt: input.sentAt,
-      billbookRef: ref,
+      quoteAmountPaise: parsed.data.amountPaise,
+      quoteSentAt: parsed.data.sentAt,
+      billbookRef: parsed.data.billbookRef,
       quoteHandoffRequested: false,
     },
   });
 
   await logLeadActivity({
-    leadId: input.leadId,
+    leadId: parsed.data.leadId,
     actorId,
     kind: "QUOTATION_SENT",
-    message: `Quotation sent · BB ${ref}`,
-    meta: { amountPaise: input.amountPaise, billbookRef: ref },
+    message: `Quotation sent · BB ${parsed.data.billbookRef}`,
+    meta: {
+      amountPaise: parsed.data.amountPaise,
+      billbookRef: parsed.data.billbookRef,
+    },
   });
 
   revalidateServicesLeads();
-  revalidatePath(`/sales/leads/${input.leadId}`);
+  revalidatePath(`/sales/leads/${parsed.data.leadId}`);
   return { ok: true };
 }
 
