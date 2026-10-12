@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -165,8 +166,14 @@ export function ProjectForm({ mode, initial }: Props) {
         <ul className="space-y-4">
           {photos.map((photo, index) => (
             <li key={photo.url} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center">
-              {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of blob URL */}
-              <img src={photo.url} alt="" className="h-20 w-28 rounded object-cover" />
+              <Image
+                src={photo.url}
+                alt=""
+                width={112}
+                height={80}
+                unoptimized
+                className="h-20 w-28 rounded object-cover"
+              />
               <Input
                 aria-label={`Alt text for photo ${index + 1}`}
                 value={photo.alt}

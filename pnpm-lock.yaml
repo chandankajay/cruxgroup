@@ -313,6 +313,9 @@ importers:
       '@repo/lib':
         specifier: workspace:*
         version: link:../../packages/lib
+      '@repo/validators':
+        specifier: workspace:*
+        version: link:../../packages/validators
       '@vercel/blob':
         specifier: ^2.3.3
         version: 2.3.3

@@ -1,8 +1,8 @@
 "use server";
 
 import { headers } from "next/headers";
-import { z } from "zod";
 import { prisma } from "@repo/db";
+import { serviceQuoteRequestSchema } from "@repo/validators/service-quote";
 import { consumeRateLimit } from "@repo/db/rate-limit";
 import { logLeadActivity } from "@repo/db/lead-activity";
 import { uploadPublicSiteImage } from "../blob-upload";
@@ -12,20 +12,6 @@ import {
   getHomeBaseHub,
   resolveServiceSlug,
 } from "@repo/lib";
-const quoteRequestSchema = z
-  .object({
-    serviceSlug: z.string().min(1),
-    villageId: z.string().min(1),
-    landSize: z.string().min(1).max(80),
-    timeline: z.string().min(1).max(80),
-    landType: z.string().max(80).optional(),
-    name: z.string().min(2).max(120),
-    phone: z.string().min(10).max(15),
-    whatsappOptIn: z.boolean(),
-    photoUrls: z.array(z.string().url()).max(5).optional(),
-  })
-  .strict();
-
 export async function uploadQuoteSitePhotoAction(
   formData: FormData,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
@@ -67,7 +53,7 @@ export async function submitServiceQuoteRequest(
     };
   }
 
-  const parsed = quoteRequestSchema.safeParse(raw);
+  const parsed = serviceQuoteRequestSchema.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, error: "Please check the form and try again." };
   }
