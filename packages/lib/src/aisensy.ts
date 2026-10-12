@@ -3,6 +3,8 @@
  * @see https://faq.aisensy.com/en/articles/11501840-api-documentation
  */
 
+import { buildCustomerReviewLink } from "./review-link";
+
 const AISENSY_API_URL = "https://backend.aisensy.com/campaign/t1/api/v2";
 
 export interface AisensyButtonParam {
@@ -12,11 +14,17 @@ export interface AisensyButtonParam {
   parameters: { type: "text"; text: string }[];
 }
 
+export interface AisensyMediaAttachment {
+  url: string;
+  filename: string;
+}
+
 export interface AisensyCampaignPayload {
   destination: string;
   campaignName: string;
   templateParams: string[];
   buttons?: AisensyButtonParam[];
+  media?: AisensyMediaAttachment;
 }
 
 /** Normalize to +E.164 for India-first flows. */
@@ -51,6 +59,7 @@ export async function sendWhatsAppMessage(
   templateName: string,
   params: string[],
   buttons?: AisensyButtonParam[],
+  media?: AisensyMediaAttachment,
 ): Promise<boolean> {
   const apiKey = process.env["AISENSY_API_KEY"];
   const destination = normalizeWhatsAppDestination(phone);
@@ -63,6 +72,9 @@ export async function sendWhatsAppMessage(
   };
   if (buttons?.length) {
     payload.buttons = buttons;
+  }
+  if (media?.url?.trim() && media.filename?.trim()) {
+    payload.media = { url: media.url.trim(), filename: media.filename.trim() };
   }
 
   if (!apiKey) {
@@ -130,6 +142,7 @@ export async function sendAisensyCampaign(
     payload.campaignName,
     payload.templateParams,
     payload.buttons,
+    payload.media,
   );
 }
 
@@ -234,31 +247,105 @@ export async function sendPartnerJobOverrunAlert(params: {
   });
 }
 
+function resolveInvoiceWhatsAppCampaignName(): string | undefined {
+  return (
+    process.env["AISENSY_WA_INVOICE_CAMPAIGN"]?.trim() ||
+    process.env["AISENSY_INVOICE_PAYMENT_TEMPLATE"]?.trim() ||
+    undefined
+  );
+}
+
+function isPublicHttpsUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && u.hostname.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Invoice PDF + Razorpay pay link. `AISENSY_INVOICE_PAYMENT_TEMPLATE` params:
- * [customerName, invoiceNumber, amountInrLabel, pdfUrl, paymentUrl].
+ * Invoice receipt template — FILE header (PDF) + one body variable (ratings link).
+ * Campaign: `AISENSY_WA_INVOICE_CAMPAIGN`. Body param {{1}} = customer review URL.
  */
+export async function sendInvoiceReceiptWhatsApp(params: {
+  destinationPhone: string;
+  pdfUrl: string;
+  pdfFilename: string;
+  ratingsLink: string;
+}): Promise<boolean> {
+  const campaignName = resolveInvoiceWhatsAppCampaignName();
+  if (!campaignName) return true;
+
+  const pdfUrl = params.pdfUrl.trim();
+  const ratingsLink = params.ratingsLink.trim();
+  if (!isPublicHttpsUrl(pdfUrl) || !isPublicHttpsUrl(ratingsLink)) {
+    console.error("[aisensy] sendInvoiceReceiptWhatsApp invalid urls", {
+      pdfOk: isPublicHttpsUrl(pdfUrl),
+      ratingsOk: isPublicHttpsUrl(ratingsLink),
+    });
+    return false;
+  }
+
+  return sendAisensyCampaign({
+    destination: params.destinationPhone,
+    campaignName,
+    templateParams: [ratingsLink],
+    media: { url: pdfUrl, filename: params.pdfFilename.trim() || "Crux-Invoice.pdf" },
+  });
+}
+
+/** @deprecated Use {@link sendInvoiceReceiptWhatsApp} via `dispatchInvoiceReceiptWhatsApp`. */
 export async function sendInvoiceWithPaymentLinkWhatsApp(params: {
   customerPhone: string;
-  customerName: string;
   invoiceNumber: string;
-  amountInrLabel: string;
   pdfUrl: string;
-  paymentUrl: string;
+  reviewToken: string;
 }): Promise<boolean> {
-  const campaignName = process.env["AISENSY_INVOICE_PAYMENT_TEMPLATE"];
-  if (!campaignName) return true;
-  return sendAisensyCampaign({
-    destination: params.customerPhone,
-    campaignName,
-    templateParams: [
-      params.customerName,
-      params.invoiceNumber,
-      params.amountInrLabel,
-      params.pdfUrl,
-      params.paymentUrl,
-    ],
+  return sendInvoiceReceiptWhatsApp({
+    destinationPhone: params.customerPhone,
+    pdfUrl: params.pdfUrl,
+    pdfFilename: `Crux-Invoice-${params.invoiceNumber.replace(/[^\w.-]+/g, "_")}.pdf`,
+    ratingsLink: buildCustomerReviewLink(params.reviewToken),
   });
+}
+
+/** Super-admin confirmation when a manual invoice is sent to a customer. */
+export async function sendManualInvoiceAdminNotifyWhatsApp(params: {
+  invoiceNumber: string;
+  customerName: string;
+  grandTotalInr: string;
+  pdfUrl: string;
+}): Promise<boolean> {
+  const campaignName = process.env["AISENSY_WA_INVOICE_ADMIN_NOTIFY_CAMPAIGN"]?.trim();
+  const adminPhone = process.env["CRUX_SUPER_ADMIN_NOTIFY_PHONE"]?.trim();
+  if (!campaignName || !adminPhone) return true;
+
+  const pdfUrl = params.pdfUrl.trim();
+  if (!isPublicHttpsUrl(pdfUrl)) {
+    console.error("[aisensy] sendManualInvoiceAdminNotifyWhatsApp invalid pdf url");
+    return false;
+  }
+
+  return sendAisensyCampaign({
+    destination: adminPhone,
+    campaignName,
+    templateParams: [params.invoiceNumber, params.customerName, params.grandTotalInr],
+    media: {
+      url: pdfUrl,
+      filename: `Crux-Invoice-${params.invoiceNumber.replace(/[^\w.-]+/g, "_")}.pdf`,
+    },
+  });
+}
+
+/** Super-admin manual invoice delivery — PDF attachment + ratings link only. */
+export async function sendSuperAdminInvoiceWhatsApp(params: {
+  destinationPhone: string;
+  pdfUrl: string;
+  pdfFilename: string;
+  ratingsLink: string;
+}): Promise<boolean> {
+  return sendInvoiceReceiptWhatsApp(params);
 }
 
 /**

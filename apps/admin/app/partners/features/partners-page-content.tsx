@@ -14,6 +14,7 @@ interface PartnerLocation {
 interface Partner {
   id: string;
   name: string;
+  kind?: string;
   phoneNumber?: string | null;
   email?: string | null;
   baseAddress?: string | null;
@@ -55,6 +56,17 @@ function PartnerRow({
         <p className="truncate text-xs text-muted-foreground">
           {partner.phoneNumber ?? partner.email ?? "No contact"}
         </p>
+        {partner.kind ? (
+          <span
+            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+              partner.kind === "PASSIVE"
+                ? "bg-amber-100 text-amber-800"
+                : "bg-emerald-100 text-emerald-800"
+            }`}
+          >
+            {partner.kind === "PASSIVE" ? "Passive" : "Active"}
+          </span>
+        ) : null}
         {partner.baseAddress && (
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             📍 {partner.baseAddress}

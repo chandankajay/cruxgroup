@@ -19,7 +19,7 @@ export default async function LiveJobsPage() {
           Field trips with machine, operator, customer, and site. Times shown in IST (Asia/Kolkata).
         </p>
       </div>
-      <LiveJobBoard />
+      <LiveJobBoard isSuperAdmin={role === "ADMIN"} />
     </div>
   );
 }

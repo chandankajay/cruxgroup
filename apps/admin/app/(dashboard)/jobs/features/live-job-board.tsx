@@ -1,15 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useTransition } from "react";
+import { useCallback } from "react";
 import useSWR from "swr";
-import { toast } from "sonner";
-import { Button } from "@repo/ui/button";
-import type { LiveJobsPayload, LiveTripInvoiceDto, LiveTripJobDto } from "../../../../lib/job-board-types";
-import {
-  generateTripInvoiceManualAction,
-  resendTripInvoicePaymentLinkAction,
-} from "../trip-invoice-actions";
+import type { LiveJobsPayload, LiveTripJobDto } from "../../../../lib/job-board-types";
+import { InvoiceScreen } from "./invoice-screen";
 
 const fetcher = async (url: string): Promise<LiveJobsPayload> => {
   const res = await fetch(url, { credentials: "include" });
@@ -49,94 +44,13 @@ function statusLabel(status: string): string {
   return status.replace(/_/g, " ");
 }
 
-function CompletedTripInvoiceActions({
-  tripId,
-  invoice,
-  onRefresh,
-}: {
-  readonly tripId: string;
-  readonly invoice: LiveTripInvoiceDto | null;
-  readonly onRefresh?: () => void;
-}) {
-  const [pending, startTransition] = useTransition();
-
-  const run = useCallback(
-    (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, okMsg: string) => {
-      startTransition(async () => {
-        const res = await fn();
-        if (res.ok) {
-          toast.success(okMsg);
-          onRefresh?.();
-        } else {
-          toast.error(res.error);
-        }
-      });
-    },
-    [onRefresh]
-  );
-
-  return (
-    <div className="sm:col-span-2 space-y-2 rounded-lg border border-emerald-800/20 bg-card/80 p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-900/80">Invoice</p>
-      {invoice ? (
-        <div className="flex flex-wrap gap-2">
-          <p className="w-full font-mono text-xs text-foreground/70">{invoice.invoiceNumber}</p>
-          {invoice.pdfUrl ? (
-            <a
-              href={invoice.pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
-            >
-              View invoice PDF
-            </a>
-          ) : null}
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={pending || !invoice.pdfUrl || !invoice.paymentLinkUrl}
-            onClick={() =>
-              run(
-                () => resendTripInvoicePaymentLinkAction(tripId),
-                "Payment link sent to the customer on WhatsApp."
-              )
-            }
-          >
-            {pending ? "Sending…" : "Resend payment link"}
-          </Button>
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            className="bg-emerald-800 text-primary-foreground hover:bg-emerald-900"
-            disabled={pending}
-            onClick={() =>
-              run(
-                () => generateTripInvoiceManualAction(tripId),
-                "Invoice generated. Customer may receive WhatsApp if templates are configured."
-              )
-            }
-          >
-            {pending ? "Generating…" : "Generate invoice"}
-          </Button>
-          <p className="w-full text-xs text-muted-foreground">
-            Use this if completion succeeded but automatic invoice creation failed earlier.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function TripJobCard({
   job,
+  isSuperAdmin,
   onRefresh,
 }: {
   readonly job: LiveTripJobDto;
+  readonly isSuperAdmin: boolean;
   readonly onRefresh?: () => void;
 }) {
   return (
@@ -207,14 +121,20 @@ function TripJobCard({
           <dd className="font-mono text-xs">{formatIso(job.actualEndTime)}</dd>
         </div>
         {job.status === "COMPLETED" ? (
-          <CompletedTripInvoiceActions tripId={job.id} invoice={job.invoice} onRefresh={onRefresh} />
+          <InvoiceScreen
+            tripId={job.id}
+            invoice={job.invoice}
+            customerPhone={job.customer.phone}
+            isSuperAdmin={isSuperAdmin}
+            onRefresh={onRefresh}
+          />
         ) : null}
       </dl>
     </article>
   );
 }
 
-export function LiveJobBoard() {
+export function LiveJobBoard({ isSuperAdmin }: { readonly isSuperAdmin: boolean }) {
   const { data, error, isLoading, isValidating, mutate } = useSWR<LiveJobsPayload>(
     "/api/jobs/live",
     fetcher,
@@ -223,6 +143,10 @@ export function LiveJobBoard() {
       revalidateOnFocus: true,
     }
   );
+
+  const onRefresh = useCallback(() => {
+    void mutate();
+  }, [mutate]);
 
   if (isLoading && !data) {
     return (
@@ -273,7 +197,7 @@ export function LiveJobBoard() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {data.live.map((job) => (
-              <TripJobCard key={job.id} job={job} />
+              <TripJobCard key={job.id} job={job} isSuperAdmin={isSuperAdmin} />
             ))}
           </div>
         )}
@@ -286,7 +210,12 @@ export function LiveJobBoard() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {data.recentCompleted.map((job) => (
-              <TripJobCard key={job.id} job={job} onRefresh={() => void mutate()} />
+              <TripJobCard
+                key={job.id}
+                job={job}
+                isSuperAdmin={isSuperAdmin}
+                onRefresh={onRefresh}
+              />
             ))}
           </div>
         )}

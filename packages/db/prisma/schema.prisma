@@ -164,11 +164,24 @@ model SavedLocation {
 
 // ─── Partner ─────────────────────────────────────────────────────────────────
 
+enum PartnerKind {
+  ACTIVE
+  PASSIVE
+}
+
 model Partner {
   id     String @id @default(auto()) @map("_id") @db.ObjectId
   /// Unique userId enforces strict 1-to-1 with `User` (each partner account owns at most one profile).
   userId String @unique @db.ObjectId
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind          PartnerKind @default(ACTIVE)
+  /// Required for PASSIVE partners; synced to `User.phoneNumber` on create/update.
+  contactPhone  String      @default("")
+  internalNotes String?
+
+  /// When passive partner completes first OTP login, set `kind=ACTIVE` and route to onboarding.
+  activatedAt   DateTime?
 
   /// Fleet / yard display name (from onboarding)
   companyName String @default("")
@@ -313,11 +326,25 @@ type EquipmentPricing {
 
 // ─── Booking ──────────────────────────────────────────────────────────────────
 
+enum BookingOrigin {
+  ONLINE
+  WALK_IN
+  ADMIN_WALK_IN
+  HISTORICAL
+}
+
+enum AdminAssignMode {
+  DIRECT
+  PARTNER_REQUEST
+}
+
 model Booking {
   id          String             @id @default(auto()) @map("_id") @db.ObjectId
   userId      String             @db.ObjectId
   equipmentId String             @db.ObjectId
   partnerId   String?            @db.ObjectId
+  origin           BookingOrigin    @default(ONLINE)
+  adminAssignMode  AdminAssignMode?
   /// Sales person credited when a lead is manually converted and linked to this booking.
   salesPersonId String?          @db.ObjectId
   salesPerson   User?            @relation("SalesAttributedBookings", fields: [salesPersonId], references: [id])
@@ -479,6 +506,7 @@ model Trip {
   totalBilledHours Float?
 
   status        TripStatus @default(SCHEDULED)
+  isHistorical  Boolean    @default(false)
   /// 4-digit OTP to authorize start (set when trip is confirmed / booked)
   startOtp      String     @default("")
   /// 4-digit OTP to authorize completion
@@ -593,6 +621,13 @@ enum InvoicePaymentStatus {
   UNPAID
   PARTIALLY_PAID
   PAID
+  /// Pro-forma quotation — no payment expectation yet.
+  QUOTATION
+}
+
+enum InvoiceDocumentType {
+  TAX_INVOICE
+  QUOTATION
 }
 
 /// Sequential invoice numbers per Indian financial year (Apr–Mar).
@@ -609,12 +644,26 @@ model Invoice {
   invoiceNumber String               @unique
   tripId        String               @unique @db.ObjectId
   trip          Trip                 @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  documentType      InvoiceDocumentType @default(TAX_INVOICE)
+  lineDescription   String?
+  subtotalPaise     Int                 @default(0)
+  discountPaise     Int                 @default(0)
+  discountIsPercent Boolean             @default(false)
+  discountValue     Int                 @default(0)
+  gstPercent        Int                 @default(18)
+  gstPaise          Int                 @default(0)
+  amountPaidPaise   Int                 @default(0)
   partnerGstin  String?
   customerGstin String?
   sacCode       String               @default("997319")
+  /// Grand total in paise (subtotal - discount + GST).
   amount        Int
   pdfUrl        String?
   paymentStatus InvoicePaymentStatus @default(UNPAID)
+  manuallyComposed  Boolean             @default(false)
+  composedByUserId  String?             @db.ObjectId
+  sentToCustomerAt  DateTime?
+  sentToAdminAt     DateTime?
   reminderD3SentAt  DateTime?
   reminderD7SentAt  DateTime?
   reminderD15SentAt DateTime?

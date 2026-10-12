@@ -144,6 +144,17 @@ const nextAuth: NextAuthResult = NextAuth({
         if ("phoneNumber" in user && user.phoneNumber) {
           token.phoneNumber = user.phoneNumber as string;
         }
+
+        const partner = await prisma.partner.findUnique({
+          where: { userId: user.id },
+          select: { id: true, kind: true, activatedAt: true },
+        });
+        if (partner?.kind === "PASSIVE" && !partner.activatedAt) {
+          await prisma.partner.update({
+            where: { id: partner.id },
+            data: { kind: "ACTIVE", activatedAt: new Date() },
+          });
+        }
       }
 
       if (token.id) {

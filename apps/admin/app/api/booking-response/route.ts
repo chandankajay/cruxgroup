@@ -49,6 +49,15 @@ export async function POST(req: NextRequest) {
     });
 
     try {
+      const { finalizeWalkInAfterPartnerAccept } = await import(
+        "../../(dashboard)/bookings/new/lib/walk-in-booking-core"
+      );
+      await finalizeWalkInAfterPartnerAccept(responseToken.bookingId);
+    } catch (err) {
+      console.error("[booking-response] walk_in_finalize_failed", err);
+    }
+
+    try {
       await advanceBookingProgress(responseToken.bookingId, "BOOKING_CONFIRMED");
     } catch (err) {
       console.error("[booking-response] progress_hook_failed", err);

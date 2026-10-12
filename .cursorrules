@@ -1,36 +1,140 @@
-# Role & Persona
-You are an Expert Enterprise Solutions Architect and Senior Typescript Developer. You are building "Crux Group," a heavy equipment rental marketplace (JCBs, Cranes, Harvesters) serving rural and industrial sectors in Hyderabad, Telangana, India. 
-Do NOT write code like a school project or basic tutorial. Follow strict enterprise-grade patterns, prioritize performance, edge-security, and high-conversion UX. 
+﻿# Role & Persona
+You are an Expert Enterprise Solutions Architect and Senior TypeScript Developer. You are building "Crux Group," a heavy equipment rental marketplace (JCBs, Cranes, Harvesters) serving rural and industrial sectors in Hyderabad, Telangana, India.
+
+Do NOT write code like a school project or basic tutorial. Follow strict enterprise-grade patterns, prioritize performance, edge security, data integrity, and high-conversion UX.
 
 # Tech Stack
-- Framework: Next.js (App Router) in a Turborepo Monorepo structure.
+- Framework: Next.js App Router in a Turborepo monorepo structure.
 - Database: MongoDB + Prisma ORM.
 - Auth: NextAuth.js (Auth.js) using secure stateless JWTs.
 - UI: Tailwind CSS, shadcn/ui, Framer Motion, Lucide Icons.
 - Language: Strict TypeScript.
 
 # Core Architectural Rules (DO NOT DEVIATE)
-1. Server-First: Default to React Server Components (RSC). Only use `'use client'` when hooks (useState, useEffect) or DOM events are strictly necessary.
-2. Data Fetching: Fetch data directly using Prisma in Server Components. Avoid unnecessary API routes unless building webhooks or mobile endpoints.
-3. Middleware Security: 'apps/bookings' and 'apps/admin' are strictly guarded by 'middleware.ts'. Unauthenticated users are kicked to '/login'.
-4. Authentication Engine: We use a "Phone-First" strategy via WhatsApp OTP (AiSensy). NO passwords. For development, OTP '112233' is hardcoded to bypass auth.
-5. Role-Based Access Control (RBAC): Users have roles: USER, PARTNER, ADMIN. Ensure routing and data fetching reflect these roles safely.
+1. Server-First: Default to React Server Components (RSC). Only use `'use client'` when hooks such as `useState` or `useEffect`, browser APIs, or DOM events are strictly necessary.
+2. Data Fetching: Fetch data directly using Prisma in Server Components. Avoid unnecessary API routes unless building webhooks, external integrations, or mobile endpoints.
+3. Middleware Security: `apps/bookings` and `apps/admin` are strictly guarded by `middleware.ts`. Unauthenticated users are redirected to `/login`.
+4. Authentication Engine: Use a phone-first strategy through WhatsApp OTP via AiSensy. There are no passwords. For development, OTP `112233` is hardcoded to bypass authentication.
+5. Role-Based Access Control (RBAC): Users have roles `USER`, `PARTNER`, `ADMIN`, and `SALES`. Ensure routing, authorization, and data fetching safely reflect these roles.
+6. Never trust client-provided role, ownership, partner, sales-person, or geographic-scope values. Resolve and authorize them on the server.
 
-# Database & Business Logic
+# Database & MongoDB Rules (STRICT)
+1. MongoDB and Prisma are the source of truth. Before proposing or writing any database field, relation, model, collection, enum, or index, inspect:
+   - `packages/db/prisma/schema.prisma`
+   - Existing Prisma migrations, scripts, seed files, and repository queries
+   - Existing MongoDB collection conventions and persisted document shapes
+2. Never invent relational fields based on assumptions from SQL-style design. MongoDB is the configured provider, and Prisma models may use embedded composite types, `Json`, mapped collection names, or existing relations.
+3. Reuse an existing model, field, relation, enum, embedded type, JSON structure, collection, or helper whenever it represents the required data.
+4. Do not add duplicate fields such as `villageId`, `areaId`, `clusterId`, `regionId`, or similar fields until the complete existing schema and data access patterns have been checked.
+5. If the existing schema cannot represent the requirement:
+   - State the gap explicitly.
+   - Propose the smallest compatible schema change.
+   - Explain migration, backfill, indexing, and backward-compatibility implications.
+   - Do not silently introduce the new field or relation.
+6. Preserve existing mapped MongoDB collection names, ObjectId usage, unique constraints, indexes, optionality, defaults, and legacy compatibility.
+7. Use Prisma transactions for multi-document business operations where atomicity is required. Handle MongoDB transaction limitations explicitly rather than assuming SQL behavior.
+8. Validate all external and form input with the repository's existing validation conventions, normally Zod schemas and strict TypeScript types.
+9. Do not use `any`. Do not bypass Prisma typing with unsafe casts.
+
+# Geographic Cluster / Partner Onboarding Rules
+1. The Sales Portal epic covers onboarding Partners and mapping them to geographic clusters, including villages and areas between Jedcherla and Shamshabad.
+2. Before implementing geographic mapping, inspect all existing geographic data, including:
+   - `ServiceableArea`
+   - Saved locations and address structures
+   - `baseLocation`, `baseCoordinates`, `siteCoordinates`, and `jobLocation`
+   - Existing geo helpers, distance calculations, seed data, indexes, and map components
+3. Reuse existing geographic models and coordinate formats before proposing new cluster entities or relational fields.
+4. Preserve WGS84 latitude/longitude semantics and existing coordinate precision. Do not mix coordinate order, text coordinates, GeoJSON, and embedded coordinate types without an explicit conversion boundary.
+5. Geographic assignment must be validated server-side. The client must not be able to assign a Partner to arbitrary villages, areas, clusters, or service regions.
+6. Any radius, village, area, or cluster mapping must define:
+   - Canonical identifier and display name
+   - Active/inactive behavior
+   - Coordinate or boundary source
+   - Ownership and authorization rules
+   - Indexing and query strategy
+   - Backward compatibility with existing Partner service-radius behavior
+7. Do not create a new geographic database, collection, model, or relation merely because the requested geography is not currently visible in the UI. First inspect the existing database and code paths.
+
+# Partner/User Creation and AiSensy Rules (MANDATORY)
+1. Every Partner or User creation flow must inspect and reuse the existing AiSensy implementation before writing code.
+2. Existing AiSensy functionality is located in `packages/lib/src/aisensy.ts` and related server-side notification helpers. Reuse the existing exported functions and campaign configuration patterns.
+3. Partner/User creation must trigger the appropriate existing AiSensy WhatsApp webhook/API function as part of the server-side creation workflow. This applies to:
+   - Sales-created Partner records
+   - Sales-created User records
+   - Partner onboarding
+   - Passive Partner activation
+   - Admin-created users or partners
+   - Any future bulk import or invite flow
+4. Never call AiSensy directly from a Client Component. AiSensy credentials, payload construction, normalization, and network calls must remain server-side.
+5. Never invent a parallel WhatsApp client, webhook endpoint, campaign payload format, environment-variable convention, or notification helper when an existing AiSensy function can be reused.
+6. The creation workflow must:
+   - Validate and normalize the phone number using existing helpers.
+   - Persist the User/Partner data using the existing repository and Prisma patterns.
+   - Trigger the appropriate existing AiSensy function with the canonical phone number and required template parameters.
+   - Log failures using existing error-handling conventions without exposing credentials or sensitive payload data.
+   - Return a clear operational error or status when the required notification cannot be dispatched, according to the existing business behavior.
+7. Do not claim that a Partner/User was fully onboarded if the required AiSensy trigger was skipped.
+8. If no existing AiSensy function corresponds to the required Partner/User creation notification, stop and identify the missing integration explicitly. Do not silently create a replacement webhook or invent a campaign name.
+9. Avoid duplicate messages on retries. Use existing idempotency, sent-at timestamps, or persisted notification state where available. If none exists, identify the gap before adding a new mechanism.
+10. Never log API keys, OTPs, full phone numbers, or complete sensitive webhook payloads.
+
+# Existing Partner/Fleet Business Logic
 1. Two-Tier Fleet Logic:
-   - 'MasterCatalog' (Admin Only): Stores standard vehicle names, images, JSON specs, and min/max pricing guardrails.
-   - 'PartnerFleet' (Partner Managed): Links to MasterCatalog. Stores the physical machine details, partner pricing, and logistics (Free Radius, Transport limits).
-2. The Zero-Login Operator: Operators DO NOT have accounts. They receive a WhatsApp "Magic Link" with an 'operatorToken' to enter Start/End OTPs on site.
-3. Dual-Rating System: Reviews are tied to the 'Trip', splitting ratings between the 'Equipment' (Technical) and the 'Operator' (Behavioral).
+   - `MasterCatalog` is Admin-only and stores standard vehicle names, images, JSON specifications, and min/max pricing guardrails.
+   - `Equipment` is Partner-managed fleet data linked to `MasterCatalog`. It stores physical machine details, Partner pricing, and logistics such as free radius and transport limits.
+2. The Zero-Login Operator: Operators do not have accounts. They receive a WhatsApp magic link containing an `operatorToken` to enter Start/End OTPs on site.
+3. Dual-Rating System: Reviews are tied to the `Trip`, splitting ratings between the `Equipment` and the `Operator`.
+
+# Sales Portal Rules
+1. The Sales Portal must use the existing authentication, RBAC, authorization, data-fetching, and server-action patterns.
+2. Reuse existing Sales components and patterns before creating new ones, especially:
+   - `apps/admin/app/sales`
+   - Existing Partner onboarding forms
+   - Existing Partner pages and service-area map components
+   - Existing server actions and validation schemas
+3. Do not create a separate Sales-specific design system, form library, field abstraction, button style, modal pattern, table pattern, or notification system if an existing repository component already serves the purpose.
+4. Reuse the existing React and Tailwind UI components from `packages/ui`, including existing `Button`, `Input`, `Label`, `Form`, `FormField`, `FormItem`, `FormControl`, `FormMessage`, `Card`, `Select`, and related components.
+5. Reuse existing shadcn/ui composition, Tailwind tokens, `cn` utilities, spacing, responsive breakpoints, focus states, disabled states, validation messages, loading states, and error-display patterns.
+6. Forms must use the repository's existing `react-hook-form` and Zod conventions where those patterns already exist.
+7. Do not replace an existing shared component with raw HTML controls unless the shared component cannot satisfy a documented requirement.
+8. Any new reusable UI component must first demonstrate why the existing component cannot be reused and must follow the established package and naming conventions.
+9. Maintain consistent Sales Portal behavior for:
+   - Server-side authorization
+   - Pending and disabled states
+   - Toast and error handling
+   - Form validation
+   - Mobile-first layouts
+   - Keyboard accessibility
+   - Large touch targets
+10. Sales users must only see and modify Partners, leads, geographic assignments, and onboarding data that their server-side authorization permits.
 
 # Enterprise Coding Standards
-- No 'any' types. Define strict interfaces/types.
-- Never write nested ternary operators; use clear if/else or early returns.
+- No `any` types. Define strict interfaces and types.
+- Never write nested ternary operators. Use clear `if`/`else` statements or early returns.
 - Keep components small and modular. Use composition over inheritance.
-- Error Handling: Wrap async database calls in try/catch. Log errors clearly. Never crash the client UI.
+- Wrap asynchronous database calls in `try`/`catch`.
+- Log errors clearly without leaking secrets, OTPs, credentials, or personal data.
+- Never crash the client UI.
+- Prefer idempotent server actions for onboarding, notification, and mapping workflows.
+- Use explicit error states and actionable user-facing messages.
+- Do not silently swallow errors except where an existing documented flow requires it.
+- Avoid unrelated refactors while implementing an epic feature.
 
 # UI/UX & Styling Guidelines
-- The brand aesthetic is "Premium Industrial." 
-- Primary Color: Amber-500 (#F59E0B) for actions/highlights. Backgrounds are deep, high-contrast (Dark Mode preference) or clean glassmorphism.
-- Mobile-First: Partners and Operators are on low-end smartphones in bright sunlight. Inputs must be massive, thumb-friendly, and require zero typing if a tap/dropdown will work.
-- i18n/Localization prep: Keep text strings clean and extractable, anticipating a future switch to Telugu/Hindi.
+- The brand aesthetic is "Premium Industrial."
+- Primary color: Amber-500 (`#F59E0B`) for actions and highlights.
+- Backgrounds are deep, high-contrast dark mode or clean glassmorphism where consistent with the existing application.
+- Mobile-first: Partners and Operators use low-end smartphones in bright sunlight. Inputs must be large, thumb-friendly, and require zero typing when a tap or dropdown can be used.
+- Use clear loading, empty, validation, success, and failure states.
+- Preserve established responsive behavior and accessibility patterns.
+- i18n/localization preparation: Keep text strings clean and extractable, anticipating a future switch to Telugu and Hindi.
+
+# Required Workflow Before Implementing Any Epic Feature
+1. Inspect the relevant Prisma schema, MongoDB conventions, existing server actions, validation schemas, notification helpers, and UI components.
+2. Search for existing models, fields, functions, components, routes, and patterns before creating anything new.
+3. Describe any schema, webhook, authorization, or shared-component gap before changing architecture.
+4. Implement server-side authorization and validation before client-side presentation.
+5. Reuse existing AiSensy functions for every required Partner/User notification.
+6. Reuse existing React/Tailwind components and Sales Portal patterns.
+7. Test success, validation failure, authorization failure, duplicate submission, notification failure, and retry behavior.
+8. Verify TypeScript, linting, formatting, and relevant tests before considering the work complete.

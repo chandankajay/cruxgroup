@@ -1,25 +1,16 @@
 "use server";
 
-import { randomUUID, randomInt } from "node:crypto";
 import { prisma } from "@repo/db";
-import {
-  sendBookingConfirmationWhatsApp,
-  sendOperatorMagicLink,
-} from "@repo/lib/aisensy";
-import { advanceBookingProgress } from "@repo/lib";
 import { auth } from "../../../../lib/auth";
 import {
   getAuthorizedWhereClause,
   toResourceAuthzContext,
 } from "../../../../lib/resource-authz";
 import { normalizeAdminPhone } from "../../../../lib/phone";
+import { upsertWalkInCustomer } from "./lib/walk-in-customer";
+import { createWalkInBookingCore } from "./lib/walk-in-booking-core";
 import { naiveIstLocalToUtc, utcToNaiveIstLocalForInput } from "./lib/ist-datetime";
-import {
-  computeWalkInQuote,
-  distanceJobToPartnerKm,
-  partnerBaseCoords,
-  type CatalogGuards,
-} from "./lib/walk-in-pricing";
+import type { CatalogGuards } from "./lib/walk-in-pricing";
 import {
   walkInBookingSchema,
   walkInRescheduleSchema,
@@ -48,90 +39,6 @@ async function requireWalkInDesk(): Promise<WalkInDeskActor | null> {
     return { kind: "PARTNER", userId, partnerId: partner.id };
   }
   return null;
-}
-
-function randomOtp4(): string {
-  return String(randomInt(1000, 10000));
-}
-
-function bookingsAppOrigin(): string {
-  return (
-    process.env["BOOKINGS_APP_ORIGIN"] ??
-    process.env["NEXT_PUBLIC_BOOKINGS_URL"] ??
-    "http://localhost:3000"
-  ).replace(/\/$/, "");
-}
-
-type WalkInCustomerInput = {
-  name: string;
-  phone: string;
-  company?: string;
-  gstin?: string;
-};
-
-/**
- * Partner walk-in / quick-add CRM customer.
- * Links each row to a platform `User` by phone so we never insert multiple `userId: null`
- * rows (MongoDB unique indexes allow only one null).
- */
-async function upsertWalkInCustomer(input: WalkInCustomerInput): Promise<{
-  id: string;
-  name: string;
-  phone: string;
-}> {
-  const phone = normalizeAdminPhone(input.phone);
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 10) {
-    throw new Error("Invalid phone number");
-  }
-
-  const platformUser = await prisma.user.upsert({
-    where: { phoneNumber: phone },
-    create: {
-      phoneNumber: phone,
-      name: input.name.trim(),
-      role: "USER",
-    },
-    update: { name: input.name.trim() },
-    select: { id: true },
-  });
-
-  const payload = {
-    name: input.name.trim(),
-    phone,
-    company: input.company?.trim() ?? "",
-    gstin: input.gstin?.trim() || null,
-  };
-
-  const byUser = await prisma.customer.findFirst({
-    where: { userId: platformUser.id },
-    select: { id: true },
-  });
-  if (byUser) {
-    return prisma.customer.update({
-      where: { id: byUser.id },
-      data: payload,
-      select: { id: true, name: true, phone: true },
-    });
-  }
-
-  const byPhone = await prisma.customer.findFirst({
-    where: { phone },
-    orderBy: { updatedAt: "desc" },
-    select: { id: true },
-  });
-  if (byPhone) {
-    return prisma.customer.update({
-      where: { id: byPhone.id },
-      data: { ...payload, userId: platformUser.id },
-      select: { id: true, name: true, phone: true },
-    });
-  }
-
-  return prisma.customer.create({
-    data: { ...payload, userId: platformUser.id },
-    select: { id: true, name: true, phone: true },
-  });
 }
 
 export type WalkInEquipmentOption = {
@@ -311,18 +218,6 @@ export async function createWalkInBookingAction(
   }
   const data = parsed.data;
 
-  let start: Date;
-  let end: Date;
-  try {
-    start = naiveIstLocalToUtc(data.startLocal);
-    end = naiveIstLocalToUtc(data.endLocal);
-  } catch {
-    return { ok: false, error: "Invalid date/time" };
-  }
-  if (end.getTime() <= start.getTime()) {
-    return { ok: false, error: "End must be after start" };
-  }
-
   const availability = await checkEquipmentAvailabilityAction({
     equipmentId: data.equipmentId,
     startLocal: data.startLocal,
@@ -332,214 +227,32 @@ export async function createWalkInBookingAction(
     return { ok: false, error: availability.error ?? "Machine is not available in this window" };
   }
 
-  const equipmentWhere = getAuthorizedWhereClause(toResourceAuthzContext(actor), {
-    resource: "Equipment",
-    targetId: data.equipmentId,
-  });
-  const equipment = await prisma.equipment.findFirst({
-    where: equipmentWhere,
-    include: {
-      catalog: {
-        select: {
-          minHourlyRate: true,
-          maxHourlyRate: true,
-          minDailyRate: true,
-          maxDailyRate: true,
-        },
-      },
-      partner: { select: { id: true, baseLocation: true, gstNumber: true } },
-    },
-  });
-
-  if (!equipment?.partnerId || !equipment.partner) {
-    return { ok: false, error: "Equipment must belong to a partner" };
+  if (actor.kind === "PARTNER") {
+    const owned = await prisma.equipment.findFirst({
+      where: { id: data.equipmentId, partnerId: actor.partnerId },
+      select: { id: true },
+    });
+    if (!owned) return { ok: false, error: "Unauthorized" };
   }
 
-  const partnerId = equipment.partnerId;
-
-  const hourlyBase =
-    equipment.hourlyRate > 0 ? equipment.hourlyRate : equipment.pricing.hourly;
-  const dailyBase = equipment.pricing.daily;
-  const catalog = equipment.catalog
-    ? {
-        minHourlyRate: equipment.catalog.minHourlyRate,
-        maxHourlyRate: equipment.catalog.maxHourlyRate,
-        minDailyRate: equipment.catalog.minDailyRate,
-        maxDailyRate: equipment.catalog.maxDailyRate,
-      }
-    : null;
-
-  const base = partnerBaseCoords(equipment.partner.baseLocation);
-  const distanceKm = distanceJobToPartnerKm(
-    { lat: data.lat, lng: data.lng },
-    base
-  );
-
-  const quote = computeWalkInQuote({
-    hourlyBase,
-    dailyBase,
-    pricingUnit: data.pricingUnit,
-    duration: data.duration,
-    catalog,
-    distanceKm,
-  });
-
-  let customerId: string;
-  let customerName: string;
-  let customerPhone: string;
-
-  if (data.mode === "existing") {
-    const c = await prisma.customer.findUnique({
-      where: { id: data.customerId! },
-    });
-    if (!c) return { ok: false, error: "Customer not found" };
-    customerId = c.id;
-    customerName = c.name;
-    customerPhone = c.phone;
-  } else {
-    const created = await upsertWalkInCustomer({
-      name: data.newName!,
-      phone: data.newPhone!,
-      company: data.newCompany,
-      gstin: data.newGstin,
-    });
-    customerId = created.id;
-    customerName = created.name;
-    customerPhone = created.phone;
-  }
-
-  const customerUserPhone = normalizeAdminPhone(customerPhone);
-
-  const platformUser = await prisma.user.upsert({
-    where: { phoneNumber: customerUserPhone },
-    create: {
-      phoneNumber: customerUserPhone,
-      name: customerName,
-      role: "USER",
-    },
-    update: { name: customerName },
-    select: { id: true },
-  });
-
-  const startOtp = randomOtp4();
-  const endOtp = randomOtp4();
-
-  const jobLocation = {
-    address: data.siteAddress,
-    lat: data.lat,
-    lng: data.lng,
-  };
-
-  let result: {
-    booking: { id: string };
-    trip: { id: string; operatorToken: string };
-  };
   try {
-    result = await prisma.$transaction(async (tx) => {
-      const booking = await tx.booking.create({
-        data: {
-          userId: platformUser.id,
-          equipmentId: equipment.id,
-          partnerId,
-          customerId,
-          status: "CONFIRMED",
-          startDate: start,
-          endDate: end,
-          siteAddress: data.siteAddress,
-          expectedShift: data.expectedShift?.trim() || null,
-          quoteAmount: quote.totalPaise,
-          location: {
-            address: data.siteAddress,
-            pincode: data.pincode,
-            coordinates: { lat: data.lat, lng: data.lng },
-          },
-          pricing: {
-            total: quote.totalPaise,
-            duration: data.duration,
-            unit: data.pricingUnit,
-          },
-        },
-      });
-
-      const trip = await tx.trip.create({
-        data: {
-          userId: platformUser.id,
-          equipmentId: equipment.id,
-          partnerId,
-          bookingId: booking.id,
-          scheduledDate: start,
-          expectedEndTime: end,
-          status: "ENROUTE",
-          startOtp,
-          endOtp,
-          reviewToken: randomUUID(),
-          lockedHourlyRate: quote.unitRatePaise,
-          lockedTransportFee: quote.transportFeePaise,
-          totalAmount: quote.totalPaise,
-          jobLocation,
-          distanceKm,
-        },
-      });
-
-      return { booking, trip };
+    const result = await createWalkInBookingCore(data, {
+      origin: "WALK_IN",
+      adminAssignMode: "DIRECT",
     });
+    if (!result.tripId) {
+      return { ok: false, error: "Trip was not created" };
+    }
+    return {
+      ok: true,
+      bookingId: result.bookingId,
+      tripId: result.tripId,
+      ...(result.notifyFailed ? { notifyFailed: true } : {}),
+    };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to create booking";
     return { ok: false, error: message };
   }
-
-  const origin = bookingsAppOrigin();
-  const operatorLink = `${origin}/operator/${result.trip.operatorToken}`;
-  const jobLabel = `${equipment.category} ${equipment.name}`.trim();
-
-  void advanceBookingProgress(result.booking.id, "BOOKING_RECEIVED").catch((err) =>
-    console.error("[walk-in] progress_received_failed", err),
-  );
-  void advanceBookingProgress(result.booking.id, "BOOKING_CONFIRMED").catch((err) =>
-    console.error("[walk-in] progress_confirmed_failed", err),
-  );
-
-  let notifyFailed = false;
-  try {
-    if (equipment.operatorPhone?.trim()) {
-      const ok = await sendOperatorMagicLink({
-        operatorPhone: equipment.operatorPhone,
-        jobLabel,
-        magicLinkUrl: operatorLink,
-        startOtp,
-      });
-      if (!ok) notifyFailed = true;
-      else {
-        void advanceBookingProgress(result.booking.id, "MACHINE_ASSIGNED").catch((err) =>
-          console.error("[walk-in] progress_machine_assigned_failed", err),
-        );
-      }
-    }
-
-    const okCustomer = await sendBookingConfirmationWhatsApp({
-      customerPhone: customerPhone,
-      customerName,
-      equipmentName: equipment.name,
-      siteAddress: data.siteAddress,
-      scheduledIstLabel: new Intl.DateTimeFormat("en-IN", {
-        timeZone: "Asia/Kolkata",
-        dateStyle: "medium",
-        timeStyle: "short",
-      }).format(start),
-      totalInrLabel: `₹${quote.totalRupees.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`,
-    });
-    if (!okCustomer) notifyFailed = true;
-  } catch (e) {
-    console.error("[walk-in] WhatsApp notification error after booking commit", e);
-    notifyFailed = true;
-  }
-
-  return {
-    ok: true,
-    bookingId: result.booking.id,
-    tripId: result.trip.id,
-    ...(notifyFailed ? { notifyFailed: true } : {}),
-  };
 }
 
 export type WalkInReschedulePayloadOk = {

@@ -66,17 +66,21 @@ export async function findEligiblePartners(
 ): Promise<EligiblePartner[]> {
   const partners = await prisma.partner.findMany({
     where: {
-      kycStatus: "VERIFIED",
       isActive: true,
-      baseCoordinates: { not: null },
+      OR: [
+        { kind: "PASSIVE" },
+        { kind: "ACTIVE", kycStatus: "VERIFIED" },
+      ],
     },
     select: {
       id: true,
+      kind: true,
+      companyName: true,
+      contactPhone: true,
       baseLocation: true,
       baseCoordinates: true,
       maxRadius: true,
       maxServiceRadiusKm: true,
-      user: { select: { name: true, phoneNumber: true } },
     },
   });
 
@@ -90,13 +94,16 @@ export async function findEligiblePartners(
     if (radiusKm <= 0) continue;
 
     const distKm = calculateDistanceKm(base, { lat: bookingLat, lng: bookingLng });
-    if (distKm <= radiusKm && p.user.phoneNumber) {
-      eligible.push({
-        partnerId: p.id,
-        partnerPhone: p.user.phoneNumber,
-        partnerName: p.user.name || "Partner",
-      });
-    }
+    if (distKm > radiusKm) continue;
+
+    const partnerPhone = p.contactPhone?.trim();
+    if (!partnerPhone) continue;
+
+    eligible.push({
+      partnerId: p.id,
+      partnerPhone,
+      partnerName: p.companyName?.trim() || "Partner",
+    });
   }
 
   return eligible;

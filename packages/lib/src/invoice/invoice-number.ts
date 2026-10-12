@@ -13,3 +13,7 @@ export function indianFyKeyUtc(d: Date): string {
 export function formatInvoiceNumber(fyKey: string, seq: number): string {
   return `CRX/${fyKey}/${String(seq).padStart(4, "0")}`;
 }
+
+export function formatQuotationNumber(fyKey: string, seq: number): string {
+  return `CRX-QUO/${fyKey}/${String(seq).padStart(4, "0")}`;
+}

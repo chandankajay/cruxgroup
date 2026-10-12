@@ -35,6 +35,18 @@ export function isShellNavItemActive(pathname: string, item: Pick<NavItem, "href
   if (item.href === "/dashboard") {
     return pathname === "/dashboard" || pathname === "/";
   }
+  if (item.href === "/bookings/admin-walk-in") {
+    return pathname.startsWith("/bookings/admin-walk-in");
+  }
+  if (item.href === "/bookings/historical/new") {
+    return pathname.startsWith("/bookings/historical");
+  }
+  if (item.href === "/platform-admin/partners/passive") {
+    return pathname.startsWith("/platform-admin/partners/passive");
+  }
+  if (item.href === "/invoices/compose") {
+    return pathname.startsWith("/invoices/compose");
+  }
   if (item.href === "/bookings") {
     return pathname === "/bookings";
   }
@@ -46,6 +58,9 @@ export function isShellNavItemActive(pathname: string, item: Pick<NavItem, "href
   }
   if (item.href === "/jobs") {
     return pathname === "/jobs" || pathname.startsWith("/jobs/");
+  }
+  if (item.href === "/invoices") {
+    return pathname === "/invoices";
   }
   if (item.href === "/customers") {
     return pathname === "/customers" || pathname.startsWith("/customers/");
@@ -132,11 +147,50 @@ const NAV_ITEM_DEFINITIONS: readonly NavItemDefinition[] = [
     ),
   },
   {
+    navId: "admin-passive-partners",
+    href: "/platform-admin/partners/passive",
+    label: "Passive partners",
+    roles: ["ADMIN"],
+    icon: (
+      <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    ),
+  },
+  {
+    navId: "admin-walk-in",
+    href: "/bookings/admin-walk-in",
+    label: "Walk-in booking",
+    roles: ["ADMIN"],
+    icon: <Icon d="M12 5v14M5 12h14" />,
+  },
+  {
+    navId: "admin-historical",
+    href: "/bookings/historical/new",
+    label: "Past job record",
+    roles: ["ADMIN"],
+    icon: <Icon d="M12 8v4l3 3M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z" />,
+  },
+  {
     navId: "admin-bookings-global",
     href: "/bookings",
     label: "Global bookings",
     roles: ["ADMIN"],
     icon: <Icon d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />,
+  },
+  {
+    navId: "admin-invoices-compose",
+    href: "/invoices/compose",
+    label: "Create invoice",
+    roles: ["ADMIN"],
+    icon: <Icon d="M12 5v14M5 12h14" />,
+  },
+  {
+    navId: "admin-invoices",
+    href: "/invoices",
+    label: "Send invoices",
+    roles: ["ADMIN"],
+    icon: (
+      <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" />
+    ),
   },
   {
     navId: "admin-sales-overview",

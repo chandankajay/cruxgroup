@@ -1,8 +1,8 @@
 "use server";
 
 import { prisma } from "@repo/db";
-import { generateInvoiceForCompletedTrip } from "@repo/lib/invoice";
-import { sendInvoiceWithPaymentLinkWhatsApp } from "@repo/lib/aisensy";
+import { generateInvoiceForCompletedTrip, ensureInvoicePdfUrl } from "@repo/lib/invoice";
+import { deliverInvoiceViaWhatsApp, sendInvoiceReceiptForTrip } from "../../../lib/invoice-whatsapp-delivery";
 import {
   getAuthorizedWhereClause,
   getResourceAuthzContext,
@@ -35,44 +35,53 @@ export async function resendTripInvoicePaymentLinkAction(
   const invoice = await prisma.invoice.findUnique({
     where: { tripId: gate.tripId },
     include: {
-      trip: { include: { user: { select: { name: true, phoneNumber: true } } } },
-      payments: { orderBy: { createdAt: "desc" }, take: 1 },
+      trip: { include: { user: { select: { phoneNumber: true } } } },
     },
   });
   if (!invoice) {
     return { ok: false, error: "No invoice on file for this trip. Use Generate invoice first." };
   }
 
-  const pdfUrl = invoice.pdfUrl?.trim() ?? "";
-  const paymentUrl = invoice.payments[0]?.paymentLinkUrl?.trim() ?? "";
+  const pdfUrl = (await ensureInvoicePdfUrl(invoice.id)) ?? "";
   const phone = invoice.trip.user.phoneNumber?.trim() ?? "";
-  if (!pdfUrl || !paymentUrl) {
-    return { ok: false, error: "Invoice PDF or payment link is missing; regenerate may be required." };
+  if (!pdfUrl) {
+    return { ok: false, error: "Invoice PDF is missing; regenerate may be required." };
   }
   if (!phone) {
     return { ok: false, error: "Customer phone is missing; cannot send WhatsApp." };
   }
 
   try {
-    await sendInvoiceWithPaymentLinkWhatsApp({
+    const sent = await sendInvoiceReceiptForTrip({
+      tripId: gate.tripId,
       customerPhone: phone,
-      customerName: invoice.trip.user.name || "Customer",
+      invoiceId: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
-      amountInrLabel: (invoice.amount / 100).toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
       pdfUrl,
-      paymentUrl,
     });
+    if (!sent) {
+      return { ok: false, error: "Failed to send invoice notification." };
+    }
   } catch (e) {
     console.error("[resendTripInvoicePaymentLinkAction] aisensy_failed", {
       tripId: gate.tripId,
       error: e instanceof Error ? e.message : String(e),
     });
-    return { ok: false, error: "Failed to send payment link notification." };
+    return { ok: false, error: "Failed to send invoice notification." };
   }
 
+  return { ok: true };
+}
+
+/** Super Admin only — manual invoice delivery via WhatsApp (PDF + ratings link). */
+export async function sendTripInvoiceWhatsAppAction(
+  tripId: string,
+  destinationPhone?: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const result = await deliverInvoiceViaWhatsApp({ tripId, destinationPhone });
+  if (!result.ok) {
+    return { ok: false, error: result.error };
+  }
   return { ok: true };
 }
 

@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 3001",
+    "dev:tunnel": "powershell -ExecutionPolicy Bypass -File ./scripts/dev-invoice-tunnel.ps1",
+    "dev:tunnel:cloudflare": "powershell -ExecutionPolicy Bypass -File ./scripts/dev-invoice-tunnel-cloudflare.ps1",
     "build": "next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",

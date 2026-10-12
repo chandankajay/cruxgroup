@@ -4,6 +4,8 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:tunnel": "pnpm --filter @crux/admin dev:tunnel",
+    "dev:tunnel:cloudflare": "pnpm --filter @crux/admin dev:tunnel:cloudflare",
     "lint": "turbo run lint",
     "check-types": "turbo run check-types",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

@@ -1,12 +1,16 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { put } from "@vercel/blob";
 import { prisma } from "@repo/db";
-import { sendInvoiceWithPaymentLinkWhatsApp } from "../aisensy";
+import { dispatchInvoiceReceiptWhatsApp } from "./send-invoice-receipt-whatsapp";
+import { buildSignedInvoicePdfUrl } from "./invoice-delivery-url";
 import { buildInvoicePdfBytes } from "./build-invoice-pdf";
+import { publicBlobPutOptions } from "../blob-storage";
 import { formatInvoiceNumber, indianFyKeyUtc } from "./invoice-number";
 import { createRazorpayPaymentLink } from "./razorpay-payment-link";
+import { isAutoInvoiceOnTripComplete } from "./auto-invoice-config";
 
 const SAC = "997319";
 
@@ -37,6 +41,8 @@ async function allocateInvoiceNumber(): Promise<string> {
  * Runs after a trip is COMPLETED. Idempotent per trip (unique invoice per trip).
  */
 export async function generateInvoiceForCompletedTrip(tripId: string): Promise<void> {
+  if (!isAutoInvoiceOnTripComplete()) return;
+
   const existing = await prisma.invoice.findUnique({ where: { tripId } });
   if (existing) return;
 
@@ -81,7 +87,7 @@ export async function generateInvoiceForCompletedTrip(tripId: string): Promise<v
   let pdfUrl: string | null = null;
   try {
     const blob = await put(blobPath, Buffer.from(pdfBytes), {
-      access: "public",
+      ...publicBlobPutOptions(),
       contentType: "application/pdf",
     });
     pdfUrl = blob.url;
@@ -98,19 +104,25 @@ export async function generateInvoiceForCompletedTrip(tripId: string): Promise<v
     customerContact: trip.user.phoneNumber ?? "",
   });
 
+  let createdInvoiceId: string | null = null;
   try {
     const invoice = await prisma.invoice.create({
       data: {
         invoiceNumber,
         tripId: trip.id,
+        subtotalPaise: amountPaise,
+        gstPercent: 0,
+        gstPaise: 0,
         partnerGstin,
         customerGstin,
         sacCode: SAC,
         amount: amountPaise,
+        lineDescription,
         pdfUrl,
         paymentStatus: "UNPAID",
       },
     });
+    createdInvoiceId = invoice.id;
 
     await prisma.payment.create({
       data: {
@@ -126,18 +138,18 @@ export async function generateInvoiceForCompletedTrip(tripId: string): Promise<v
     return;
   }
 
-  const phone = trip.user.phoneNumber;
-  if (phone?.trim() && pdfUrl && razorpay?.shortUrl) {
-    await sendInvoiceWithPaymentLinkWhatsApp({
+  const phone = trip.user.phoneNumber?.trim();
+  if (phone && pdfUrl && createdInvoiceId) {
+    let reviewToken = trip.reviewToken?.trim();
+    if (!reviewToken) {
+      reviewToken = randomUUID();
+      await prisma.trip.update({ where: { id: trip.id }, data: { reviewToken } });
+    }
+    await dispatchInvoiceReceiptWhatsApp({
       customerPhone: phone,
-      customerName: trip.user.name || "Customer",
+      pdfUrl: buildSignedInvoicePdfUrl(createdInvoiceId),
       invoiceNumber,
-      amountInrLabel: (amountPaise / 100).toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-      pdfUrl,
-      paymentUrl: razorpay.shortUrl,
+      reviewToken,
     });
   }
 }

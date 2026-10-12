@@ -8,7 +8,9 @@ type GeoPoint = { type: "Point"; coordinates: [number, number] };
  */
 type PartnerListRow = {
   id: string;
+  partnerRecordId: string;
   name: string;
+  kind: string;
   phoneNumber: string | null;
   email: string | null;
   baseAddress: string;
@@ -19,6 +21,7 @@ type PartnerListRow = {
 function toApiRow(
   p: {
     id: string;
+    kind: string;
     address: string;
     maxRadius: number;
     maxServiceRadiusKm: number | null;
@@ -31,6 +34,8 @@ function toApiRow(
   const r = getPartnerServiceRadiusKm(p);
   return {
     id: u.id,
+    partnerRecordId: p.id,
+    kind: p.kind,
     name: u.name,
     phoneNumber: u.phoneNumber,
     email: u.email,
@@ -44,13 +49,40 @@ function toApiRow(
 
 export async function listPartners() {
   const rows = await prisma.partner.findMany({
-    include: {
-      user: { select: { id: true, name: true, phoneNumber: true, email: true } },
+    select: {
+      id: true,
+      userId: true,
+      kind: true,
+      companyName: true,
+      contactPhone: true,
+      address: true,
+      maxRadius: true,
+      maxServiceRadiusKm: true,
+      baseLocation: true,
+      baseCoordinates: true,
     },
   });
 
+  const userIds = [...new Set(rows.map((p) => p.userId))];
+  const users = await prisma.user.findMany({
+    where: { id: { in: userIds } },
+    select: { id: true, name: true, phoneNumber: true, email: true },
+  });
+  const userById = new Map(users.map((u) => [u.id, u]));
+
   return rows
-    .map((p) => toApiRow(p, p.user))
+    .flatMap((p) => {
+      const u = userById.get(p.userId);
+      const name = u?.name?.trim() || p.companyName?.trim() || "Unnamed Partner";
+      const phoneNumber = u?.phoneNumber?.trim() || p.contactPhone?.trim() || null;
+      const rowUser = u ?? {
+        id: p.userId,
+        name,
+        phoneNumber,
+        email: null as string | null,
+      };
+      return [toApiRow(p, rowUser)];
+    })
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 }
 
