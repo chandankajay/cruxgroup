@@ -42,18 +42,7 @@ export async function fetchSalespeople(): Promise<SalespersonRow[] | null> {
       assignedAreaSlugs: true,
       salesLeads: {
         where: {
-          OR: [
-            {
-              leadType: { not: "SERVICE" },
-              status: { in: ["NEW", "CONTACTED", "INTERESTED"] },
-            },
-            {
-              leadType: "SERVICE",
-              serviceStage: {
-                notIn: ["COMPLETED", "LOST"],
-              },
-            },
-          ],
+          status: { in: ["NEW", "CONTACTED", "INTERESTED"] },
         },
         select: { id: true },
       },
@@ -89,18 +78,7 @@ export async function fetchSalespersonById(
       assignedAreaSlugs: true,
       salesLeads: {
         where: {
-          OR: [
-            {
-              leadType: { not: "SERVICE" },
-              status: { in: ["NEW", "CONTACTED", "INTERESTED"] },
-            },
-            {
-              leadType: "SERVICE",
-              serviceStage: {
-                notIn: ["COMPLETED", "LOST"],
-              },
-            },
-          ],
+          status: { in: ["NEW", "CONTACTED", "INTERESTED"] },
         },
         select: { id: true },
       },
