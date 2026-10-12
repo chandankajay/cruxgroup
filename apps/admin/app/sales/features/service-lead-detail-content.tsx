@@ -16,11 +16,9 @@ import { Label } from "@repo/ui/label";
 import { Select } from "@repo/ui/select";
 import { Textarea } from "@repo/ui/textarea";
 import {
-  markQuotationSentAdminAction,
-  requestQuoteAdminHandoffAction,
-} from "../../../(dashboard)/services-leads/actions";
-import {
   appendLeadNoteAction,
+  markQuotationSentSalesAction,
+  requestQuoteAdminHandoffSalesAction,
   updateServiceLeadStageSalesAction,
   type LeadDetail,
 } from "../actions";
@@ -71,13 +69,13 @@ export function ServiceLeadDetailContent({ lead }: { readonly lead: LeadDetail }
       return;
     }
     startTransition(async () => {
-      const result = await markQuotationSentAdminAction({
+      const result = await markQuotationSentSalesAction({
         leadId: lead.id,
         amountPaise: Math.round(rupees * 100),
         sentAt: new Date(sentDate),
         billbookRef,
       });
-      if (!result.ok) setError(result.error);
+      if (!result.success) setError(result.error);
       else {
         setShowQuote(false);
         router.refresh();
@@ -87,8 +85,8 @@ export function ServiceLeadDetailContent({ lead }: { readonly lead: LeadDetail }
 
   function handoffToAdmin() {
     startTransition(async () => {
-      const result = await requestQuoteAdminHandoffAction(lead.id);
-      if (!result.ok) setError(result.error);
+      const result = await requestQuoteAdminHandoffSalesAction(lead.id);
+      if (!result.success) setError(result.error);
       else router.refresh();
     });
   }
@@ -134,18 +132,20 @@ export function ServiceLeadDetailContent({ lead }: { readonly lead: LeadDetail }
       ) : null}
 
       <div className="mb-6 flex flex-wrap gap-2">
-        <Button type="button" variant="outline" asChild>
-          <a href={`tel:${lead.phoneNumber}`}>Call</a>
-        </Button>
-        <Button type="button" variant="outline" className="border-emerald-600 text-emerald-700" asChild>
-          <a
-            href={`https://wa.me/91${lead.phoneNumber.replace(/\D/g, "").slice(-10)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            WhatsApp
-          </a>
-        </Button>
+        <a
+          href={`tel:${lead.phoneNumber}`}
+          className="inline-flex rounded-md border border-border px-4 py-2 text-sm"
+        >
+          Call
+        </a>
+        <a
+          href={`https://wa.me/91${lead.phoneNumber.replace(/\D/g, "").slice(-10)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex rounded-md border border-emerald-600 px-4 py-2 text-sm text-emerald-700"
+        >
+          WhatsApp
+        </a>
         {lead.canSendQuotes ? (
           <Button type="button" className="bg-amber-500 hover:bg-amber-600" onClick={() => setShowQuote(true)}>
             Mark quotation sent

@@ -16,9 +16,12 @@ export function ServicesLeadsList({ leads, filters }: Props) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Services leads — list</h1>
-        <Button variant="outline" asChild>
-          <Link href="/services-leads">Board</Link>
-        </Button>
+        <Link
+          href="/services-leads"
+          className="inline-flex rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+        >
+          Board
+        </Link>
       </div>
       <div className="overflow-hidden rounded-xl border">
         <table className="w-full text-sm">

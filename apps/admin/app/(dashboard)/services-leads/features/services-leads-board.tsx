@@ -86,9 +86,12 @@ export function ServicesLeadsBoard({ board, salespeople, filters }: Props) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/services-leads?view=list">List</Link>
-          </Button>
+          <Link
+            href="/services-leads?view=list"
+            className="inline-flex rounded-md border border-border px-3 py-2 text-sm hover:bg-muted"
+          >
+            List
+          </Link>
         </div>
       </div>
 
