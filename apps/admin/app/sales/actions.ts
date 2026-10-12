@@ -5,7 +5,6 @@ import { prisma } from "@repo/db";
 import type { LeadStatus, LeadType } from "@prisma/client";
 import type { ServiceLeadStage } from "@prisma/client";
 import { canSalesMoveToStage } from "@repo/lib/service-lead-stage-rules";
-import { SERVICE_LEAD_STAGES } from "@repo/lib/service-leads";
 import {
   markQuotationSentSchema,
   updateServiceLeadStageSchema,
