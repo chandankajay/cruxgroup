@@ -61,7 +61,7 @@
       "dependsOn": ["^lint"]
     },
     "check-types": {
-      "dependsOn": ["^check-types", "^build"]
+      "dependsOn": ["^build", "^check-types"]
     },
     "test": {
       "dependsOn": ["^test"]

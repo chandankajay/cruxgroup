@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * AiSensy WhatsApp campaign API helpers (server-only usage recommended).
  * @see https://faq.aisensy.com/en/articles/11501840-api-documentation
@@ -66,10 +68,6 @@ export async function sendWhatsAppMessage(
   }
 
   if (!apiKey) {
-    console.log("[aisensy] sendWhatsAppMessage (no AISENSY_API_KEY):", {
-      ...payload,
-      apiKeyPresent: false,
-    });
     return true;
   }
 

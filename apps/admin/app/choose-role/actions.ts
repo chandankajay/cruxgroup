@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { assertSalesRoleSelectable } from "@repo/lib";
+import { assertSalesRoleSelectable } from "@repo/lib/sales-permissions";
+import { selectAdminRoleServerSchema } from "@repo/validators/admin-role";
 import { prisma } from "@repo/db";
 import { auth } from "../../lib/auth";
 import { homePathForRole } from "../../lib/role-routes";
@@ -12,8 +13,12 @@ export type SelectAdminRoleResult =
   | { ok: false; error: string };
 
 export async function selectAdminRoleAction(
-  role: "PARTNER" | "SALES",
+  role: unknown,
 ): Promise<SelectAdminRoleResult> {
+  const roleParsed = selectAdminRoleServerSchema.safeParse(role);
+  if (!roleParsed.success) {
+    return { ok: false, error: "Invalid role selection." };
+  }
   const session = await auth();
   const userId = session?.user?.id;
   const currentRole = session?.user?.role;
@@ -32,7 +37,7 @@ export async function selectAdminRoleAction(
 
   let partnerRole: "PARTNER";
   try {
-    partnerRole = assertSalesRoleSelectable(role);
+    partnerRole = assertSalesRoleSelectable(roleParsed.data);
   } catch {
     return {
       ok: false,

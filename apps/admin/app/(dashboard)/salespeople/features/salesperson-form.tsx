@@ -7,6 +7,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Switch } from "@repo/ui/switch";
+import { upsertSalespersonSchema } from "@repo/validators/salesperson";
 import {
   createSalespersonAction,
   updateSalespersonAction,
@@ -47,8 +48,13 @@ export function SalespersonForm({ mode, initial }: Props) {
         isActive,
         assignedAreaSlugs,
       };
+      const validated = upsertSalespersonSchema.safeParse(payload);
+      if (!validated.success) {
+        setError("Please check the form and try again.");
+        return;
+      }
       if (mode === "create") {
-        const result = await createSalespersonAction(payload);
+        const result = await createSalespersonAction(validated.data);
         if (!result.ok) {
           setError(result.error);
           return;
@@ -58,7 +64,7 @@ export function SalespersonForm({ mode, initial }: Props) {
         return;
       }
       if (!initial?.id) return;
-      const result = await updateSalespersonAction(initial.id, payload);
+      const result = await updateSalespersonAction(initial.id, validated.data);
       if (!result.ok) {
         setError(result.error);
         return;

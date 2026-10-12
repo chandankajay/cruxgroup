@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useSession } from "next-auth/react";
+import { selectAdminRoleClientSchema } from "@repo/validators/admin-role";
 import { selectAdminRoleAction } from "./actions";
 
 export function RoleSelectionCard() {
@@ -13,7 +14,8 @@ export function RoleSelectionCard() {
     setError(undefined);
     startTransition(async () => {
       try {
-        const result = await selectAdminRoleAction("PARTNER");
+        const role = selectAdminRoleClientSchema.parse("PARTNER");
+        const result = await selectAdminRoleAction(role);
         if (!result.ok) {
           setError(result.error);
           return;

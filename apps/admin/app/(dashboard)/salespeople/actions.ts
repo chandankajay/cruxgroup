@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@repo/db";
 import { requireAdminSession } from "../../../lib/sales-auth";
+import { upsertSalespersonSchema } from "@repo/validators/salesperson";
+import type { UpsertSalespersonInput } from "@repo/validators/salesperson";
 import { normalizeAdminPhone, ADMIN_PHONE_E164 } from "../../../lib/phone";
+
+export type { UpsertSalespersonInput };
 
 const SALESPEOPLE_PATH = "/salespeople";
 
@@ -98,29 +102,19 @@ export async function fetchSalespersonById(
   };
 }
 
-export type UpsertSalespersonInput = {
-  name: string;
-  phoneNumber: string;
-  canSendQuotes: boolean;
-  isActive: boolean;
-  assignedAreaSlugs: string[];
-};
-
-function parseUpsertInput(raw: UpsertSalespersonInput): UpsertSalespersonInput | { error: string } {
-  const name = raw.name.trim();
-  const phone = normalizeAdminPhone(raw.phoneNumber);
-  if (!name) return { error: "Full name is required." };
+function parseUpsertInput(raw: unknown): UpsertSalespersonInput | { error: string } {
+  const parsed = upsertSalespersonSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: "Please check the form and try again." };
+  }
+  const phone = normalizeAdminPhone(parsed.data.phoneNumber);
   if (!ADMIN_PHONE_E164.test(phone)) {
     return { error: "Enter a valid Indian mobile number." };
   }
-  const slugs = raw.assignedAreaSlugs
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
+  const slugs = parsed.data.assignedAreaSlugs.map((s) => s.toLowerCase());
   return {
-    name,
+    ...parsed.data,
     phoneNumber: phone,
-    canSendQuotes: raw.canSendQuotes,
-    isActive: raw.isActive,
     assignedAreaSlugs: slugs,
   };
 }
