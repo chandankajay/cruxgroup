@@ -1,27 +1,26 @@
 # Services pipeline DB rollback (PR #24 / CWA-39)
 
-Use this when reverting the services lead pipeline schema before the web stack (PR #25) is deployed.
+**Prefer fix-forward:** If production already has `SERVICE` leads or the new admin/web stack is partially deployed, complete PR #25 and deploy **web + admin together** instead of rolling schema back.
+
+Use the steps below only when you must run **older application code** against a database that already received the PR #24 schema changes.
 
 ## Why rollback is fragile
 
-1. **`LeadType.SERVICE` enum value** — Older deployed apps run a Prisma client generated without `SERVICE`. After `db push`, MongoDB documents may use `leadType: "SERVICE"` while old servers still run old clients → runtime errors on read/filter.
-2. **Optional `salesPersonId`** — Making the field optional changes generated types (`string` → `string | null`). Old admin builds that assume non-null can fail TypeScript or throw at runtime when assigning leads.
-3. **`onDelete: SetNull` on `Lead.salesPerson`** — Previously `Cascade` (if that was the live shape). Rollback to `Cascade` **deletes or blocks** depending on migration path; `SetNull` leaves leads with `salesPersonId: null`. Reverting the relation rule without a data pass can orphan or delete rows.
+1. **`LeadType.SERVICE` enum value** — Older deployed apps use a Prisma client generated without `SERVICE`. After `db push`, MongoDB documents may use `leadType: "SERVICE"` while old servers still run old clients → runtime errors on read/filter.
+2. **Optional `salesPersonId`** — Making the field optional changes generated types (`string` → `string | null`). Old admin builds that assume non-null can fail at compile time or runtime.
+3. **`onDelete: SetNull` on `Lead.salesPerson`** — Reverting to `Cascade` without a data pass can delete or block rows; `SetNull` leaves leads with `salesPersonId: null`.
+4. **Mongo + `prisma db push`** — Push adds fields and enum values; it does **not** remove fields or enum values from existing documents. “Schema downgrade” requires a deliberate data migration or manual Mongo updates, not push alone.
 
 ## Safe rollback order
 
-1. **Freeze writes** — Disable service lead board actions in admin (deploy previous admin build or feature flag) so no new `SERVICE` leads are created during rollback.
-2. **Deploy application code first (downgrade)** — Ship admin/web builds from **before** PR #24/#25 that do not reference `SERVICE`, `serviceStage`, or optional `salesPersonId` in queries. Until this is live, do not remove columns/enums from the database.
-3. **Data audit (plan only in staging; execute in prod with backup)**  
-   - Export leads where `leadType = SERVICE`.  
-   - Decide: archive to JSON, re-label to `CUSTOMER`, or delete (business decision).  
-   - Clear `serviceStage` / `serviceSlug` fields if downgrading code that does not understand them.
-4. **Schema downgrade** — After old code is serving traffic, run a controlled `prisma db push` (or manual Mongo updates) to remove fields/enums **only if** no remaining documents use them. Regenerate Prisma client on the old app version.
-5. **Verify** — Booking/equipment leads still load; admin sales board works; no Prisma errors in logs.
-
-## Forward-only alternative
-
-If production already has `SERVICE` leads, prefer **fix-forward** (complete PR #25, deploy web + admin together) instead of schema rollback.
+1. **Freeze writes** — Disable service lead board actions and the public quote path (deploy previous admin/web build or feature flag) so no new `SERVICE` leads are created during rollback.
+2. **Back up** — Export `Lead`, `LeadActivity`, and related collections (or full DB snapshot) before mutating data.
+3. **Move `SERVICE` leads out** — For each lead with `leadType = SERVICE`:
+   - Re-label to `CUSTOMER` / `FLEET_PARTNER`, archive to JSON, or delete (business decision).
+   - Clear `serviceStage`, `serviceSlug`, and other service-only fields if downgrading code that does not understand them.
+   - **Leads with no salesperson:** assign `salesPersonId` to a valid `User` with `role: SALES`, or delete/archive the lead — old code may not tolerate null assignees.
+4. **Deploy old application code** — Ship admin/web builds from **before** PR #24/#25 that do not query `SERVICE`, `serviceStage`, or optional `salesPersonId`. Do not rely on schema “removal” via `db push`.
+5. **Verify** — Booking/equipment leads still load; legacy sales board works; no Prisma errors in logs.
 
 ## Related
 

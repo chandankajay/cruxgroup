@@ -5,6 +5,8 @@ import { prisma } from "@repo/db";
 import type { LeadStatus, LeadType } from "@prisma/client";
 import type { ServiceLeadStage } from "@prisma/client";
 import { canSalesMoveToStage } from "@repo/lib/service-lead-stage-rules";
+import { resolveServiceSlug } from "@repo/lib/service-leads";
+import { createLeadSchema } from "@repo/validators/create-lead";
 import {
   markQuotationSentSchema,
   updateServiceLeadStageSchema,
@@ -257,41 +259,45 @@ export async function fetchLeadDetail(leadId: string): Promise<LeadDetail | null
   };
 }
 
-export async function createLeadAction(input: {
-  name: string;
-  phoneNumber: string;
-  leadType: LeadType;
-  source: string;
-  serviceSlug?: string;
-  areaLabel?: string;
-  landSize?: string;
-  timeline?: string;
-  landType?: string;
-}): Promise<{ success: boolean; error?: string; id?: string }> {
+export async function createLeadAction(
+  raw: unknown,
+): Promise<{ success: boolean; error?: string; id?: string }> {
   const sales = await requireSalesSession();
   if (!sales) return { success: false, error: "Forbidden" };
 
-  const name = input.name.trim();
+  const parsed = createLeadSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: "Check the form fields and try again." };
+  }
+  const input = parsed.data;
+
   const phoneNumber = input.phoneNumber.replace(/\D/g, "").slice(-10);
-  if (!name) return { success: false, error: "Name is required." };
   if (phoneNumber.length !== 10) {
     return { success: false, error: "Enter a valid 10-digit phone number." };
   }
 
   const isService = input.leadType === "SERVICE";
+  let resolvedServiceSlug: string | null = null;
+  if (isService) {
+    const slug = resolveServiceSlug(input.serviceSlug ?? "");
+    if (!slug) {
+      return { success: false, error: "Select a valid service." };
+    }
+    resolvedServiceSlug = slug;
+  }
 
   const lead = await prisma.lead.create({
     data: {
       salesPersonId: sales.userId,
-      name,
+      name: input.name,
       phoneNumber,
       leadType: input.leadType,
-      source: input.source.trim() || (isService ? "Field visit" : ""),
+      source: input.source?.trim() || (isService ? "Field visit" : ""),
       status: "NEW",
       ...(isService
         ? {
             serviceStage: "NEW" as ServiceLeadStage,
-            serviceSlug: input.serviceSlug?.trim() || null,
+            serviceSlug: resolvedServiceSlug,
             areaLabel: input.areaLabel?.trim() || null,
             landSize: input.landSize?.trim() || null,
             timeline: input.timeline?.trim() || null,

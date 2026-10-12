@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/table";
+import { createLeadSchema } from "@repo/validators/create-lead";
 import { createLeadAction, type LeadRow } from "../actions";
 
 const LEAD_TYPES: { value: LeadType; label: string }[] = [
@@ -84,16 +85,24 @@ export function LeadsPageContent({
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError(undefined);
+
+    const payload = {
+      name,
+      phoneNumber: phone,
+      leadType,
+      source,
+      ...(leadType === "SERVICE"
+        ? { serviceSlug, areaLabel, landSize }
+        : {}),
+    };
+    const parsed = createLeadSchema.safeParse(payload);
+    if (!parsed.success) {
+      setError("Check the form fields and try again.");
+      return;
+    }
+
     startTransition(async () => {
-      const result = await createLeadAction({
-        name,
-        phoneNumber: phone,
-        leadType,
-        source,
-        ...(leadType === "SERVICE"
-          ? { serviceSlug, areaLabel, landSize }
-          : {}),
-      });
+      const result = await createLeadAction(parsed.data);
       if (!result.success) {
         setError(result.error);
         return;
