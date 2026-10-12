@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@repo/db";
 
-const PIN_LENGTH = 4;
 const BCRYPT_ROUNDS = 10;
 const MAX_PIN_FAILS_BEFORE_LOCKOUT = 5;
 const PIN_LOCKOUT_MINUTES = 15;
@@ -25,9 +24,7 @@ export const WEAK_PINS = new Set([
 ]);
 
 export type LoginStep = "otp" | "pin";
-
 export type PinVerifyError = "NOT_SET" | "LOCKED" | "WRONG_PIN";
-
 export type PinValidationError = "INVALID_FORMAT" | "WEAK_PIN";
 
 export function validatePinFormat(pin: string): boolean {
@@ -44,20 +41,14 @@ export function validatePinForSet(pin: string): PinValidationError | null {
   return null;
 }
 
-export function isPinLocked(user: {
-  pinLockoutUntil: Date | null;
-}): boolean {
+export function isPinLocked(user: { pinLockoutUntil: Date | null }): boolean {
   return !!user.pinLockoutUntil && user.pinLockoutUntil > new Date();
 }
 
 export async function hashPin(pin: string): Promise<string> {
   const validationError = validatePinForSet(pin);
-  if (validationError === "INVALID_FORMAT") {
-    throw new Error("PIN_INVALID_FORMAT");
-  }
-  if (validationError === "WEAK_PIN") {
-    throw new Error("PIN_WEAK");
-  }
+  if (validationError === "INVALID_FORMAT") throw new Error("PIN_INVALID_FORMAT");
+  if (validationError === "WEAK_PIN") throw new Error("PIN_WEAK");
   return bcrypt.hash(pin, BCRYPT_ROUNDS);
 }
 
@@ -81,9 +72,7 @@ async function recordFailedPinAttempt(userId: string): Promise<void> {
       where: { id: userId },
       data: {
         pinAttempts: 0,
-        pinLockoutUntil: new Date(
-          Date.now() + PIN_LOCKOUT_MINUTES * 60 * 1000,
-        ),
+        pinLockoutUntil: new Date(Date.now() + PIN_LOCKOUT_MINUTES * 60 * 1000),
       },
     });
   } else {
@@ -103,12 +92,8 @@ export async function verifyPin(
     select: { pinHash: true, pinLockoutUntil: true },
   });
 
-  if (!user?.pinHash) {
-    return { ok: false, error: "NOT_SET" };
-  }
-  if (isPinLocked(user)) {
-    return { ok: false, error: "LOCKED" };
-  }
+  if (!user?.pinHash) return { ok: false, error: "NOT_SET" };
+  if (isPinLocked(user)) return { ok: false, error: "LOCKED" };
 
   const normalized = pin.replace(/\D/g, "");
   if (!validatePinFormat(normalized)) {
@@ -139,25 +124,22 @@ export async function setPin(userId: string, pin: string): Promise<void> {
   });
 }
 
-/** After OTP verified in the same login / reset flow. */
-export async function resetPinAfterOtp(
-  userId: string,
-  pin: string,
-): Promise<void> {
+export async function resetPinAfterOtp(userId: string, pin: string): Promise<void> {
   await setPin(userId, pin);
 }
 
-/**
- * After normalizing phone, decide whether the client should show OTP or PIN entry.
- */
 export async function resolveLoginStep(phoneNumber: string): Promise<LoginStep> {
   const user = await prisma.user.findUnique({
     where: { phoneNumber },
     select: { pinHash: true },
   });
+  return user?.pinHash ? "pin" : "otp";
+}
 
-  if (user?.pinHash) {
-    return "pin";
-  }
-  return "otp";
+export async function userNeedsPinSetup(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { phoneNumber: true, pinHash: true },
+  });
+  return !!user?.phoneNumber && !user.pinHash;
 }

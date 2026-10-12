@@ -36,6 +36,8 @@ Always confirm whether the quoted rate includes:
 - Mobilisation to your site (critical for Jadcherla and beyond)
 - GST (should be quoted separately at 18%)
 
+On raw venture plots, JCB hire often covers clearing, cut-fill, and grading before a surveyor mobilises — see the [land development workflow](/en/articles/land-development-raw-to-survey-ready) for the full sequence from uneven land to survey-ready platform.
+
 ## What to Verify Before the Machine Arrives
 
 **Operator licence and experience.** A valid heavy equipment operator licence is non-negotiable. Ask how many years the operator has worked on your type of site — trenching for pipelines is different from quarry work in Tandur.
@@ -73,7 +75,7 @@ The Telangana construction market is growing faster than the informal rental sup
 
 ## 1. Industrial Plot Fencing in Shadnagar NIMZ
 
-The National Investment and Manufacturing Zone around Shadnagar is bringing hundreds of industrial plots online. Every factory, warehouse, and pharma unit needs compound wall foundations — and that means hundreds of uniform holes drilled along kilometre-long perimeters. A post hole digger with a 12-inch auger completes in minutes what manual labour takes hours to do. For NIMZ contractors, auger hire is a line item on nearly every project budget.
+The National Investment and Manufacturing Zone around Shadnagar is bringing hundreds of industrial plots online. Every factory, warehouse, and pharma unit needs compound wall foundations — and that means hundreds of uniform holes drilled along kilometre-long perimeters. A post hole digger with a 12-inch auger completes in minutes what manual labour takes hours to do. For NIMZ contractors, auger hire is a line item on nearly every project budget. For wall type and foundation specifications, see our [engineering reference library](/en/articles/compound-wall-types-compared) — compound wall comparison, [post spacing guide](/en/articles/boundary-post-spacing-foundations), and [rocky terrain foundations](/en/articles/foundation-methods-rocky-terrain).
 
 ## 2. Solar Panel Foundations for Telangana's Solar Mission
 
@@ -85,7 +87,7 @@ Highway corridor development along NH44 from Kothur through Shadnagar brings tel
 
 ## 4. Compound Walls for New Residential Layouts
 
-Residential layout developers in Nalgonda, Suryapet, and the Hyderabad periphery need compound wall pole holes before brickwork begins. A single layout can require 500–2,000 holes. Booking a post hole digger for three days often costs less than the labour bill for manual drilling — and finishes faster.
+Residential layout developers in Nalgonda, Suryapet, and the Hyderabad periphery need compound wall pole holes before brickwork begins. A single layout can require 500–2,000 holes. Booking a post hole digger for three days often costs less than the labour bill for manual drilling — and finishes faster. Plot owners should confirm [HMDA possession checklist](/en/articles/hmda-layout-venture-handover-checklist) items and [internal road access](/en/articles/internal-road-formation-layout-ventures) before mobilising auger machines.
 
 ## 5. Agricultural Fencing in Mahbubnagar District
 
@@ -155,7 +157,7 @@ The Outer Ring Road's continued expansion and the logistics-industrial belt arou
 
 ## NIMZ Shadnagar — Manufacturing Needs Earthmovers First
 
-Before a single factory machine is installed at NIMZ, contractors need JCBs for site grading, excavators for foundations, post hole diggers for compound fencing, and cranes for steel structures. The NIMZ zone is years from completion, which means years of sustained equipment demand in Shadnagar and surrounding areas.
+Before a single factory machine is installed at NIMZ, contractors need JCBs for site grading, excavators for foundations, post hole diggers for compound fencing, and cranes for steel structures. Raw allotments arrive uneven and often rocky — clearing, [rock breaking](/en/articles/rock-breaking-hard-strata-site-prep), and [cut-fill levelling](/en/articles/site-levelling-cut-fill-reference) must finish before a licensed surveyor pegs the plot. See the full [raw land to survey-ready workflow](/en/articles/land-development-raw-to-survey-ready). The NIMZ zone is years from completion, which means years of sustained equipment demand in Shadnagar and surrounding areas.
 
 ## Irrigation and Water Infrastructure
 
@@ -260,7 +262,7 @@ Unlike earthing pits, foundation holes often require larger auger diameters and 
 
 ## Compound Wall Pole Holes for Plotted Layouts
 
-Precast compound walls and RCC boundary walls require uniformly spaced pole holes before a single brick is laid. A typical 40x60 plot boundary can need 40 to 80 holes depending on pole spacing — manual labour on this scale pushes layout completion by weeks. Post hole diggers with 9-inch or 12-inch augers complete an entire plot boundary in a morning.
+Precast compound walls and RCC boundary walls require uniformly spaced pole holes before a single brick is laid. A typical 40x60 plot boundary can need 40 to 80 holes depending on pole spacing — manual labour on this scale pushes layout completion by weeks. Post hole diggers with 9-inch or 12-inch augers complete an entire plot boundary in a morning. See the [boundary post spacing reference](/en/articles/boundary-post-spacing-foundations) for standard intervals and embedment depths.
 
 Tukkuguda's warehouse belt and Ibrahimpatnam's south ORR layouts run compound wall packages as standard developer offerings — auger hire is a line item on nearly every project budget. When booking, share the total hole count, spacing requirements, and whether the soil is murram, black cotton, or hard strata so the operator arrives with the correct auger size.
 

@@ -11,6 +11,10 @@ import {
   resolveNearbySlug,
   type Location,
 } from "../../../lib/seo/data/locations";
+import {
+  getTechnicalGuidesByPillar,
+  locationShowsEngineeringGuides,
+} from "../../../lib/seo/data/technical-guides";
 import { getUseCaseBySlug } from "../../../lib/seo/data/use-cases";
 import {
   RESERVED_LOCATION_SLUGS,
@@ -218,6 +222,65 @@ export default async function LocationPage({
         className="mt-6"
         message={`Hi, I need equipment in ${location.displayName}, ${location.district}.`}
       />
+
+      {locationShowsEngineeringGuides(location.slug) ? (
+        <section className="mt-10">
+          <h2 className="border-b border-border pb-2 text-xl font-semibold text-offwhite">
+            Engineering &amp; Site Development References
+          </h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted">
+            Venture and industrial plots around {location.displayName} move from
+            raw land through levelling to survey-ready platform before compound
+            walls and foundations. These references cover both stages — no pricing.
+          </p>
+
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-brand">
+              Land development &amp; levelling
+            </h3>
+            <ul className="mt-3 space-y-3">
+              {getTechnicalGuidesByPillar("land-development").map((guide) => (
+                <li key={guide.slug}>
+                  <Link
+                    href={`/${locale}/articles/${guide.slug}`}
+                    className="block rounded-xl border border-border bg-surface p-4 transition-colors hover:border-brand/40"
+                  >
+                    <span className="text-xs font-semibold uppercase tracking-wide text-brand">
+                      {guide.tag}
+                    </span>
+                    <span className="mt-1 block font-semibold text-offwhite">
+                      {guide.title}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-brand">
+              Compound wall &amp; boundary
+            </h3>
+            <ul className="mt-3 space-y-3">
+              {getTechnicalGuidesByPillar("perimeter").map((guide) => (
+                <li key={guide.slug}>
+                  <Link
+                    href={`/${locale}/articles/${guide.slug}`}
+                    className="block rounded-xl border border-border bg-surface p-4 transition-colors hover:border-brand/40"
+                  >
+                    <span className="text-xs font-semibold uppercase tracking-wide text-brand">
+                      {guide.tag}
+                    </span>
+                    <span className="mt-1 block font-semibold text-offwhite">
+                      {guide.title}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
 
       {useCases.length > 0 ? (
         <section className="mt-10">

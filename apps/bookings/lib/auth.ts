@@ -7,7 +7,6 @@ import { prisma } from "@repo/db";
 import { sendWhatsAppMessage } from "@repo/lib";
 import { normalizeBookingsPhone } from "./phone";
 
-/** + then 10–15 digits (E.164-style, India is 12 digits after +). */
 const E164_LIKE = /^\+[1-9]\d{9,14}$/;
 
 const userSelect = {
@@ -25,13 +24,35 @@ function toSessionUser(u: {
   name: string;
   role: string;
   phoneNumber: string | null;
+  pinHash?: string | null;
 }) {
   return {
     id: u.id,
     name: u.name ?? "",
     role: u.role,
     phoneNumber: u.phoneNumber ?? "",
+    pinSet: !!u.pinHash,
   };
+}
+
+async function applyDbUserToToken(token: {
+  id?: string;
+  role?: string;
+  phoneNumber?: string;
+  pinSet?: boolean;
+}) {
+  if (!token.id) return;
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: token.id },
+    select: { role: true, phoneNumber: true, pinHash: true },
+  });
+
+  if (dbUser?.role) token.role = dbUser.role;
+  if (dbUser?.phoneNumber) {
+    token.phoneNumber = dbUser.phoneNumber;
+    token.pinSet = !!dbUser.pinHash;
+  }
 }
 
 const authConfig = {
@@ -49,60 +70,33 @@ const authConfig = {
         try {
           const rawPhone = credentials?.phoneNumber as string | undefined;
           const otp = credentials?.otp as string | undefined;
-
-          if (!rawPhone || !otp) {
-            console.warn("[auth.authorize] missing phone or otp");
-            return null;
-          }
+          if (!rawPhone || !otp) return null;
 
           const phoneNumber = normalizeBookingsPhone(rawPhone);
           const otpResult = await verifyOtp(phoneNumber, otp);
-          if (otpResult.lockedOut) {
-            console.warn("[auth.authorize] OTP account locked");
-            return null;
-          }
-          if (!otpResult.verified) {
-            console.warn("[auth.authorize] invalid or expired OTP");
-            return null;
-          }
+          if (otpResult.lockedOut || !otpResult.verified) return null;
+          if (!E164_LIKE.test(phoneNumber)) return null;
 
-          if (!E164_LIKE.test(phoneNumber)) {
-            console.warn("[auth.authorize] phone failed E.164 check", {
-              rawPhone,
-              normalized: phoneNumber,
-            });
-            return null;
-          }
-
-          const existing = await prisma.user.findUnique({
+          let row = await prisma.user.findUnique({
             where: { phoneNumber },
             select: userSelect,
           });
 
-          let row = existing;
-
           if (!row) {
             try {
               row = await prisma.user.create({
-                data: {
-                  phoneNumber,
-                  role: "USER",
-                },
+                data: { phoneNumber, role: "USER" },
                 select: userSelect,
               });
-            } catch (createErr) {
-              console.warn(
-                "[auth.authorize] user.create failed, retrying findUnique",
-                createErr instanceof Error ? createErr.message : createErr,
-              );
-              const retry = await prisma.user.findUnique({
+            } catch {
+              row = await prisma.user.findUnique({
                 where: { phoneNumber },
                 select: userSelect,
               });
-              if (!retry) throw createErr;
-              row = retry;
             }
           }
+
+          if (!row) return null;
 
           if (!row.welcomeNoteSentAt) {
             const welcomeTemplate =
@@ -120,10 +114,41 @@ const authConfig = {
 
           return toSessionUser(row);
         } catch (err) {
-          console.error(
-            "[auth.authorize]",
-            err instanceof Error ? err.stack ?? err.message : err,
-          );
+          console.error("[auth.authorize]", err);
+          return null;
+        }
+      },
+    }),
+
+    Credentials({
+      id: "pin",
+      name: "Phone PIN",
+      credentials: {
+        phoneNumber: { label: "Phone Number", type: "text" },
+        pin: { label: "PIN", type: "text" },
+      },
+      async authorize(credentials) {
+        try {
+          const rawPhone = credentials?.phoneNumber as string | undefined;
+          const pin = credentials?.pin as string | undefined;
+          if (!rawPhone || !pin) return null;
+
+          const phoneNumber = normalizeBookingsPhone(rawPhone);
+          if (!E164_LIKE.test(phoneNumber)) return null;
+
+          const row = await prisma.user.findUnique({
+            where: { phoneNumber },
+            select: userSelect,
+          });
+
+          if (!row?.pinHash || isPinLocked(row)) return null;
+
+          const pinResult = await verifyPin(row.id, pin);
+          if (!pinResult.ok) return null;
+
+          return toSessionUser(row);
+        } catch (err) {
+          console.error("[auth.pin.authorize]", err);
           return null;
         }
       },
@@ -171,42 +196,20 @@ const authConfig = {
 
   callbacks: {
     async jwt({ token, user }) {
-      try {
-        if (user) {
-          token.id = user.id;
-          if ("phoneNumber" in user && user.phoneNumber) {
-            token.phoneNumber = user.phoneNumber as string;
-          }
-          if ("role" in user && user.role) {
-            token.role = user.role as string;
-          }
-          if ("phoneNumber" in user && user.phoneNumber) {
-            token.pinSet = "pinSet" in user ? !!user.pinSet : undefined;
-          }
+      if (user) {
+        token.id = user.id;
+        if ("phoneNumber" in user && user.phoneNumber) {
+          token.phoneNumber = user.phoneNumber as string;
         }
-        if (token.id) {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { role: true, phoneNumber: true, pinHash: true },
-          });
-          if (dbUser?.role) {
-            token.role = dbUser.role;
-          } else if (!token.role) {
-            token.role = dbUser?.role ?? "USER";
-          }
-          if (dbUser?.phoneNumber) {
-            token.phoneNumber = dbUser.phoneNumber;
-            token.pinSet = !!dbUser.pinHash;
-          }
+        if ("role" in user && user.role) {
+          token.role = user.role as string;
         }
-        return token;
-      } catch (err) {
-        console.error(
-          "[auth.jwt]",
-          err instanceof Error ? err.stack ?? err.message : err,
-        );
-        throw err;
+        if ("pinSet" in user) {
+          token.pinSet = !!user.pinSet;
+        }
       }
+      await applyDbUserToToken(token);
+      return token;
     },
 
     session({ session, token }) {

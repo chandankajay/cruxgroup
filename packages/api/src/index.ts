@@ -27,6 +27,7 @@ export {
   hashPin,
   validatePinForSet,
   isWeakPin,
+  userNeedsPinSetup,
   WEAK_PINS,
   type LoginStep,
   type PinVerifyError,

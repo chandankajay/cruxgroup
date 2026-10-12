@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { userNeedsPinSetup } from "@repo/api";
 import { prisma } from "@repo/db";
 import { auth } from "../../lib/auth";
 import { LoginPageClient } from "./login-client";
@@ -20,6 +21,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       return <LoginPageClient initialStep="set_pin" initialPinMode="setup" />;
     }
     redirect("/");
+  }
+
+  if (session?.user?.id && (await userNeedsPinSetup(session.user.id))) {
+    return <LoginPageClient initialStep="set_pin" initialPinMode="setup" />;
   }
 
   if (session?.user?.id && session.user.phoneNumber && session.user.pinSet === false) {
