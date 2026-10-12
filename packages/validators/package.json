@@ -1,0 +1,26 @@
+{
+  "name": "@repo/validators",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./salesperson": "./src/salesperson.ts",
+    "./admin-role": "./src/admin-role.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src --max-warnings 0",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "eslint": "^9.39.1",
+    "typescript": "5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

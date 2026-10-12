@@ -9,11 +9,13 @@
     "./geo": "./src/geo.ts",
     "./invoice": "./src/invoice/index.ts",
     "./legal/partner-terms": "./src/legal/partner-terms.ts",
-    "./partner-booking-notification": "./src/partner-booking-notification.ts"
+    "./partner-booking-notification": "./src/partner-booking-notification.ts",
+    "./sales-permissions": "./src/sales-permissions.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
-    "lint": "eslint src --max-warnings 0"
+    "lint": "eslint src --max-warnings 0",
+    "test": "vitest run"
   },
   "dependencies": {
     "@repo/db": "workspace:*",
@@ -26,6 +28,7 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^22.15.30",
     "eslint": "^9.39.1",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vitest": "^3.2.4"
   }
 }
