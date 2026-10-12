@@ -190,8 +190,14 @@ export const SITE_SERVICES: readonly SiteService[] = [
   },
 ];
 
+const SLUG_ALIASES: Record<string, ServicePageSlug> = {
+  "land-levelling": "ground-levelling",
+  "debris-rock-breaking": "debris-clearing",
+};
+
 export function getServiceBySlug(slug: string): SiteService | undefined {
-  return SITE_SERVICES.find((s) => s.slug === slug);
+  const normalized = SLUG_ALIASES[slug] ?? slug;
+  return SITE_SERVICES.find((s) => s.slug === normalized);
 }
 
 export function getAllServiceSlugs(): ServicePageSlug[] {

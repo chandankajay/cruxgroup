@@ -1,7 +1,13 @@
 export const SERVICE_PAGE_SLUGS = [
   "compound-fence",
   "ground-levelling",
+  "land-levelling",
+  "earthworks-excavation",
+  "precast-wall",
+  "farmhouse-construction",
+  "compound-fencing",
   "debris-clearing",
+  "debris-rock-breaking",
   "silent-rock-breaking",
 ] as const;
 

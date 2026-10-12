@@ -5,6 +5,13 @@ export {
   assertSalesRoleSelectable,
   type SalesUserPermissions,
 } from "./sales-permissions";
+export type { ClustersData, ClusterVillage, ServiceCluster } from "./clusters.types";
+export {
+  getClustersData,
+  getHomeBaseHub,
+  getClusterVillages,
+  findVillageById,
+} from "./clusters";
 export {
   SERVICE_LEAD_STAGES,
   SERVICE_LEAD_STAGE_LABELS,

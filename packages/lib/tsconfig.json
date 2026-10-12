@@ -5,6 +5,7 @@
     "strictNullChecks": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
     "noEmit": true
   },
   "include": ["src"],
