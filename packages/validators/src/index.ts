@@ -16,3 +16,7 @@ export {
   serviceSlugSchema,
 } from "./service-lead-stage.js";
 export { createLeadSchema, type CreateLeadInput } from "./create-lead.js";
+export {
+  serviceQuoteRequestSchema,
+  type ServiceQuoteRequestInput,
+} from "./service-quote.js";

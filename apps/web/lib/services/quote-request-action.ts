@@ -6,12 +6,11 @@ import { serviceQuoteRequestSchema } from "@repo/validators/service-quote";
 import { consumeRateLimit } from "@repo/db/rate-limit";
 import { logLeadActivity } from "@repo/db/lead-activity";
 import { uploadPublicSiteImage } from "../blob-upload";
-import {
-  calculateDistanceKm,
-  findVillageById,
-  getHomeBaseHub,
-  resolveServiceSlug,
-} from "@repo/lib";
+import { calculateDistanceKm } from "@repo/lib/geo";
+import { findVillageById, getHomeBaseHub } from "@repo/lib/clusters";
+import { resolveServiceSlug } from "@repo/lib/service-leads";
+import { isPublicVercelBlobUrl } from "@repo/validators/service-quote";
+
 export async function uploadQuoteSitePhotoAction(
   formData: FormData,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
@@ -56,6 +55,10 @@ export async function submitServiceQuoteRequest(
   const parsed = serviceQuoteRequestSchema.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, error: "Please check the form and try again." };
+  }
+
+  if (parsed.data.photoUrls?.some((url) => !isPublicVercelBlobUrl(url))) {
+    return { ok: false, error: "Invalid photo URL." };
   }
 
   const serviceSlug = resolveServiceSlug(parsed.data.serviceSlug);

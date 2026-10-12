@@ -59,7 +59,7 @@ export async function getPublishedSpokeProjects(serviceSlug: string, areaSlug: s
   return tagged();
 }
 
-export const getPublishedProjectsList = unstable_cache(
+const getPublishedProjectsListCached = unstable_cache(
   async () => {
     return prisma.servicesProject.findMany({
       where: { published: true },
@@ -81,6 +81,10 @@ export const getPublishedProjectsList = unstable_cache(
   ["projects-list"],
   { revalidate: 3600, tags: [projectsListTag()] },
 );
+
+export async function getPublishedProjectsList() {
+  return getPublishedProjectsListCached();
+}
 
 export async function listPublishedServiceAreaPageParams(): Promise<
   { serviceSlug: string; areaSlug: string }[]

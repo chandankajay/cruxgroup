@@ -4,9 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import {
   SERVICE_CATALOG_LABELS,
   SERVICE_CATALOG_SLUGS,
-  findVillageById,
-  getClustersData,
-} from "@repo/lib";
+} from "@repo/lib/service-leads";
+import type { QuoteVillageOption } from "@repo/lib/quote-village-option";
+import { serviceQuoteRequestSchema } from "@repo/validators/service-quote";
 import {
   submitServiceQuoteRequest,
   uploadQuoteSitePhotoAction,
@@ -19,8 +19,17 @@ const TIMELINES = [
   "Flexible",
 ];
 
-export function QuoteRequestForm() {
-  const clusters = useMemo(() => getClustersData(), []);
+type Props = {
+  villages: QuoteVillageOption[];
+};
+
+export function QuoteRequestForm({ villages }: Props) {
+  const villageById = useMemo(() => {
+    const map = new Map<string, QuoteVillageOption>();
+    for (const v of villages) map.set(v.id, v);
+    return map;
+  }, [villages]);
+
   const [serviceSlug, setServiceSlug] = useState<string>("land-levelling");
   const [villageId, setVillageId] = useState("");
   const [landSize, setLandSize] = useState("");
@@ -35,7 +44,7 @@ export function QuoteRequestForm() {
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  const village = villageId ? findVillageById(villageId) : undefined;
+  const village = villageId ? villageById.get(villageId) : undefined;
   const distanceOk =
     village &&
     (village.roadDistanceFromHubKm <= 50 || village.distanceFromHubKm <= 50);
@@ -44,18 +53,27 @@ export function QuoteRequestForm() {
     e.preventDefault();
     setError(undefined);
     setSuccess(undefined);
+
+    const payload = {
+      serviceSlug,
+      villageId,
+      landSize,
+      timeline,
+      landType,
+      name,
+      phone,
+      whatsappOptIn,
+      photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
+    };
+
+    const parsed = serviceQuoteRequestSchema.safeParse(payload);
+    if (!parsed.success) {
+      setError("Please check the form and try again.");
+      return;
+    }
+
     startTransition(async () => {
-      const result = await submitServiceQuoteRequest({
-        serviceSlug,
-        villageId,
-        landSize,
-        timeline,
-        landType,
-        name,
-        phone,
-        whatsappOptIn,
-        photoUrls: photoUrls.length > 0 ? photoUrls : undefined,
-      });
+      const result = await submitServiceQuoteRequest(parsed.data);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -71,7 +89,7 @@ export function QuoteRequestForm() {
     <form onSubmit={onSubmit} className="mx-auto max-w-2xl space-y-8 text-white">
       <div>
         <h1 className="text-3xl font-bold">Get a free site visit &amp; quote</h1>
-        <p className="mt-2 text-sm text-zinc-400">
+        <p className="mt-2 text-sm text-zinc-300">
           We serve within 50 km of our base at Fatimapur, Kothur. Our team visits the site, then
           sends a quotation.
         </p>
@@ -85,7 +103,7 @@ export function QuoteRequestForm() {
               key={slug}
               className={`cursor-pointer rounded-xl border p-4 transition-colors ${
                 serviceSlug === slug
-                  ? "border-amber-500 bg-amber-500/10"
+                  ? "border-amber-500 bg-zinc-900 ring-2 ring-amber-500"
                   : "border-zinc-700 bg-zinc-900/50"
               }`}
             >
@@ -113,7 +131,7 @@ export function QuoteRequestForm() {
             className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-3 text-white"
           >
             <option value="">Select…</option>
-            {clusters.villages.map((v) => (
+            {villages.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name} — {v.mandal}
               </option>
@@ -121,7 +139,7 @@ export function QuoteRequestForm() {
           </select>
           {village ? (
             <p
-              className={`text-sm ${distanceOk ? "text-emerald-400" : "text-amber-400"}`}
+              className={`text-sm ${distanceOk ? "text-emerald-300" : "text-amber-200"}`}
             >
               {distanceOk ? "✓" : "⚠"}{" "}
               {village.name} is {village.roadDistanceFromHubKm.toFixed(0)} km road (
@@ -171,15 +189,18 @@ export function QuoteRequestForm() {
           {photoUrls.length > 0 ? (
             <ul className="mb-3 flex flex-wrap gap-2">
               {photoUrls.map((url) => (
-                <li key={url} className="text-xs text-zinc-400 truncate max-w-[120px]">
+                <li key={url} className="text-xs text-zinc-300 truncate max-w-[120px]">
                   {url.split("/").pop()}
                 </li>
               ))}
             </ul>
           ) : null}
+          <label className="sr-only" htmlFor="site-photo">Upload site photo</label>
           <input
+            id="site-photo"
             type="file"
             accept="image/jpeg,image/png,image/webp"
+            aria-label="Upload site photo"
             disabled={uploadingPhoto || photoUrls.length >= 5}
             onChange={async (e) => {
               const file = e.target.files?.[0];
@@ -198,7 +219,7 @@ export function QuoteRequestForm() {
               e.target.value = "";
             }}
           />
-          <p className="mt-1 text-xs text-zinc-500">JPG or PNG, max 10 MB each</p>
+          <p className="mt-1 text-xs text-zinc-400">JPG or PNG, max 10 MB each</p>
         </div>
       </div>
 
@@ -238,7 +259,7 @@ export function QuoteRequestForm() {
       </label>
 
       {error ? <p className="text-sm text-red-400" role="alert">{error}</p> : null}
-      {success ? <p className="text-sm text-emerald-400" role="status">{success}</p> : null}
+      {success ? <p className="text-sm text-emerald-300" role="status">{success}</p> : null}
 
       <button
         type="submit"
@@ -247,7 +268,7 @@ export function QuoteRequestForm() {
       >
         {pending ? "Submitting…" : "Request site visit"}
       </button>
-      <p className="text-center text-xs text-zinc-500">
+      <p className="text-center text-xs text-zinc-400">
         By submitting, you agree to be contacted by Crux Group about this request.
       </p>
     </form>

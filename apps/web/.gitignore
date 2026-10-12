@@ -1,3 +1,4 @@
 
 /test-results/
 e2e/results.json
+next-env.d.ts
