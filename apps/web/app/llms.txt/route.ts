@@ -54,6 +54,14 @@ ${formatLocationList("district-hq")}
 - Crane: https://www.cruxgroup.in/en/equipment/crane
 - Borewell (partner network): https://www.cruxgroup.in/en/equipment/borewell
 
+## Site Services Landing Pages
+
+- Compound Fence Services: https://www.cruxgroup.in/en/services/compound-fence
+- Ground Levelling: https://www.cruxgroup.in/en/services/ground-levelling
+- Debris Clearing: https://www.cruxgroup.in/en/services/debris-clearing
+- Silent Rock Breaking: https://www.cruxgroup.in/en/services/silent-rock-breaking
+- All services hub: https://www.cruxgroup.in/en/services
+
 ## Guides & Articles
 
 https://www.cruxgroup.in/en/articles

@@ -13,6 +13,7 @@ import { LanguageToggle } from "../ui/LanguageToggle";
 const LINKS: { label: string; hash: string }[] = [
   { label: "About", hash: "#hero" },
   { label: "Fleet", hash: "#fleet" },
+  { label: "Services", hash: "/services" },
   { label: "Partners", hash: "#partners" },
   { label: "Customers", hash: "#customers" },
   { label: "Blog", hash: "/blog" },

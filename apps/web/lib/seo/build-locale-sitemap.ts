@@ -7,6 +7,7 @@ import {
   type LocationTier,
 } from "./data/locations";
 import { EQUIPMENT_PAGE_SLUGS } from "./equipment-slugs";
+import { getAllServiceSlugs } from "./data/services";
 
 const BASE_URL = "https://www.cruxgroup.in";
 
@@ -53,6 +54,12 @@ export function buildLocaleSitemap(locale: string): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.7,
     },
+    {
+      url: `${prefix}/services`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
   ];
 
   for (const slug of getAllLocationSlugs()) {
@@ -86,6 +93,15 @@ export function buildLocaleSitemap(locale: string): MetadataRoute.Sitemap {
   for (const slug of EQUIPMENT_PAGE_SLUGS) {
     entries.push({
       url: `${prefix}/equipment/${slug}`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    });
+  }
+
+  for (const slug of getAllServiceSlugs()) {
+    entries.push({
+      url: `${prefix}/services/${slug}`,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
