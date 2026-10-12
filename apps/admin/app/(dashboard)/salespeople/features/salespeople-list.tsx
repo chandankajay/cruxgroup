@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Badge } from "@repo/ui/badge";
-import { Button } from "@repo/ui/button";
 import type { SalespersonRow } from "../actions";
 
 type Props = {

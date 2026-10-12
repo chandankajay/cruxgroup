@@ -3,11 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@repo/db";
 import { requireAdminSession } from "../../../lib/sales-auth";
-import { upsertSalespersonSchema } from "@repo/validators/salesperson";
-import type { UpsertSalespersonInput } from "@repo/validators/salesperson";
+import {
+  upsertSalespersonSchema,
+  type UpsertSalespersonInput,
+} from "@repo/validators/salesperson";
 import { normalizeAdminPhone, ADMIN_PHONE_E164 } from "../../../lib/phone";
 
-export type { UpsertSalespersonInput };
+export type { UpsertSalespersonInput } from "@repo/validators/salesperson";
 
 const SALESPEOPLE_PATH = "/salespeople";
 
