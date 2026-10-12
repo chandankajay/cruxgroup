@@ -8,7 +8,11 @@
     "./salesperson": "./src/salesperson.ts",
     "./admin-role": "./src/admin-role.ts",
     "./service-lead-stage": "./src/service-lead-stage.ts",
-    "./create-lead": "./src/create-lead.ts"
+    "./create-lead": "./src/create-lead.ts",
+    "./service-quote": "./src/service-quote.ts",
+    "./website-project": "./src/website-project.ts",
+    "./service-area-cms": "./src/service-area-cms.ts",
+    "./public-blob-url": "./src/public-blob-url.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

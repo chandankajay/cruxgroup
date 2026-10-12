@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { listQuoteVillageOptions } from "@repo/lib/quote-villages";
 import { QuoteRequestForm } from "./quote-form";
 
 export const metadata: Metadata = {
@@ -9,9 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default function RequestQuotePage() {
+  const villages = listQuoteVillageOptions();
   return (
     <main className="min-h-screen bg-zinc-950 px-4 py-12">
-      <QuoteRequestForm />
+      <QuoteRequestForm villages={villages} />
     </main>
   );
 }

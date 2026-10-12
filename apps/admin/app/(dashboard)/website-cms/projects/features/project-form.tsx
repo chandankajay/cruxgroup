@@ -8,7 +8,10 @@ import { Switch } from "@repo/ui/switch";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Textarea } from "@repo/ui/textarea";
-import { SERVICE_CATALOG_SLUGS, SERVICE_CATALOG_LABELS } from "@repo/lib";
+import {
+  SERVICE_CATALOG_SLUGS,
+  SERVICE_CATALOG_LABELS,
+} from "@repo/lib/service-leads";
 import {
   upsertProjectAction,
   uploadProjectPhotoAction,
