@@ -45,6 +45,9 @@ export const SERVICE_CATALOG_LABELS: Record<ServiceCatalogSlug, string> = {
 /** Legacy web slug → canonical service slug */
 export const SERVICE_SLUG_ALIASES: Record<string, ServiceCatalogSlug> = {
   "ground-levelling": "land-levelling",
+  "compound-fence": "compound-fencing",
+  "debris-clearing": "debris-rock-breaking",
+  "silent-rock-breaking": "debris-rock-breaking",
 };
 
 export function resolveServiceSlug(raw: string): ServiceCatalogSlug | null {

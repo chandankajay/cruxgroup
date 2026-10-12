@@ -34,6 +34,11 @@ export default async function WebsiteCmsDashboardPage(): Promise<React.ReactElem
       desc: `${postCount} total · ${publishedPosts} published`,
       href: "/website-cms/blog",
     },
+    {
+      title: "Service projects",
+      desc: "Case study photos for services SEO pages",
+      href: "/website-cms/projects",
+    },
   ];
 
   return (

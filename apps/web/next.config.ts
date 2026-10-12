@@ -13,7 +13,32 @@ function securityHeaders(): { key: string; value: string }[] {
 }
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   serverExternalPackages: ["@prisma/client", ".prisma/client"],
+  async redirects() {
+    return [
+      {
+        source: "/:locale(en|te)/services/ground-levelling",
+        destination: "/:locale/services/land-levelling",
+        permanent: true,
+      },
+      {
+        source: "/:locale(en|te)/services/compound-fence",
+        destination: "/:locale/services/compound-fencing",
+        permanent: true,
+      },
+      {
+        source: "/:locale(en|te)/services/debris-clearing",
+        destination: "/:locale/services/debris-rock-breaking",
+        permanent: true,
+      },
+      {
+        source: "/:locale(en|te)/services/silent-rock-breaking",
+        destination: "/:locale/services/debris-rock-breaking",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

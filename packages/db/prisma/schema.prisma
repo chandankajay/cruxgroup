@@ -938,3 +938,87 @@ model BlogPost {
 
   @@map("blog_posts")
 }
+
+// ─── Services SEO & projects (apps/web) ─────────────────────────────────────
+
+model ServicesSeoService {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug        String   @unique
+  unitLabel   String
+  process_en  String
+  process_te  String   @default("")
+  faqs        Json     @default("[]")
+  published   Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+
+  areaPages ServiceAreaPage[]
+
+  @@map("services_seo_services")
+}
+
+model ServicesArea {
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  slug                   String   @unique
+  displayName            String
+  clusterId              String?
+  roadKmFromBase         Float
+  straightLineKmFromBase Float?
+  soil                   String?
+  terrain                String?
+  demandDrivers          String[] @default([])
+  villages               Json     @default("[]")
+  published              Boolean  @default(false)
+  updatedAt              DateTime @updatedAt
+
+  areaPages ServiceAreaPage[]
+  projects  ServicesProject[]
+
+  @@index([published])
+  @@map("services_areas")
+}
+
+model ServiceAreaPage {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  serviceSlug   String
+  areaSlug      String
+  service       ServicesSeoService @relation(fields: [serviceSlug], references: [slug])
+  area          ServicesArea       @relation(fields: [areaSlug], references: [slug])
+  published     Boolean  @default(false)
+  lastReviewed  DateTime?
+  thinContent   Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+
+  @@unique([serviceSlug, areaSlug])
+  @@index([published])
+  @@map("service_area_pages")
+}
+
+model ServicesProject {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  serviceSlug    String
+  areaSlug       String?
+  area           ServicesArea? @relation(fields: [areaSlug], references: [slug])
+  villageLabel   String?
+  sizeLabel      String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  photos         Json     @default("[]")
+  testimonial    String?
+  published      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([published, serviceSlug])
+  @@index([areaSlug])
+  @@map("services_projects")
+}
+
+model RateLimitCounter {
+  id        String   @id @map("_id")
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+  @@map("rate_limit_counters")
+}

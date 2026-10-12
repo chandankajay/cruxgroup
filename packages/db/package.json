@@ -8,6 +8,7 @@
     "./client": "./src/client.ts",
     "./types": "./src/types.ts",
     "./transport-fee": "./src/transportFee.ts",
+    "./rate-limit": "./src/rate-limit.ts",
     "./lead-activity": "./src/lead-activity.ts"
   },
   "scripts": {

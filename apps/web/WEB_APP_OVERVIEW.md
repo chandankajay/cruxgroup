@@ -191,6 +191,13 @@ export const metadata: Metadata = {
 
 ---
 
+## Environment (quote form & cache revalidation)
+
+Copy `.env.example` to `.env.local`. Notable server vars:
+
+- `CRUX_SERVICES_REVALIDATE_SECRET` — **required** for `POST /api/revalidate/services` (shared with **crux-admin**).
+- `DATABASE_URL`, `BLOB_PUBLIC_READ_WRITE_TOKEN` for quote leads and photo uploads.
+
 ## Dependencies worth noting
 
 - `@repo/db` — shared Prisma client
