@@ -388,6 +388,7 @@ model BookingProgressLog {
 enum LeadType {
   FLEET_PARTNER
   CUSTOMER
+  SERVICE
 }
 
 enum LeadStatus {
@@ -398,25 +399,74 @@ enum LeadStatus {
   DEAD
 }
 
+/// Site-services pipeline stages (leadType = SERVICE). Rental leads keep using `status` only.
+enum ServiceLeadStage {
+  NEW
+  SITE_VISIT_SCHEDULED
+  SITE_VISIT_DONE
+  QUOTATION_SENT
+  QUOTE_ACCEPTED
+  ADVANCE_RECEIVED
+  COMPLETED
+  LOST
+}
+
 model Lead {
   id            String     @id @default(auto()) @map("_id") @db.ObjectId
-  salesPersonId String     @db.ObjectId
-  salesPerson   User       @relation("SalesLeads", fields: [salesPersonId], references: [id], onDelete: Cascade)
+  /// Optional for web service leads until admin/sales assigns an owner.
+  salesPersonId String?    @db.ObjectId
+  salesPerson   User?      @relation("SalesLeads", fields: [salesPersonId], references: [id], onDelete: SetNull)
   name          String
   phoneNumber   String
   leadType      LeadType
   source        String     @default("")
   status        LeadStatus @default(NEW)
+  serviceStage  ServiceLeadStage?
+  lostReason    String?
+  /// Service request metadata (leadType = SERVICE)
+  serviceSlug         String?
+  areaLabel           String?
+  villageId           String?
+  landSize            String?
+  timeline            String?
+  landType            String?
+  whatsappOptIn       Boolean  @default(false)
+  straightLineKmFromBase Float?
+  roadKmFromBase      Float?
+  beyondServiceArea   Boolean  @default(false)
+  sitePhotoUrls       String[] @default([])
+  quoteAmountPaise    Int?
+  quoteSentAt         DateTime?
+  billbookRef         String?
+  quoteHandoffRequested Boolean @default(false)
   bookingId     String?    @db.ObjectId
   booking       Booking?   @relation(fields: [bookingId], references: [id])
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   notes         LeadNote[]
+  activities    LeadActivity[]
 
   @@index([salesPersonId])
   @@index([status])
   @@index([leadType])
+  @@index([serviceStage])
+  @@index([leadType, serviceStage])
+  @@index([serviceSlug])
   @@map("leads")
+}
+
+model LeadActivity {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  leadId    String   @db.ObjectId
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  actorId   String?  @db.ObjectId
+  kind      String
+  message   String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([leadId, createdAt])
+  @@map("lead_activities")
 }
 
 model LeadNote {

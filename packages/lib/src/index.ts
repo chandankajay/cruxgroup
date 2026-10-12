@@ -6,6 +6,16 @@ export {
   type SalesUserPermissions,
 } from "./sales-permissions";
 export {
+  SERVICE_LEAD_STAGES,
+  SERVICE_LEAD_STAGE_LABELS,
+  SERVICE_CATALOG_SLUGS,
+  SERVICE_CATALOG_LABELS,
+  SERVICE_SLUG_ALIASES,
+  resolveServiceSlug,
+  type ServiceLeadStageId,
+  type ServiceCatalogSlug,
+} from "./service-leads";
+export {
   findEligiblePartners,
   createBookingResponseTokens,
   sendPartnerBookingNotification,

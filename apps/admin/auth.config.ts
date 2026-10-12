@@ -40,6 +40,9 @@ function isPartnerBlockedFromPath(pathname: string): boolean {
   if (pathname.startsWith("/salespeople")) {
     return true;
   }
+  if (pathname.startsWith("/services-leads")) {
+    return true;
+  }
   return false;
 }
 

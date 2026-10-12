@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@repo/db";
 import type { LeadStatus, LeadType } from "@prisma/client";
+import type { ServiceLeadStage } from "@prisma/client";
+import { SERVICE_LEAD_STAGES } from "@repo/lib";
+import { logLeadActivity } from "../../lib/lead-activity";
 import { createSalesBookingNotification } from "../../lib/sales-notifications";
 import { requireAdminSession, requireSalesSession } from "../../lib/sales-auth";
 
@@ -20,9 +23,20 @@ export type LeadRow = {
   leadType: LeadType;
   source: string;
   status: LeadStatus;
+  serviceStage: ServiceLeadStage | null;
+  serviceSlug: string | null;
+  areaLabel: string | null;
+  landSize: string | null;
   bookingId: string | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type LeadActivityRow = {
+  id: string;
+  kind: string;
+  message: string;
+  createdAt: Date;
 };
 
 export type LeadNoteRow = {
@@ -34,6 +48,14 @@ export type LeadNoteRow = {
 
 export type LeadDetail = LeadRow & {
   notes: LeadNoteRow[];
+  activities: LeadActivityRow[];
+  timeline: string | null;
+  landType: string | null;
+  whatsappOptIn: boolean;
+  quoteAmountPaise: number | null;
+  billbookRef: string | null;
+  quoteHandoffRequested: boolean;
+  canSendQuotes: boolean;
 };
 
 export type SalesStats = {
@@ -145,6 +167,10 @@ export async function fetchMyLeads(params: {
         leadType: true,
         source: true,
         status: true,
+        serviceStage: true,
+        serviceSlug: true,
+        areaLabel: true,
+        landSize: true,
         bookingId: true,
         createdAt: true,
         updatedAt: true,
@@ -158,10 +184,14 @@ export async function fetchMyLeads(params: {
 
 export async function fetchLeadDetail(leadId: string): Promise<LeadDetail | null> {
   const sales = await requireSalesSession();
-  if (!sales) return null;
+  const admin = await requireAdminSession();
+  if (!sales && !admin) return null;
 
   const lead = await prisma.lead.findFirst({
-    where: { id: leadId, salesPersonId: sales.userId },
+    where: {
+      id: leadId,
+      ...(sales ? { salesPersonId: sales.userId } : {}),
+    },
     select: {
       id: true,
       name: true,
@@ -169,6 +199,16 @@ export async function fetchLeadDetail(leadId: string): Promise<LeadDetail | null
       leadType: true,
       source: true,
       status: true,
+      serviceStage: true,
+      serviceSlug: true,
+      areaLabel: true,
+      landSize: true,
+      timeline: true,
+      landType: true,
+      whatsappOptIn: true,
+      quoteAmountPaise: true,
+      billbookRef: true,
+      quoteHandoffRequested: true,
       bookingId: true,
       createdAt: true,
       updatedAt: true,
@@ -179,6 +219,16 @@ export async function fetchLeadDetail(leadId: string): Promise<LeadDetail | null
           text: true,
           createdAt: true,
           author: { select: { name: true } },
+        },
+      },
+      activities: {
+        orderBy: { createdAt: "desc" },
+        take: 40,
+        select: {
+          id: true,
+          kind: true,
+          message: true,
+          createdAt: true,
         },
       },
     },
@@ -194,6 +244,8 @@ export async function fetchLeadDetail(leadId: string): Promise<LeadDetail | null
       createdAt: n.createdAt,
       authorName: n.author.name || "Sales",
     })),
+    activities: lead.activities,
+    canSendQuotes: admin?.canSendQuotes ?? sales?.canSendQuotes ?? false,
   };
 }
 
@@ -202,6 +254,11 @@ export async function createLeadAction(input: {
   phoneNumber: string;
   leadType: LeadType;
   source: string;
+  serviceSlug?: string;
+  areaLabel?: string;
+  landSize?: string;
+  timeline?: string;
+  landType?: string;
 }): Promise<{ success: boolean; error?: string; id?: string }> {
   const sales = await requireSalesSession();
   if (!sales) return { success: false, error: "Forbidden" };
@@ -213,20 +270,80 @@ export async function createLeadAction(input: {
     return { success: false, error: "Enter a valid 10-digit phone number." };
   }
 
+  const isService = input.leadType === "SERVICE";
+
   const lead = await prisma.lead.create({
     data: {
       salesPersonId: sales.userId,
       name,
       phoneNumber,
       leadType: input.leadType,
-      source: input.source.trim(),
+      source: input.source.trim() || (isService ? "Field visit" : ""),
       status: "NEW",
+      ...(isService
+        ? {
+            serviceStage: "NEW" as ServiceLeadStage,
+            serviceSlug: input.serviceSlug?.trim() || null,
+            areaLabel: input.areaLabel?.trim() || null,
+            landSize: input.landSize?.trim() || null,
+            timeline: input.timeline?.trim() || null,
+            landType: input.landType?.trim() || null,
+          }
+        : {}),
     },
     select: { id: true },
   });
 
+  if (isService) {
+    await logLeadActivity({
+      leadId: lead.id,
+      actorId: sales.userId,
+      kind: "CREATED",
+      message: "Service lead created in the field",
+    });
+  }
+
   revalidateSales();
+  revalidatePath("/services-leads");
   return { success: true, id: lead.id };
+}
+
+export async function updateServiceLeadStageSalesAction(
+  leadId: string,
+  stage: ServiceLeadStage,
+  lostReason?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const sales = await requireSalesSession();
+  if (!sales) return { success: false, error: "Forbidden" };
+
+  if (stage === "LOST" && !lostReason?.trim()) {
+    return { success: false, error: "Add a lost reason." };
+  }
+  if (!(SERVICE_LEAD_STAGES as readonly string[]).includes(stage)) {
+    return { success: false, error: "Invalid stage." };
+  }
+
+  const updated = await prisma.lead.updateMany({
+    where: { id: leadId, leadType: "SERVICE", salesPersonId: sales.userId },
+    data: {
+      serviceStage: stage,
+      ...(stage === "LOST" ? { lostReason: lostReason?.trim() } : {}),
+    },
+  });
+  if (updated.count === 0) return { success: false, error: "Lead not found." };
+
+  await logLeadActivity({
+    leadId,
+    actorId: sales.userId,
+    kind: "STAGE",
+    message: `Stage → ${stage}`,
+    meta: { stage },
+  });
+
+  revalidateSales();
+  revalidatePath(`/sales/leads/${leadId}`);
+  revalidatePath("/services-leads");
+  return { success: true };
 }
 
 export async function updateLeadStatusAction(
@@ -252,13 +369,18 @@ export async function appendLeadNoteAction(
   text: string,
 ): Promise<{ success: boolean; error?: string }> {
   const sales = await requireSalesSession();
-  if (!sales) return { success: false, error: "Forbidden" };
+  const admin = await requireAdminSession();
+  const authorId = sales?.userId ?? admin?.userId;
+  if (!authorId) return { success: false, error: "Forbidden" };
 
   const trimmed = text.trim();
   if (!trimmed) return { success: false, error: "Note cannot be empty." };
 
   const lead = await prisma.lead.findFirst({
-    where: { id: leadId, salesPersonId: sales.userId },
+    where: {
+      id: leadId,
+      ...(sales ? { salesPersonId: sales.userId } : {}),
+    },
     select: { id: true },
   });
   if (!lead) return { success: false, error: "Lead not found." };
@@ -266,7 +388,7 @@ export async function appendLeadNoteAction(
   await prisma.leadNote.create({
     data: {
       leadId,
-      authorId: sales.userId,
+      authorId,
       text: trimmed,
     },
   });
@@ -499,6 +621,10 @@ export async function fetchSalesPersonLeadsAdmin(
       leadType: true,
       source: true,
       status: true,
+      serviceStage: true,
+      serviceSlug: true,
+      areaLabel: true,
+      landSize: true,
       bookingId: true,
       createdAt: true,
       updatedAt: true,

@@ -20,6 +20,7 @@ import {
 import { createLeadAction, type LeadRow } from "../actions";
 
 const LEAD_TYPES: { value: LeadType; label: string }[] = [
+  { value: "SERVICE", label: "Site service" },
   { value: "FLEET_PARTNER", label: "Fleet partner" },
   { value: "CUSTOMER", label: "Customer" },
 ];
@@ -60,8 +61,13 @@ export function LeadsPageContent({
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [leadType, setLeadType] = useState<LeadType>("CUSTOMER");
+  const [leadType, setLeadType] = useState<LeadType>(
+    initialLeadType ?? "SERVICE",
+  );
   const [source, setSource] = useState("");
+  const [serviceSlug, setServiceSlug] = useState("land-levelling");
+  const [areaLabel, setAreaLabel] = useState("");
+  const [landSize, setLandSize] = useState("");
 
   const applyFilters = useCallback(
     (params: { status?: string; leadType?: string; search?: string }) => {
@@ -84,6 +90,9 @@ export function LeadsPageContent({
         phoneNumber: phone,
         leadType,
         source,
+        ...(leadType === "SERVICE"
+          ? { serviceSlug, areaLabel, landSize }
+          : {}),
       });
       if (!result.success) {
         setError(result.error);
@@ -161,6 +170,43 @@ export function LeadsPageContent({
                 placeholder="Referral, site visit, etc."
               />
             </div>
+            {leadType === "SERVICE" ? (
+              <>
+                <div>
+                  <Label htmlFor="lead-service">Service</Label>
+                  <Select
+                    id="lead-service"
+                    value={serviceSlug}
+                    onChange={(e) => setServiceSlug(e.target.value)}
+                  >
+                    <option value="land-levelling">Land levelling</option>
+                    <option value="earthworks-excavation">Earthworks & excavation</option>
+                    <option value="precast-wall">Precast wall</option>
+                    <option value="farmhouse-construction">Farmhouse construction</option>
+                    <option value="compound-fencing">Compound fencing</option>
+                    <option value="debris-rock-breaking">Debris & rock breaking</option>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="lead-area">Area / village</Label>
+                  <Input
+                    id="lead-area"
+                    value={areaLabel}
+                    onChange={(e) => setAreaLabel(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lead-size">Land size</Label>
+                  <Input
+                    id="lead-size"
+                    value={landSize}
+                    onChange={(e) => setLandSize(e.target.value)}
+                    placeholder="e.g. 2.5 acres"
+                  />
+                </div>
+              </>
+            ) : null}
           </div>
           {error ? (
             <p className="mt-3 text-sm text-red-600" role="alert">
