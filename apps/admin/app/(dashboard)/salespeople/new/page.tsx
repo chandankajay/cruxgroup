@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireAdminSession } from "../../../lib/sales-auth";
+import { requireAdminSession } from "../../../../lib/sales-auth";
 import { SalespersonForm } from "../features/salesperson-form";
 
 export const dynamic = "force-dynamic";

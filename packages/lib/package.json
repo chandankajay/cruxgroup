@@ -25,13 +25,9 @@
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
-<<<<<<< HEAD
     "@types/node": "^22.15.30",
     "eslint": "^9.39.1",
-    "typescript": "5.9.2"
-=======
     "typescript": "5.9.2",
     "vitest": "^3.2.4"
->>>>>>> 02f1d10 (feat(admin): CWA-53 admin-managed sales roles and canSendQuotes)
   }
 }

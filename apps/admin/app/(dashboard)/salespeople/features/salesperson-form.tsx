@@ -79,9 +79,12 @@ export function SalespersonForm({ mode, initial }: Props) {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" asChild>
-            <Link href="/salespeople">Cancel</Link>
-          </Button>
+          <Link
+            href="/salespeople"
+            className="inline-flex items-center rounded-md border border-border px-4 py-2 text-sm hover:bg-muted"
+          >
+            Cancel
+          </Link>
           <Button type="submit" disabled={pending}>
             {mode === "create" ? "Create account" : "Save changes"}
           </Button>

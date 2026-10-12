@@ -19,9 +19,12 @@ export function SalespeopleList({ salespeople }: Props) {
             Create and manage salesperson logins and quote permissions.
           </p>
         </div>
-        <Button asChild className="bg-amber-500 hover:bg-amber-600 text-white">
-          <Link href="/salespeople/new">+ New salesperson</Link>
-        </Button>
+        <Link
+          href="/salespeople/new"
+          className="inline-flex items-center justify-center rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600"
+        >
+          + New salesperson
+        </Link>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border/60">
@@ -70,9 +73,12 @@ export function SalespeopleList({ salespeople }: Props) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/salespeople/${sp.id}/edit`}>Edit</Link>
-                    </Button>
+                    <Link
+                      href={`/salespeople/${sp.id}/edit`}
+                      className="text-sm font-medium text-amber-600 hover:underline"
+                    >
+                      Edit
+                    </Link>
                   </td>
                 </tr>
               ))

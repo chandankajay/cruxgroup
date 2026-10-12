@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { requireAdminSession } from "../../../../lib/sales-auth";
+import { requireAdminSession } from "../../../../../lib/sales-auth";
 import { fetchSalespersonById } from "../../actions";
 import { SalespersonForm } from "../../features/salesperson-form";
 
