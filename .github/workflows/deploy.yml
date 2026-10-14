@@ -1,0 +1,239 @@
+# Push to main → dev db push (if schema) → dev deploy + prod prebuilt build → artifact for promote workflow.
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: "Comma-separated: web,admin,bookings (blank = turbo-affected)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    if: github.repository == 'chandankajay/cruxgroup'
+    runs-on: ubuntu-24.04
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      admin: ${{ steps.filter.outputs.admin }}
+      bookings: ${{ steps.filter.outputs.bookings }}
+      schema: ${{ steps.schema.outputs.changed }}
+      base_sha: ${{ steps.base.outputs.sha }}
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          fetch-depth: 0
+
+      - name: Resolve diff base (squash-merge friendly)
+        id: base
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="$(git rev-parse HEAD^)"
+          fi
+          echo "sha=$BEFORE" >> "$GITHUB_OUTPUT"
+
+      - name: Detect Prisma schema change
+        id: schema
+        run: |
+          if git diff --name-only "${{ steps.base.outputs.sha }}" HEAD | grep -q '^packages/db/prisma/schema.prisma$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve affected apps
+        id: filter
+        env:
+          TURBO_SCM_BASE: ${{ steps.base.outputs.sha }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.apps }}" ]; then
+            IFS=',' read -ra APPS <<< "${{ inputs.apps }}"
+            for app in web admin bookings; do
+              match=false
+              for a in "${APPS[@]}"; do
+                if [ "$(echo "$a" | xargs)" = "$app" ]; then match=true; fi
+              done
+              if [ "$match" = true ]; then
+                echo "$app=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "$app=false" >> "$GITHUB_OUTPUT"
+              fi
+            done
+          else
+            for app in web admin bookings; do
+              if npx -y turbo-ignore@2.9.6 "@crux/$app" --fallback="$TURBO_SCM_BASE" >/dev/null 2>&1; then
+                echo "$app=false" >> "$GITHUB_OUTPUT"
+              else
+                echo "$app=true" >> "$GITHUB_OUTPUT"
+              fi
+            done
+          fi
+
+  db-push-dev:
+    needs: changes
+    if: needs.changes.outputs.schema == 'true'
+    concurrency:
+      group: db-push-dev
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    environment: development
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prisma db push (dev Atlas)
+        run: pnpm db:push
+
+  deploy-web-dev:
+    needs: [changes, db-push-dev]
+    if: |
+      always() && needs.changes.outputs.web == 'true' &&
+      (needs.db-push-dev.result == 'success' || needs.db-push-dev.result == 'skipped')
+    concurrency:
+      group: deploy-dev-web
+      cancel-in-progress: false
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      app: web
+      vercel_org_id: ${{ vars.VERCEL_ORG_ID }}
+      vercel_project_id: ${{ vars.VERCEL_PROJECT_ID_WEB }}
+      github_environment: development
+      mode: dev
+      alias_domain: dev.cruxgroup.in
+
+  build-web-prod:
+    needs: [changes, db-push-dev]
+    if: |
+      always() && needs.changes.outputs.web == 'true' &&
+      (needs.db-push-dev.result == 'success' || needs.db-push-dev.result == 'skipped')
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      app: web
+      vercel_org_id: ${{ vars.VERCEL_ORG_ID }}
+      vercel_project_id: ${{ vars.VERCEL_PROJECT_ID_WEB }}
+      github_environment: production-build
+      mode: prod-build
+
+  deploy-admin-dev:
+    needs: [changes, db-push-dev]
+    if: |
+      always() && needs.changes.outputs.admin == 'true' &&
+      (needs.db-push-dev.result == 'success' || needs.db-push-dev.result == 'skipped')
+    concurrency:
+      group: deploy-dev-admin
+      cancel-in-progress: false
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      app: admin
+      vercel_org_id: ${{ vars.VERCEL_ORG_ID }}
+      vercel_project_id: ${{ vars.VERCEL_PROJECT_ID_ADMIN }}
+      github_environment: development
+      mode: dev
+      alias_domain: dev-admin.cruxgroup.in
+
+  build-admin-prod:
+    needs: [changes, db-push-dev]
+    if: |
+      always() && needs.changes.outputs.admin == 'true' &&
+      (needs.db-push-dev.result == 'success' || needs.db-push-dev.result == 'skipped')
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      app: admin
+      vercel_org_id: ${{ vars.VERCEL_ORG_ID }}
+      vercel_project_id: ${{ vars.VERCEL_PROJECT_ID_ADMIN }}
+      github_environment: production-build
+      mode: prod-build
+
+  deploy-bookings-dev:
+    needs: [changes, db-push-dev]
+    if: |
+      always() && needs.changes.outputs.bookings == 'true' &&
+      (needs.db-push-dev.result == 'success' || needs.db-push-dev.result == 'skipped')
+    concurrency:
+      group: deploy-dev-bookings
+      cancel-in-progress: false
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      app: bookings
+      vercel_org_id: ${{ vars.VERCEL_ORG_ID }}
+      vercel_project_id: ${{ vars.VERCEL_PROJECT_ID_BOOKINGS }}
+      github_environment: development
+      mode: dev
+      alias_domain: dev-bookings.cruxgroup.in
+
+  build-bookings-prod:
+    needs: [changes, db-push-dev]
+    if: |
+      always() && needs.changes.outputs.bookings == 'true' &&
+      (needs.db-push-dev.result == 'success' || needs.db-push-dev.result == 'skipped')
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      app: bookings
+      vercel_org_id: ${{ vars.VERCEL_ORG_ID }}
+      vercel_project_id: ${{ vars.VERCEL_PROJECT_ID_BOOKINGS }}
+      github_environment: production-build
+      mode: prod-build
+
+  publish-promote-manifest:
+    needs:
+      - changes
+      - build-web-prod
+      - build-admin-prod
+      - build-bookings-prod
+    if: always() && needs.changes.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Write promote manifest
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const apps = [
+            { app: 'web', enabled: process.env.WEB === 'true', url: process.env.WEB_URL },
+            { app: 'admin', enabled: process.env.ADMIN === 'true', url: process.env.ADMIN_URL },
+            { app: 'bookings', enabled: process.env.BOOKINGS === 'true', url: process.env.BOOKINGS_URL },
+          ];
+          const manifest = {
+            commit: process.env.GITHUB_SHA,
+            run_id: process.env.GITHUB_RUN_ID,
+            schema_changed: process.env.SCHEMA_CHANGED === 'true',
+            apps: {
+              web: process.env.WEB === 'true',
+              admin: process.env.ADMIN === 'true',
+              bookings: process.env.BOOKINGS === 'true',
+            },
+            deployments: apps
+              .filter((a) => a.enabled && a.url)
+              .map((a) => ({ app: a.app, deployment_url: a.url })),
+          };
+          fs.writeFileSync('promote-manifest.json', JSON.stringify(manifest, null, 2));
+          NODE
+        env:
+          WEB: ${{ needs.changes.outputs.web }}
+          ADMIN: ${{ needs.changes.outputs.admin }}
+          BOOKINGS: ${{ needs.changes.outputs.bookings }}
+          WEB_URL: ${{ needs.build-web-prod.outputs.prod_deployment_url }}
+          ADMIN_URL: ${{ needs.build-admin-prod.outputs.prod_deployment_url }}
+          BOOKINGS_URL: ${{ needs.build-bookings-prod.outputs.prod_deployment_url }}
+          SCHEMA_CHANGED: ${{ needs.changes.outputs.schema }}
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: promote-manifest
+          path: promote-manifest.json
+          retention-days: 14

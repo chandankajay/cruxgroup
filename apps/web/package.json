@@ -13,6 +13,7 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "@repo/db": "workspace:*",
+    "@repo/env": "workspace:*",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",

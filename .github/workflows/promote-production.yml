@@ -1,0 +1,241 @@
+# Production promote queue (separate from deploy-dev). Requires production environment approval.
+
+name: promote-production
+
+on:
+  workflow_run:
+    workflows: [deploy]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "deploy workflow run id (optional)"
+        required: false
+        type: string
+
+concurrency:
+  group: promote-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    if: |
+      github.repository == 'chandankajay/cruxgroup' &&
+      (github.event_name == 'workflow_dispatch' ||
+        (github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-24.04
+    environment: production-build
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      PROJECT_ID_WEB: ${{ vars.VERCEL_PROJECT_ID_WEB }}
+      PROJECT_ID_ADMIN: ${{ vars.VERCEL_PROJECT_ID_ADMIN }}
+      PROJECT_ID_BOOKINGS: ${{ vars.VERCEL_PROJECT_ID_BOOKINGS }}
+    outputs:
+      schema_changed: ${{ steps.read.outputs.schema_changed }}
+      web_url: ${{ steps.read.outputs.web_url }}
+      admin_url: ${{ steps.read.outputs.admin_url }}
+      bookings_url: ${{ steps.read.outputs.bookings_url }}
+      web: ${{ steps.read.outputs.web }}
+      admin: ${{ steps.read.outputs.admin }}
+      bookings: ${{ steps.read.outputs.bookings }}
+      release_sha: ${{ steps.read.outputs.release_sha }}
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          fetch-depth: 0
+
+      - name: Resolve deploy run id
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.run_id }}" ]; then
+            echo "run_id=${{ inputs.run_id }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "run_id=${{ github.event.workflow_run.id }}" >> "$GITHUB_OUTPUT"
+          else
+            run_id=$(gh run list --workflow deploy.yml --branch main --limit 1 --json databaseId --jq '.[0].databaseId')
+            echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify deploy workflow run
+        id: run_meta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_ID="${{ steps.resolve.outputs.run_id }}"
+          JSON=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")
+          NAME=$(echo "$JSON" | jq -r .name)
+          WORKFLOW_PATH=$(echo "$JSON" | jq -r .path)
+          BRANCH=$(echo "$JSON" | jq -r .head_branch)
+          CONCLUSION=$(echo "$JSON" | jq -r .conclusion)
+          HEAD_SHA=$(echo "$JSON" | jq -r .head_sha)
+          if [ "$NAME" != "deploy" ] || [ "$WORKFLOW_PATH" != ".github/workflows/deploy.yml" ]; then
+            echo "Expected deploy workflow (.github/workflows/deploy.yml), got name=$NAME path=$WORKFLOW_PATH"
+            exit 1
+          fi
+          if [ "$BRANCH" != "main" ]; then
+            echo "Expected head_branch main, got $BRANCH"
+            exit 1
+          fi
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "Expected conclusion success, got $CONCLUSION"
+            exit 1
+          fi
+          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: promote-manifest
+          run-id: ${{ steps.resolve.outputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify manifest metadata
+        run: |
+          RUN_ID="${{ steps.resolve.outputs.run_id }}"
+          HEAD_SHA="${{ steps.run_meta.outputs.head_sha }}"
+          COMMIT=$(jq -r .commit promote-manifest.json)
+          MANIFEST_RUN=$(jq -r .run_id promote-manifest.json)
+          if [ "$COMMIT" != "$HEAD_SHA" ]; then
+            echo "manifest.commit $COMMIT != deploy head_sha $HEAD_SHA"
+            exit 1
+          fi
+          if [ "$MANIFEST_RUN" != "$RUN_ID" ]; then
+            echo "manifest.run_id $MANIFEST_RUN != deploy run_id $RUN_ID"
+            exit 1
+          fi
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$COMMIT" origin/main; then
+            echo "manifest.commit is not an ancestor of origin/main"
+            exit 1
+          fi
+
+      - name: Verify deployments (Vercel API)
+        run: node .github/scripts/verify-vercel-promote-deployments.mjs
+
+      - name: Parse manifest outputs
+        id: read
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const m = JSON.parse(fs.readFileSync('promote-manifest.json', 'utf8'));
+          const byApp = Object.fromEntries(m.deployments.map((d) => [d.app, d.deployment_url]));
+          const out = process.env.GITHUB_OUTPUT;
+          const write = (k, v) => fs.appendFileSync(out, `${k}=${v}\n`);
+          write('schema_changed', m.schema_changed ? 'true' : 'false');
+          write('web', m.apps?.web ? 'true' : 'false');
+          write('admin', m.apps?.admin ? 'true' : 'false');
+          write('bookings', m.apps?.bookings ? 'true' : 'false');
+          write('web_url', byApp.web ?? '');
+          write('admin_url', byApp.admin ?? '');
+          write('bookings_url', byApp.bookings ?? '');
+          write('release_sha', m.commit ?? '');
+          NODE
+
+  db-push-prod:
+    needs: prepare
+    if: needs.prepare.outputs.schema_changed == 'true'
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prisma db push (production)
+        run: pnpm db:push
+
+  promote-web:
+    needs: [prepare, db-push-prod]
+    if: |
+      always() && needs.prepare.outputs.web == 'true' && needs.prepare.outputs.web_url != '' &&
+      (needs.db-push-prod.result == 'success' || needs.db-push-prod.result == 'skipped')
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      app: web
+      vercel_org_id: ${{ vars.VERCEL_ORG_ID }}
+      vercel_project_id: ${{ vars.VERCEL_PROJECT_ID_WEB }}
+      github_environment: production
+      mode: promote
+      deployment_url: ${{ needs.prepare.outputs.web_url }}
+
+  promote-admin:
+    needs: [prepare, db-push-prod]
+    if: |
+      always() && needs.prepare.outputs.admin == 'true' && needs.prepare.outputs.admin_url != '' &&
+      (needs.db-push-prod.result == 'success' || needs.db-push-prod.result == 'skipped')
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      app: admin
+      vercel_org_id: ${{ vars.VERCEL_ORG_ID }}
+      vercel_project_id: ${{ vars.VERCEL_PROJECT_ID_ADMIN }}
+      github_environment: production
+      mode: promote
+      deployment_url: ${{ needs.prepare.outputs.admin_url }}
+
+  promote-bookings:
+    needs: [prepare, db-push-prod]
+    if: |
+      always() && needs.prepare.outputs.bookings == 'true' && needs.prepare.outputs.bookings_url != '' &&
+      (needs.db-push-prod.result == 'success' || needs.db-push-prod.result == 'skipped')
+    uses: ./.github/workflows/_deploy-app.yml
+    with:
+      app: bookings
+      vercel_org_id: ${{ vars.VERCEL_ORG_ID }}
+      vercel_project_id: ${{ vars.VERCEL_PROJECT_ID_BOOKINGS }}
+      github_environment: production
+      mode: promote
+      deployment_url: ${{ needs.prepare.outputs.bookings_url }}
+
+  release:
+    name: semantic-release
+    needs: [prepare, db-push-prod, promote-web, promote-admin, promote-bookings]
+    if: |
+      !cancelled() &&
+      github.repository == 'chandankajay/cruxgroup' &&
+      needs.prepare.result == 'success' &&
+      (needs.db-push-prod.result == 'success' || needs.db-push-prod.result == 'skipped') &&
+      (needs.promote-web.result == 'success' || needs.promote-web.result == 'skipped') &&
+      (needs.promote-admin.result == 'success' || needs.promote-admin.result == 'skipped') &&
+      (needs.promote-bookings.result == 'success' || needs.promote-bookings.result == 'skipped') &&
+      (needs.promote-web.result == 'success' ||
+        needs.promote-admin.result == 'success' ||
+        needs.promote-bookings.result == 'success')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          ref: ${{ needs.prepare.outputs.release_sha }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Create semver tag and GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.release_sha }}
+        run: node .github/scripts/create-release-at-sha.mjs

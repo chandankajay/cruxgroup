@@ -2,12 +2,16 @@
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "globalEnv": [
+    "APP_ENV",
+    "CI",
+    "NEXT_RUNTIME",
     "NEXTAUTH_SECRET",
     "AUTH_SECRET",
     "DATABASE_URL",
     "BLOB_READ_WRITE_TOKEN",
     "BLOB_PUBLIC_READ_WRITE_TOKEN",
-    "AISENSY_API_KEY"
+    "AISENSY_API_KEY",
+    "AISENSY_TEST_ALLOWLIST"
   ],
   "tasks": {
     "build": {
@@ -15,6 +19,8 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
       "env": [
+        "APP_ENV",
+        "AISENSY_TEST_ALLOWLIST",
         "NODE_ENV",
         "VERCEL",
         "VERCEL_URL",
@@ -24,6 +30,7 @@
         "BLOB_READ_WRITE_TOKEN",
         "BLOB_PUBLIC_READ_WRITE_TOKEN",
         "AISENSY_API_KEY",
+        "AISENSY_WELCOME_TEMPLATE_NAME",
         "AISENSY_TEMPLATE_NAME",
         "AISENSY_TEMPLATE_LOGIN_CODE",
         "AISENSY_OPERATOR_LINK_TEMPLATE",
@@ -34,7 +41,6 @@
         "AISENSY_PAYSLIP_TEMPLATE",
         "AISENSY_PARTNER_SERVICE_DUE_TEMPLATE",
         "AISENSY_BOOKING_NOTIFICATION",
-        "AISENSY_WELCOME_TEMPLATE_NAME",
         "AISENSY_PROGRESS_BOOKING_RECEIVED_TEMPLATE",
         "AISENSY_PROGRESS_BOOKING_CONFIRMED_TEMPLATE",
         "AISENSY_PROGRESS_MACHINE_ASSIGNED_TEMPLATE",
@@ -62,6 +68,9 @@
     },
     "check-types": {
       "dependsOn": ["^check-types", "^build"]
+    },
+    "test": {
+      "dependsOn": ["^test"]
     },
     "dev": {
       "cache": false,
