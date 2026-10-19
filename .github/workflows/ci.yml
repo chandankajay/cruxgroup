@@ -1,4 +1,4 @@
-# PR + main push: conventions gate, Mongo-backed quality (lint/types/test/build), blocking critical audit.
+# pull_request (any base) + push to main: conventions gate, Mongo-backed quality, blocking critical audit.
 # Job names: `ci / conventions`, `ci / quality` (branch protection).
 
 name: ci
