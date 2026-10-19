@@ -19,8 +19,15 @@ describe("catalogueDocumentSchema", () => {
   });
 
   it("rejects an own image key outside the allow-list", () => {
-    const tampered = JSON.parse(JSON.stringify(catalogueDocumentSource)) as typeof catalogueDocumentSource;
-    tampered.sections[0].items[0].image = { key: "dozer", kind: "own" };
+    const tampered = JSON.parse(JSON.stringify(catalogueDocumentSource)) as {
+      sections: { items: { image: { key: string; kind: string } }[] }[];
+    };
+    const firstItem = tampered.sections[0]?.items[0];
+    expect(firstItem).toBeDefined();
+    if (!firstItem) {
+      return;
+    }
+    firstItem.image = { key: "dozer", kind: "own" };
     const parsed = catalogueDocumentSchema.safeParse(tampered);
     expect(parsed.success).toBe(false);
   });
