@@ -19,8 +19,7 @@ export const BANNED_TE_PHRASES = [
   "ఆర్కిటెక్ట్",
   "డిజైన్ బృందం",
   "మీతో సిద్ధం",
-  "ధృవీకరించిన",
-  "ఆపరేటర్",
+  "ధృవీకరించిన ఆపరేటర్",
   "GST ఇన్వాయిస్",
   "బోర్వెల్",
   "సంవత్సరాల అనుభవం",
@@ -30,6 +29,18 @@ export const BANNED_TE_PHRASES = [
   "అనుమతి",
   "ఆమోదం",
 ] as const;
+
+const TELUGU_ZW_JOINER_REGEX = /[\u200C\u200D]/g;
+
+/** Strip ZWNJ/ZWJ so evasion via zero-width characters still matches denylist scans. */
+export function normalizeTeluguForBannedPhraseScan(text: string): string {
+  return text.replace(TELUGU_ZW_JOINER_REGEX, "");
+}
+
+export function teTextContainsBannedPhrase(text: string): boolean {
+  const normalized = normalizeTeluguForBannedPhraseScan(text).toLowerCase();
+  return BANNED_TE_PHRASES.some((phrase) => normalized.includes(phrase.toLowerCase()));
+}
 
 export function collectLocalizedFieldStrings(
   value: unknown,

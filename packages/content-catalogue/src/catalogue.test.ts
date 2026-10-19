@@ -5,6 +5,7 @@ import {
   BANNED_TE_PHRASES,
   collectLocalizedEnStrings,
   collectLocalizedTeStrings,
+  teTextContainsBannedPhrase,
 } from "./banned-claim-phrases";
 import { catalogueDocumentSource } from "./catalogue.data";
 import { catalogueDocumentSchema } from "./catalogue.schema";
@@ -134,11 +135,13 @@ describe("catalogue content rules", () => {
   it("contains no banned claim phrases in Telugu copy (brief §5)", () => {
     const teStrings = collectLocalizedTeStrings(doc);
     for (const text of teStrings) {
-      const lower = text.toLowerCase();
-      for (const phrase of BANNED_TE_PHRASES) {
-        expect(lower).not.toContain(phrase.toLowerCase());
-      }
+      expect(teTextContainsBannedPhrase(text)).toBe(false);
     }
+  });
+
+  it("still catches Telugu banned phrases when ZWNJ is inserted", () => {
+    const withZwnj = `ధృవీకరించి${"\u200C"}న ఆపరేటర్`;
+    expect(teTextContainsBannedPhrase(withZwnj)).toBe(true);
   });
 
   it("derives a stable sorted image key list for the CWA-57 manifest", () => {
