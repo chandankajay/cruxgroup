@@ -1,0 +1,29 @@
+{
+  "name": "@repo/content-catalogue",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./catalogue": "./src/catalogue.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src scripts --max-warnings 0",
+    "test": "vitest run",
+    "import-catalogue": "tsx scripts/import-catalogue.ts"
+  },
+  "dependencies": {
+    "server-only": "^0.0.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.15.30",
+    "eslint": "^9.39.1",
+    "tsx": "^4.21.0",
+    "typescript": "5.9.2",
+    "vitest": "^3.2.4",
+    "yaml": "^2.8.1"
+  }
+}
