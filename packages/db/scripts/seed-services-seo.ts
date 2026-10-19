@@ -33,6 +33,11 @@ const MEASURED_ROAD_KM_FROM_C1: Readonly<
 
 const data = clustersJson as ClustersData;
 
+function shouldResetFirstReleaseReview(): boolean {
+  if (process.env.SEED_RESET_FIRST_RELEASE_REVIEW === "1") return true;
+  return process.argv.includes("--reset-first-release-review");
+}
+
 async function main(): Promise<void> {
   assertSafeServicesSeoSeedTarget();
 
@@ -95,10 +100,24 @@ async function main(): Promise<void> {
         thinContent: true,
         lastReviewed: null,
       },
-      update: {
-        published: false,
-      },
+      update: {},
     });
+  }
+
+  if (shouldResetFirstReleaseReview()) {
+    for (const areaSlug of FIRST_RELEASE_AREA_SLUGS) {
+      await prisma.serviceAreaPage.updateMany({
+        where: {
+          serviceSlug: FIRST_RELEASE_SERVICE_SLUG,
+          areaSlug,
+        },
+        data: {
+          published: false,
+          thinContent: true,
+          lastReviewed: null,
+        },
+      });
+    }
   }
 
   const allPages = await prisma.serviceAreaPage.findMany({

@@ -4,19 +4,22 @@ export const SEED_REFUSED_PROD_DB_NAME = "crux_prod";
 const ALLOWED_APP_ENVS = new Set(["dev", "ci"]);
 
 /**
- * Parses the database name from a MongoDB connection string without logging the URL.
+ * Parses the database name from a MongoDB connection string (path segment only).
+ * Never returns userinfo or host — URLs without a path return "".
  */
 export function parseMongoDatabaseName(databaseUrl: string): string {
   const trimmed = databaseUrl.trim();
   if (!trimmed) return "";
 
   const withoutQuery = trimmed.split("?")[0] ?? trimmed;
-  const slash = withoutQuery.lastIndexOf("/");
-  if (slash === -1 || slash === withoutQuery.length - 1) {
-    return "";
-  }
-  const name = withoutQuery.slice(slash + 1);
-  return decodeURIComponent(name);
+  const withoutScheme = withoutQuery.replace(/^mongodb(\+srv)?:\/\//i, "");
+  const pathStart = withoutScheme.indexOf("/");
+  if (pathStart === -1) return "";
+
+  const path = withoutScheme.slice(pathStart + 1);
+  if (!path) return "";
+
+  return decodeURIComponent(path);
 }
 
 /**
@@ -62,7 +65,7 @@ export function assertSafeServicesSeoSeedTarget(): void {
 
   if (dbName !== allowedDb) {
     throw new Error(
-      `seed-services-seo: database name "${dbName}" does not match SEED_ALLOWED_DB.`,
+      "seed-services-seo: DATABASE_URL database name does not match SEED_ALLOWED_DB.",
     );
   }
 }

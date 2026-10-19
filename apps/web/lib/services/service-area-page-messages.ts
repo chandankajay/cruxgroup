@@ -1,8 +1,5 @@
 export type ServiceAreaPageLocale = "en" | "te";
 
-/** Telugu strings pending review by a Telugu reader (CWA-37). */
-const tePendingReview = true;
-
 export const serviceAreaPageMessages: Record<
   ServiceAreaPageLocale,
   {
@@ -23,10 +20,8 @@ export const serviceAreaPageMessages: Record<
     lastReviewed: (formattedDate) => `Last reviewed ${formattedDate}.`,
   },
   te: {
-    // PENDING_TE_REVIEW — placeholder until Telugu copy is reviewed.
-    distanceHomeBase: tePendingReview
-      ? "మా బేస్ ఫతిమాపూర్ (కోతూర్)లో ఉంది."
-      : "",
+    // PENDING_TE_REVIEW — placeholder until Telugu copy is reviewed (CWA-37).
+    distanceHomeBase: "మా బేస్ ఫతిమాపూర్ (కోతూర్)లో ఉంది.",
     distanceStraightLine: (km) =>
       `మా ఫతిమాపూర్ (కోతూర్) బేస్ నుండి ${km.toFixed(1)} కి.మీ. సరళ దూరం.`,
     distanceRoad: (km) => `రోడ్డు ద్వారా సుమారు ${km.toFixed(1)} కి.మీ.`,

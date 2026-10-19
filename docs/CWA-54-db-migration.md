@@ -25,6 +25,15 @@ Seed guard (refuse by default):
 2. Run the seed on **dev** only — every `ServicesArea` **update** sets `roadKmFromBase` and `roadKmFromBaseSource` to measured values or **`null`** (clears bogus 7 km from PR #25).
 3. `ServiceAreaPage`: seed sets `published: false` on all rows that are **not** a first-release pair (`farmhouse-construction` × `fatimapur-kothur` | `shadnagar` | `shamshabad`), including legacy C1 × six-service rows from #25.
 4. Publishing: admin CMS sets `lastReviewed` when publishing (counts as review); `thinContent` must be false before publish.
+5. Re-running the seed does **not** unpublish reviewed first-release pages. To reset fake #25 review state once:
+
+```bash
+SEED_RESET_FIRST_RELEASE_REVIEW=1 APP_ENV=dev SEED_ALLOWED_DB=crux_dev DATABASE_URL='...' \
+  pnpm --filter @repo/db exec tsx scripts/seed-services-seo.ts
+# or: ... exec tsx scripts/seed-services-seo.ts --reset-first-release-review
+```
+
+This sets `published: false`, `thinContent: true`, and `lastReviewed: null` on the three `farmhouse-construction` launch area pages only.
 
 ### One-off (if seed not run yet)
 
