@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { resolveServiceSlug, SERVICE_CATALOG_LABELS } from "@repo/lib";
+import {
+  isFirstReleaseServiceAreaPair,
+  serviceAreaPageIsPublic,
+} from "@repo/lib/service-area-publish-gate";
 import { SpokeProjectsStrip } from "../../../../../components/services/spoke-projects-strip";
 import {
   getPublishedServiceAreaPageTagged,
   getPublishedSpokeProjects,
   listPublishedServiceAreaPageParams,
 } from "../../../../../lib/services/cached-content";
+import {
+  formatServiceAreaDistanceParagraph,
+  type ServiceAreaPageLocale,
+} from "../../../../../lib/services/service-area-page-messages";
 
 export const revalidate = 86400;
 
@@ -20,11 +28,15 @@ export async function generateStaticParams(): Promise<
   if (!process.env.DATABASE_URL) return [];
   try {
     const pages = await listPublishedServiceAreaPageParams();
-    return pages.map((p) => ({
-      slug: p.serviceSlug,
-      area: p.areaSlug,
-      locale: "en",
-    }));
+    return pages
+      .filter((p) =>
+        isFirstReleaseServiceAreaPair(p.serviceSlug, p.areaSlug),
+      )
+      .map((p) => ({
+        slug: p.serviceSlug,
+        area: p.areaSlug,
+        locale: "en",
+      }));
   } catch {
     return [];
   }
@@ -39,7 +51,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const serviceName = SERVICE_CATALOG_LABELS[serviceSlug];
   const areaName = page?.area.displayName ?? area;
-  const indexable = page?.published && !page.thinContent;
+  const indexable =
+    page &&
+    serviceAreaPageIsPublic({
+      serviceSlug,
+      areaSlug: area,
+      published: page.published,
+      lastReviewed: page.lastReviewed,
+      thinContent: page.thinContent,
+    });
 
   return {
     title: `${serviceName} in ${areaName} — Crux Group`,
@@ -53,23 +73,42 @@ export default async function ServiceAreaPage({ params }: Props) {
   const serviceSlug = resolveServiceSlug(slug);
   if (!serviceSlug) notFound();
 
+  if (!isFirstReleaseServiceAreaPair(serviceSlug, area)) {
+    notFound();
+  }
+
   const page = await getPublishedServiceAreaPageTagged(serviceSlug, area);
-  if (!page?.published) notFound();
+  if (
+    !page ||
+    !serviceAreaPageIsPublic({
+      serviceSlug,
+      areaSlug: area,
+      published: page.published,
+      lastReviewed: page.lastReviewed,
+      thinContent: page.thinContent,
+    })
+  ) {
+    notFound();
+  }
 
   const projects = await getPublishedSpokeProjects(serviceSlug, area);
   const serviceName = SERVICE_CATALOG_LABELS[serviceSlug];
+  const pageLocale: ServiceAreaPageLocale = locale === "te" ? "te" : "en";
+
+  const distanceText = formatServiceAreaDistanceParagraph({
+    locale: pageLocale,
+    areaSlug: area,
+    straightLineKm: page.area.straightLineKmFromBase,
+    roadKm: page.area.roadKmFromBase,
+    lastReviewed: page.lastReviewed,
+  });
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-16 text-white">
       <h1 className="text-3xl font-bold">
         {serviceName} in {page.area.displayName}
       </h1>
-      <p className="mt-4 text-zinc-400">
-        {page.area.roadKmFromBase.toFixed(0)} km road from our Fatimapur (Kothur) base.
-        {page.lastReviewed
-          ? ` Last reviewed ${page.lastReviewed.toLocaleDateString("en-IN")}.`
-          : ""}
-      </p>
+      <p className="mt-4 text-zinc-400">{distanceText}</p>
       <a
         href={`/${locale}/services/request-quote`}
         className="mt-8 inline-block rounded-xl bg-amber-500 px-6 py-3 font-semibold text-black"

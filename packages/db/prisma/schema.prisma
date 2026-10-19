@@ -961,7 +961,8 @@ model ServicesArea {
   slug                   String   @unique
   displayName            String
   clusterId              String?
-  roadKmFromBase         Float
+  roadKmFromBase         Float?
+  roadKmFromBaseSource   String?
   straightLineKmFromBase Float?
   soil                   String?
   terrain                String?

@@ -8,9 +8,9 @@
     {
       "id": "C1",
       "slug": "fatimapur-kothur",
-      "displayName": "Fatimapur (Kothur)",
+      "displayName": "Fathimapur (Kothur)",
       "hub": {
-        "name": "Fatimapur (Kothur)",
+        "name": "Fathimapur (Kothur)",
         "coordinates": {
           "lat": 17.16672,
           "lng": 78.27859
@@ -334,7 +334,7 @@
     {
       "id": "c1-fatimapur",
       "clusterId": "C1",
-      "name": "Fatimapur",
+      "name": "Fathimapur",
       "placeType": "village/town (OSM place)",
       "mandal": "Kothur",
       "mandalSource": "Nominatim reverse geocode (OSM boundary)",
@@ -365,7 +365,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Thimmapur 509325 0.5 km, Fatimapur 509325 0.7 km, Reddipalem 509325 2.5 km)",
+      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Thimmapur 509325 0.5 km, Fathimapur 509325 0.7 km, Reddipalem 509325 2.5 km)",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.17124,
@@ -411,7 +411,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "nearest PO villages: Fatimapur 509325 1.1 km, Thimmapur 509325 2.1 km, Kothur 509228 2.6 km",
+      "pincodeHint": "nearest PO villages: Fathimapur 509325 1.1 km, Thimmapur 509325 2.1 km, Kothur 509228 2.6 km",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.1621,
@@ -434,7 +434,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Reddipalem 509325 0.9 km, Fatimapur 509325 2.0 km, Thimmapur 509325 2.0 km)",
+      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Reddipalem 509325 0.9 km, Fathimapur 509325 2.0 km, Thimmapur 509325 2.0 km)",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.18461,
@@ -457,7 +457,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Reddipalem 509325 1.0 km, Fatimapur 509325 2.2 km, Thimmapur 509325 2.5 km)",
+      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Reddipalem 509325 1.0 km, Fathimapur 509325 2.2 km, Thimmapur 509325 2.5 km)",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.18536,
@@ -526,7 +526,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Fatimapur 509325 3.2 km, Chegur 509325 3.4 km, Veerlapalle 509325 3.7 km)",
+      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Fathimapur 509325 3.2 km, Chegur 509325 3.4 km, Veerlapalle 509325 3.7 km)",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.15417,
@@ -595,7 +595,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Reddipalem 509325 1.3 km, Fatimapur 509325 3.6 km, Thimmapur 509325 3.8 km)",
+      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Reddipalem 509325 1.3 km, Fathimapur 509325 3.6 km, Thimmapur 509325 3.8 km)",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.19612,
@@ -756,7 +756,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "nearest PO villages: Kothur 509228 3.5 km, Thimmapur 509325 4.9 km, Fatimapur 509325 5.4 km",
+      "pincodeHint": "nearest PO villages: Kothur 509228 3.5 km, Thimmapur 509325 4.9 km, Fathimapur 509325 5.4 km",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.13744,
@@ -802,7 +802,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Chegur 509325 0.8 km, Veerlapalle 509325 3.8 km, Fatimapur 509325 5.6 km)",
+      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Chegur 509325 0.8 km, Veerlapalle 509325 3.8 km, Fathimapur 509325 5.6 km)",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.16889,
@@ -825,7 +825,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Chegur 509325 1.7 km, Reddipalem 509325 5.0 km, Fatimapur 509325 5.8 km)",
+      "pincodeHint": "likely 509325 (3 nearest PO villages all 509325: Chegur 509325 1.7 km, Reddipalem 509325 5.0 km, Fathimapur 509325 5.8 km)",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.19074,
@@ -1906,7 +1906,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "nearest PO villages: Kothur 509228 2.8 km, Nandigama 509228 2.8 km, Fatimapur 509325 3.1 km",
+      "pincodeHint": "nearest PO villages: Kothur 509228 2.8 km, Nandigama 509228 2.8 km, Fathimapur 509325 3.1 km",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.14384,
@@ -1975,7 +1975,7 @@
       "pincode": null,
       "pincodeStatus": "unverified",
       "postOffice": null,
-      "pincodeHint": "nearest PO villages: Kothur 509228 1.7 km, Nandigama 509228 3.4 km, Fatimapur 509325 3.8 km",
+      "pincodeHint": "nearest PO villages: Kothur 509228 1.7 km, Nandigama 509228 3.4 km, Fathimapur 509325 3.8 km",
       "pincodeNote": null,
       "coordinates": {
         "lat": 17.13342,
