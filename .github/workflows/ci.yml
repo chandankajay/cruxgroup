@@ -125,8 +125,11 @@ jobs:
       - name: Prisma generate
         run: pnpm db:generate
 
-      - name: Lint, types, test
-        run: pnpm exec turbo run lint check-types test --cache-dir=.turbo
+      - name: Lint and types
+        run: pnpm exec turbo run lint check-types --cache-dir=.turbo
+
+      - name: Test
+        run: pnpm exec turbo run test --cache-dir=.turbo
 
       - name: Build
         run: pnpm exec turbo run build --cache-dir=.turbo

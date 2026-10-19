@@ -70,7 +70,8 @@
       "dependsOn": ["^check-types", "^build"]
     },
     "test": {
-      "dependsOn": ["^test"]
+      "dependsOn": ["^test"],
+      "inputs": ["$TURBO_DEFAULT$", "**/*.{test,spec}.{ts,tsx}", "vitest.config.*"]
     },
     "dev": {
       "cache": false,
