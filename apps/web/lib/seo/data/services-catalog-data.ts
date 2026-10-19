@@ -48,7 +48,7 @@ export const SITE_SERVICES_CATALOG: readonly SiteService[] = [
     ],
     seoTitle: "Land Levelling Services near Kothur & Shadnagar — Crux Group",
     seoDescription:
-      "Book land levelling and site grading per acre — cut-fill, FGL formation, and compaction within 50 km of Fatimapur, Kothur.",
+      "Book land levelling and site grading per acre — cut-fill, FGL formation, and compaction within 50 km of Fathimapur, Kothur.",
     whatsappMessage: "Hi Crux Group, I need land levelling for my plot. Please schedule a site visit.",
     relatedGuideSlugs: ["site-levelling-cut-fill-reference", "land-development-raw-to-survey-ready"],
     searchTerms: ["land levelling", "ground levelling", "plot grading", "FGL"],

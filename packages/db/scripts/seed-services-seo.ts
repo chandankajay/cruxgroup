@@ -1,11 +1,12 @@
 /**
  * Backfill ServicesArea rows from packages/lib clusters-data.json.
- * Run: pnpm --filter @repo/db exec tsx scripts/seed-services-seo.ts
+ * Run (dev DB only): pnpm --filter @repo/db exec tsx scripts/seed-services-seo.ts
  */
 import { prisma } from "../src/client";
-import { calculateDistanceKm } from "../../lib/src/geo";
+import { assertSafeServicesSeoSeedTarget } from "../src/seed-services-seo-guard";
 import clustersJson from "../../lib/src/data/clusters-data.json";
 import type { ClustersData } from "../../lib/src/clusters.types";
+import { straightLineKmFromC1Hub } from "../../lib/src/area-hub-distance";
 
 const SERVICE_SLUGS = [
   "land-levelling",
@@ -16,45 +17,64 @@ const SERVICE_SLUGS = [
   "debris-rock-breaking",
 ] as const;
 
+/** First public release (CWA-54): only these area × service pairs may be reviewed/published. */
+const FIRST_RELEASE_AREA_SLUGS = new Set([
+  "fatimapur-kothur",
+  "shadnagar",
+  "shamshabad",
+]);
+
+const FIRST_RELEASE_SERVICE_SLUG = "farmhouse-construction";
+
+/**
+ * Hub-to-hub road km from C1 — only set when measured (OSRM/manual) with a documented source.
+ * Never derive from village.roadDistanceFromHubKm.
+ */
+const MEASURED_ROAD_KM_FROM_C1: Readonly<
+  Record<string, { km: number; source: string }>
+> = {};
+
 const data = clustersJson as ClustersData;
 
+function areaDisplayName(slug: string, fallback: string): string {
+  if (slug === "fatimapur-kothur") return "Fathimapur (Kothur)";
+  return fallback;
+}
+
 async function main(): Promise<void> {
-  const hub = data.clusters.find((c) => c.isHomeBase);
-  if (!hub) throw new Error("Home base cluster missing");
+  assertSafeServicesSeoSeedTarget();
 
   for (const cluster of data.clusters) {
     const villages = data.villages.filter((v) => v.clusterId === cluster.id);
-    const roadKm =
-      villages.reduce((min, v) => Math.min(min, v.roadDistanceFromHubKm), Infinity) ||
-      cluster.maxServiceRadiusKm;
+    const straightLineKm = straightLineKmFromC1Hub(cluster.hub.coordinates);
+    const measuredRoad = MEASURED_ROAD_KM_FROM_C1[cluster.slug];
 
     await prisma.servicesArea.upsert({
       where: { slug: cluster.slug },
       create: {
         slug: cluster.slug,
-        displayName: cluster.displayName,
+        displayName: areaDisplayName(cluster.slug, cluster.displayName),
         clusterId: cluster.id,
-        roadKmFromBase: roadKm,
-        straightLineKmFromBase: calculateDistanceKm(
-          hub.hub.coordinates,
-          cluster.hub.coordinates,
-        ),
+        roadKmFromBase: measuredRoad?.km ?? null,
+        roadKmFromBaseSource: measuredRoad?.source ?? null,
+        straightLineKmFromBase: straightLineKm,
         demandDrivers: [cluster.whyHere],
         villages: villages.slice(0, 50).map((v) => ({
           id: v.id,
           name: v.name,
           pincode: v.pincode,
         })),
-        published: cluster.isFirstBatch,
+        published: false,
       },
       update: {
-        displayName: cluster.displayName,
-        roadKmFromBase: roadKm,
-        straightLineKmFromBase: calculateDistanceKm(
-          hub.hub.coordinates,
-          cluster.hub.coordinates,
-        ),
-        published: cluster.isFirstBatch,
+        displayName: areaDisplayName(cluster.slug, cluster.displayName),
+        straightLineKmFromBase: straightLineKm,
+        ...(measuredRoad
+          ? {
+              roadKmFromBase: measuredRoad.km,
+              roadKmFromBaseSource: measuredRoad.source,
+            }
+          : {}),
       },
     });
   }
@@ -72,27 +92,23 @@ async function main(): Promise<void> {
     });
   }
 
-  const firstBatch = data.clusters.filter((c) => c.isFirstBatch);
-  for (const cluster of firstBatch) {
-    for (const serviceSlug of SERVICE_SLUGS) {
-      await prisma.serviceAreaPage.upsert({
-        where: {
-          serviceSlug_areaSlug: { serviceSlug, areaSlug: cluster.slug },
+  for (const areaSlug of FIRST_RELEASE_AREA_SLUGS) {
+    await prisma.serviceAreaPage.upsert({
+      where: {
+        serviceSlug_areaSlug: {
+          serviceSlug: FIRST_RELEASE_SERVICE_SLUG,
+          areaSlug,
         },
-        create: {
-          serviceSlug,
-          areaSlug: cluster.slug,
-          published: true,
-          thinContent: false,
-          lastReviewed: new Date(),
-        },
-        update: {
-          published: true,
-          thinContent: false,
-          lastReviewed: new Date(),
-        },
-      });
-    }
+      },
+      create: {
+        serviceSlug: FIRST_RELEASE_SERVICE_SLUG,
+        areaSlug,
+        published: false,
+        thinContent: true,
+        lastReviewed: null,
+      },
+      update: {},
+    });
   }
 }
 

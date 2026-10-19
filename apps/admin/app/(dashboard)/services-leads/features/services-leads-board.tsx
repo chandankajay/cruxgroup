@@ -82,7 +82,7 @@ export function ServicesLeadsBoard({ board, salespeople, filters }: Props) {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Services leads</h1>
           <p className="text-sm text-muted-foreground">
-            {openTotal} open · pipeline within 50 km of Fatimapur, Kothur
+            {openTotal} open · pipeline within 50 km of Fathimapur, Kothur
           </p>
         </div>
         <div className="flex gap-2">

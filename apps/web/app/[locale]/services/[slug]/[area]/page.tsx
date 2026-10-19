@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { resolveServiceSlug, SERVICE_CATALOG_LABELS } from "@repo/lib";
+import { serviceAreaPageIsPublic } from "@repo/lib/service-area-publish-gate";
 import { SpokeProjectsStrip } from "../../../../../components/services/spoke-projects-strip";
 import {
   getPublishedServiceAreaPageTagged,
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const serviceName = SERVICE_CATALOG_LABELS[serviceSlug];
   const areaName = page?.area.displayName ?? area;
-  const indexable = page?.published && !page.thinContent;
+  const indexable = page ? serviceAreaPageIsPublic(page) : false;
 
   return {
     title: `${serviceName} in ${areaName} — Crux Group`,
@@ -54,7 +55,7 @@ export default async function ServiceAreaPage({ params }: Props) {
   if (!serviceSlug) notFound();
 
   const page = await getPublishedServiceAreaPageTagged(serviceSlug, area);
-  if (!page?.published) notFound();
+  if (!page || !serviceAreaPageIsPublic(page)) notFound();
 
   const projects = await getPublishedSpokeProjects(serviceSlug, area);
   const serviceName = SERVICE_CATALOG_LABELS[serviceSlug];
@@ -65,7 +66,12 @@ export default async function ServiceAreaPage({ params }: Props) {
         {serviceName} in {page.area.displayName}
       </h1>
       <p className="mt-4 text-zinc-400">
-        {page.area.roadKmFromBase.toFixed(0)} km road from our Fatimapur (Kothur) base.
+        {page.area.straightLineKmFromBase != null
+          ? `${page.area.straightLineKmFromBase.toFixed(1)} km straight-line from our Fathimapur (Kothur) base.`
+          : "Distance from our Fathimapur (Kothur) base is being updated."}
+        {page.area.roadKmFromBase != null
+          ? ` About ${page.area.roadKmFromBase.toFixed(1)} km by road.`
+          : ""}
         {page.lastReviewed
           ? ` Last reviewed ${page.lastReviewed.toLocaleDateString("en-IN")}.`
           : ""}

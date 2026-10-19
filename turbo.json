@@ -2,6 +2,7 @@
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "globalEnv": [
+    "APP_ENV",
     "NEXTAUTH_SECRET",
     "AUTH_SECRET",
     "DATABASE_URL",

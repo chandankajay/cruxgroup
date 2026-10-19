@@ -16,7 +16,9 @@
     "./clusters": "./src/clusters.ts",
     "./services-revalidate": "./src/services-revalidate.ts",
     "./quote-villages": "./src/quote-villages.ts",
-    "./quote-village-option": "./src/quote-village-option.ts"
+    "./quote-village-option": "./src/quote-village-option.ts",
+    "./area-hub-distance": "./src/area-hub-distance.ts",
+    "./service-area-publish-gate": "./src/service-area-publish-gate.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

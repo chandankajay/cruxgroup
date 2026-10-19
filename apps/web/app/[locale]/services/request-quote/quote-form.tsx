@@ -90,7 +90,7 @@ export function QuoteRequestForm({ villages }: Props) {
       <div>
         <h1 className="text-3xl font-bold">Get a free site visit &amp; quote</h1>
         <p className="mt-2 text-sm text-zinc-300">
-          We serve within 50 km of our base at Fatimapur, Kothur. Our team visits the site, then
+          We serve within 50 km of our base at Fathimapur, Kothur. Our team visits the site, then
           sends a quotation.
         </p>
       </div>

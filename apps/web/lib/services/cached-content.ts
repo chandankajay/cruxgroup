@@ -8,6 +8,7 @@ import {
   serviceAreaPageTag,
   serviceAreaPagesListTag,
 } from "@repo/lib";
+import { serviceAreaPageIsPublic } from "@repo/lib/service-area-publish-gate";
 
 export async function getPublishedServiceAreaPageTagged(
   serviceSlug: string,
@@ -91,11 +92,24 @@ export async function listPublishedServiceAreaPageParams(): Promise<
 > {
   const tagged = unstable_cache(
     async () => {
-      return prisma.serviceAreaPage.findMany({
-        where: { published: true, thinContent: false },
+      const rows = await prisma.serviceAreaPage.findMany({
+        where: {
+          published: true,
+          thinContent: false,
+          lastReviewed: { not: null },
+        },
         take: 500,
-        select: { serviceSlug: true, areaSlug: true },
+        select: {
+          serviceSlug: true,
+          areaSlug: true,
+          published: true,
+          thinContent: true,
+          lastReviewed: true,
+        },
       });
+      return rows
+        .filter((row) => serviceAreaPageIsPublic(row))
+        .map(({ serviceSlug, areaSlug }) => ({ serviceSlug, areaSlug }));
     },
     ["service-area-page-params"],
     { revalidate: 3600, tags: [serviceAreaPagesListTag()] },
