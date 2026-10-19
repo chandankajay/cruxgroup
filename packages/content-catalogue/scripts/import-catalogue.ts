@@ -664,8 +664,8 @@ for (const step of document.booklet.earthworks.process) {
 }
 
 const buildingBlockTe: Record<string, string> = {
-  "Building construction on contract, from foundations to finishing, to your drawings or designs we prepare with you.":
-    "కాంట్రాక్ట్‌పై బిల్డింగ్ నిర్మాణం, ఫౌండేషన్ల నుండి ఫినిషింగ్ వరకు, మీ డ్రాయింగ్‌లకు లేదా మీతో సిద్ధం చేసిన డిజైన్‌లకు.",
+  "Building construction on contract, from foundations to finishing, to your drawings or general design options that can be adapted to your plot and budget.":
+    "కాంట్రాక్ట్‌పై బిల్డింగ్ నిర్మాణం, ఫౌండేషన్ల నుండి ఫినిషింగ్ వరకు, మీ డ్రాయింగ్‌లకు లేదా మీ ప్లాట్ మరియు బడ్జెట్‌కు అనుకూలం చేయగల సాధారణ డిజైన్ ఎంపికలకు.",
   "Any of the farm house designs in this booklet, or your own, built on your land.":
     "ఈ బుక్‌లెట్‌లోని ఏదైనా ఫార్మ్ హౌస్ డిజైన్, లేదా మీ స్వంతం, మీ భూమిపై నిర్మించబడుతుంది.",
   "General civil works on contract, such as foundations, RCC, masonry and site works.":
@@ -681,7 +681,7 @@ for (const block of document.booklet.building.blocks) {
 
 const processStepTe: Record<string, string> = {
   "We visit the site, take measurements and understand what you need.": "మేము సైట్‌ను సందర్శిస్తాము, కొలతలు తీసుకుంటాము మరియు మీ అవసరాలను అర్థం చేస్తాము.",
-  "You get a written quote with scope, rates and timeline.": "మీకు పరిధి, రేట్లు మరియు కాలపట్టికతో రాత పూర్వక కోట్ అందుతుంది.",
+  "You get a written quote with scope and rates.": "మీకు పరిధి మరియు రేట్లతో రాత పూర్వక కోట్ అందుతుంది.",
   "Our own machines and team carry out the work to the agreed scope.": "మా స్వంత యంత్రాలు మరియు బృందం అంగీకరించిన పరిధికి పని చేస్తారు.",
   "We walk the finished work with you before closing.": "ముగింపు ముందు పూర్తయిన పనిని మీతో కలిసి చూస్తాము.",
 };

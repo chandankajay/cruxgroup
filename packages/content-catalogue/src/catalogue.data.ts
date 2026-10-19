@@ -994,8 +994,8 @@ export const catalogueDocumentSource = {
             "teReviewed": false
           },
           "text": {
-            "en": "Building construction on contract, from foundations to finishing, to your drawings or designs we prepare with you.",
-            "te": "కాంట్రాక్ట్‌పై బిల్డింగ్ నిర్మాణం, ఫౌండేషన్ల నుండి ఫినిషింగ్ వరకు, మీ డ్రాయింగ్‌లకు లేదా మీతో సిద్ధం చేసిన డిజైన్‌లకు.",
+            "en": "Building construction on contract, from foundations to finishing, to your drawings or general design options that can be adapted to your plot and budget.",
+            "te": "కాంట్రాక్ట్‌పై బిల్డింగ్ నిర్మాణం, ఫౌండేషన్ల నుండి ఫినిషింగ్ వరకు, మీ డ్రాయింగ్‌లకు లేదా మీ ప్లాట్ మరియు బడ్జెట్‌కు అనుకూలం చేయగల సాధారణ డిజైన్ ఎంపికలకు.",
             "teReviewed": false
           }
         },
@@ -1051,8 +1051,8 @@ export const catalogueDocumentSource = {
             "teReviewed": false
           },
           "body": {
-            "en": "You get a written quote with scope, rates and timeline.",
-            "te": "మీకు పరిధి, రేట్లు మరియు కాలపట్టికతో రాత పూర్వక కోట్ అందుతుంది.",
+            "en": "You get a written quote with scope and rates.",
+            "te": "మీకు పరిధి మరియు రేట్లతో రాత పూర్వక కోట్ అందుతుంది.",
             "teReviewed": false
           }
         },

@@ -181,14 +181,14 @@ booklet:
     lead: "Farm houses, buildings and general civil works on contract, backed by our own machinery for the earth work."
     image: {src: booklet/assets/gen/building-construction.jpg, kind: illus}
     blocks:
-      - {h: "Building contracts", t: "Building construction on contract, from foundations to finishing, to your drawings or designs we prepare with you."}
+      - {h: "Building contracts", t: "Building construction on contract, from foundations to finishing, to your drawings or general design options that can be adapted to your plot and budget."}
       - {h: "Farm house construction", t: "Any of the farm house designs in this booklet, or your own, built on your land."}
       - {h: "Civil contracts", t: "General civil works on contract, such as foundations, RCC, masonry and site works."}
   process:
     heading: "How we work"
     steps:
       - {h: "Survey", t: "We visit the site, take measurements and understand what you need."}
-      - {h: "Quote", t: "You get a written quote with scope, rates and timeline."}
+      - {h: "Quote", t: "You get a written quote with scope and rates."}
       - {h: "Milestone payments", t: "30% to start, 50% at the agreed mid-stage milestone, 20% on handover.", pay: [30, 50, 20]}
       - {h: "Execution", t: "Our own machines and team carry out the work to the agreed scope."}
       - {h: "Handover", t: "We walk the finished work with you before closing."}

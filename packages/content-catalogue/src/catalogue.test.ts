@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { BANNED_EN_PHRASES, collectLocalizedEnStrings } from "./banned-claim-phrases";
 import { catalogueDocumentSource } from "./catalogue.data";
 import { catalogueDocumentSchema, imageKindSchema } from "./catalogue.schema";
 import { collectCatalogueImageKeys } from "./collect-image-keys";
@@ -93,6 +94,16 @@ describe("catalogue content rules", () => {
       const parsedKind = imageKindSchema.parse(ref.kind);
       if (parsedKind === "design" || parsedKind === "illus") {
         expect(ref.kind).not.toBe("own");
+      }
+    }
+  });
+
+  it("contains no banned claim phrases in English copy (brief §5)", () => {
+    const enStrings = collectLocalizedEnStrings(doc);
+    for (const text of enStrings) {
+      const lower = text.toLowerCase();
+      for (const phrase of BANNED_EN_PHRASES) {
+        expect(lower).not.toContain(phrase.toLowerCase());
       }
     }
   });
