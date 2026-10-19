@@ -2,7 +2,7 @@
 
 ## Local environment
 
-Copy [`.env.example`](./.env.example) to `.env` and fill in values. For **admin** and **bookings**, set `AUTH_SECRET` (generate one with `npx auth secret`). Auth.js also accepts `NEXTAUTH_SECRET` if `AUTH_SECRET` is unset.
+Copy [`.env.example`](./.env.example) to `.env` and fill in values. For **admin** and **bookings**, set `AUTH_SECRET` (generate one with `npx auth secret`). Auth.js also accepts `NEXTAUTH_SECRET` if `AUTH_SECRET` is unset. For **admin** KYC document viewing, `KYC_DOC_VIEW_SECRET` is the recommended separate key; without it, signing falls back to `AUTH_SECRET` (reusing the session signing key).
 
 ---
 
