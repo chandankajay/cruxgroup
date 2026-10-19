@@ -4,16 +4,21 @@ const DOC_KINDS = ["pan", "aadhaar", "cheque"] as const;
 export type KycDocKind = (typeof DOC_KINDS)[number];
 
 function signingSecret(): string {
-  const s =
-    process.env["KYC_DOC_VIEW_SECRET"]?.trim() ||
-    process.env["AUTH_SECRET"]?.trim() ||
-    process.env["NEXTAUTH_SECRET"]?.trim();
-  if (!s && process.env["NODE_ENV"] === "production") {
-    throw new Error(
-      "Set KYC_DOC_VIEW_SECRET, AUTH_SECRET, or NEXTAUTH_SECRET for signed KYC document URLs."
-    );
+  const kycSecret = process.env["KYC_DOC_VIEW_SECRET"]?.trim();
+  if (kycSecret) {
+    return kycSecret;
   }
-  return s || "dev-only-kyc-doc-view-secret";
+  const authSecret = process.env["AUTH_SECRET"]?.trim();
+  if (authSecret) {
+    return authSecret;
+  }
+  const nextAuthSecret = process.env["NEXTAUTH_SECRET"]?.trim();
+  if (nextAuthSecret) {
+    return nextAuthSecret;
+  }
+  throw new Error(
+    "Set KYC_DOC_VIEW_SECRET, AUTH_SECRET, or NEXTAUTH_SECRET for signed KYC document URLs.",
+  );
 }
 
 /**

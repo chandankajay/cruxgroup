@@ -1,7 +1,8 @@
-const AUTH_SECRET_ENV_KEYS = ["NEXTAUTH_SECRET", "AUTH_SECRET"] as const;
+/** Matches Auth.js `setEnvDefaults` precedence (`AUTH_SECRET` then `NEXTAUTH_SECRET`). */
+const AUTH_SECRET_ENV_KEYS = ["AUTH_SECRET", "NEXTAUTH_SECRET"] as const;
 
 const MISSING_AUTH_SECRET_MESSAGE =
-  "Set NEXTAUTH_SECRET or AUTH_SECRET (required to sign sessions).";
+  "Set AUTH_SECRET or NEXTAUTH_SECRET (required to sign sessions).";
 
 /**
  * Resolves the Auth.js signing secret at call time (never at module load).
