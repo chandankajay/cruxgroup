@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./aisensy": "./src/aisensy.ts",
+    "./clusters": "./src/clusters.ts",
     "./geo": "./src/geo.ts",
     "./invoice": "./src/invoice/index.ts",
     "./legal/partner-terms": "./src/legal/partner-terms.ts",
