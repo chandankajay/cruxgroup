@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { BANNED_EN_PHRASES, collectLocalizedEnStrings } from "./banned-claim-phrases";
+import {
+  BANNED_EN_PHRASES,
+  BANNED_TE_PHRASES,
+  collectLocalizedEnStrings,
+  collectLocalizedTeStrings,
+} from "./banned-claim-phrases";
 import { catalogueDocumentSource } from "./catalogue.data";
-import { catalogueDocumentSchema, imageKindSchema } from "./catalogue.schema";
+import { catalogueDocumentSchema } from "./catalogue.schema";
 import { collectCatalogueImageKeys } from "./collect-image-keys";
 
 const PRICE_NOTE_SNIPPET = "exclude GST";
@@ -11,6 +16,13 @@ describe("catalogueDocumentSchema", () => {
   it("parses committed catalogue.data.ts", () => {
     const parsed = catalogueDocumentSchema.safeParse(catalogueDocumentSource);
     expect(parsed.success).toBe(true);
+  });
+
+  it("rejects an own image key outside the allow-list", () => {
+    const tampered = JSON.parse(JSON.stringify(catalogueDocumentSource)) as typeof catalogueDocumentSource;
+    tampered.sections[0].items[0].image = { key: "dozer", kind: "own" };
+    const parsed = catalogueDocumentSchema.safeParse(tampered);
+    expect(parsed.success).toBe(false);
   });
 });
 
@@ -70,7 +82,7 @@ describe("catalogue content rules", () => {
     });
   });
 
-  it("requires Telugu for every localized string and flags pending review", () => {
+  it("requires Telugu for every localized string and allows teReviewed true after review", () => {
     const visit = (value: unknown): void => {
       if (value === null || typeof value !== "object") {
         return;
@@ -78,7 +90,9 @@ describe("catalogue content rules", () => {
       const record = value as Record<string, unknown>;
       if (typeof record.en === "string" && typeof record.te === "string") {
         expect(record.te.length).toBeGreaterThan(0);
-        expect(record.teReviewed).toBe(false);
+        if (record.teReviewed !== undefined) {
+          expect(record.teReviewed === true || record.teReviewed === false).toBe(true);
+        }
         return;
       }
       for (const child of Object.values(record)) {
@@ -88,13 +102,15 @@ describe("catalogue content rules", () => {
     visit(doc);
   });
 
-  it("never types design or illustrative images as own", () => {
-    const keys = collectCatalogueImageKeys(doc);
-    for (const ref of keys) {
-      const parsedKind = imageKindSchema.parse(ref.kind);
-      if (parsedKind === "design" || parsedKind === "illus") {
-        expect(ref.kind).not.toBe("own");
-      }
+  it("types farm, wall and fence design galleries as design (never own)", () => {
+    for (const opt of doc.booklet.farmHouseDesigns.options) {
+      expect(opt.image.kind).toBe("design");
+    }
+    for (const opt of doc.booklet.wallDesigns.options) {
+      expect(opt.image.kind).toBe("design");
+    }
+    for (const opt of doc.booklet.fencing.options) {
+      expect(opt.image.kind).toBe("design");
     }
   });
 
@@ -103,6 +119,16 @@ describe("catalogue content rules", () => {
     for (const text of enStrings) {
       const lower = text.toLowerCase();
       for (const phrase of BANNED_EN_PHRASES) {
+        expect(lower).not.toContain(phrase.toLowerCase());
+      }
+    }
+  });
+
+  it("contains no banned claim phrases in Telugu copy (brief §5)", () => {
+    const teStrings = collectLocalizedTeStrings(doc);
+    for (const text of teStrings) {
+      const lower = text.toLowerCase();
+      for (const phrase of BANNED_TE_PHRASES) {
         expect(lower).not.toContain(phrase.toLowerCase());
       }
     }
