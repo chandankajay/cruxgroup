@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@repo/auth": "workspace:*",
     "@repo/db": "workspace:*",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
