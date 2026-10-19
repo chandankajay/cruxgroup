@@ -1,3 +1,4 @@
+import { applyNoIndexHeaders } from "@repo/env/edge";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
@@ -10,7 +11,9 @@ function pathnameHasLocale(pathname: string): boolean {
 function withPathname(request: NextRequest, pathname: string): NextResponse {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  applyNoIndexHeaders(response);
+  return response;
 }
 
 export function middleware(request: NextRequest): NextResponse {
@@ -36,13 +39,17 @@ export function middleware(request: NextRequest): NextResponse {
   if (pathname === "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/en";
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    applyNoIndexHeaders(response);
+    return response;
   }
 
   if (!pathnameHasLocale(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = `/en${pathname}`;
-    return NextResponse.redirect(url);
+    const response = NextResponse.redirect(url);
+    applyNoIndexHeaders(response);
+    return response;
   }
 
   return withPathname(request, pathname);

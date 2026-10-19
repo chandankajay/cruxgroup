@@ -1,8 +1,17 @@
+import { shouldNoIndex } from "@repo/env";
 import type { MetadataRoute } from "next";
+
+export const dynamic = "force-dynamic";
 
 const BASE_URL = "https://www.cruxgroup.in";
 
 export default function robots(): MetadataRoute.Robots {
+  if (shouldNoIndex()) {
+    return {
+      rules: { userAgent: "*", disallow: "/" },
+    };
+  }
+
   return {
     rules: [
       { userAgent: "*", allow: "/" },

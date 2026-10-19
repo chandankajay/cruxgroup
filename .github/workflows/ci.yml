@@ -1,8 +1,10 @@
+# pull_request (any base) + push to main: conventions gate, Mongo-backed quality, blocking critical audit.
+# Job names: `ci / conventions`, `ci / quality` (branch protection).
+
 name: ci
 
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
@@ -14,6 +16,74 @@ permissions:
   contents: read
 
 jobs:
+  conventions:
+    name: conventions
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: read
+    steps:
+      # TODO: remove this exemption after PR #26 merges (open stack #23–#26 only).
+      - name: Legacy exemption (PRs #23–#26)
+        id: exempt
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          pr="$PR_NUMBER"
+          if [[ "$pr" =~ ^(23|24|25|26)$ ]]; then
+            echo "exempt=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping conventions (legacy open PR #${pr})."
+          else
+            echo "exempt=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Branch name (type/JIRA-ID)
+        if: steps.exempt.outputs.exempt != 'true'
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          branch="$BRANCH"
+          if ! [[ "$branch" =~ ^(feat|fix|chore|refactor|perf|docs|test|ci|hotfix)/[A-Z]+-[0-9]+$ ]]; then
+            echo "Branch must match ^(feat|fix|chore|refactor|perf|docs|test|ci|hotfix)/[A-Z]+-[0-9]+$"
+            echo "Example: feat/CWA-53"
+            exit 1
+          fi
+
+      - name: Conventional PR title (types + scope)
+        if: steps.exempt.outputs.exempt != 'true'
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+            refactor
+            perf
+            docs
+            test
+            ci
+            hotfix
+          requireScope: true
+
+      - name: Jira scope in PR title
+        if: steps.exempt.outputs.exempt != 'true'
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          node <<'NODE'
+          const title = process.env.TITLE ?? '';
+          const re =
+            /^(feat|fix|chore|refactor|perf|docs|test|ci|hotfix)\(([A-Z]+-\d+)\)!?: .+/;
+          if (!re.test(title)) {
+            console.error(
+              'PR title must be Conventional Commits with Jira scope, e.g. feat(CWA-53): summary or feat(CWA-53)!: breaking',
+            );
+            process.exit(1);
+          }
+          NODE
+
   quality:
     name: quality
     runs-on: ubuntu-24.04
@@ -57,6 +127,9 @@ jobs:
 
       - name: Lint and types
         run: pnpm exec turbo run lint check-types --cache-dir=.turbo
+
+      - name: Test
+        run: pnpm exec turbo run test --cache-dir=.turbo
 
       - name: Build
         run: pnpm exec turbo run build --cache-dir=.turbo

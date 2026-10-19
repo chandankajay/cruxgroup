@@ -1,19 +1,22 @@
+import { applyNoIndexHeaders } from "@repo/env/edge";
 import NextAuth, { type NextAuthResult } from "next-auth";
+import type { NextMiddleware } from "next/server";
+import { NextResponse } from "next/server";
 import { authConfig } from "./auth.config";
 
-/**
- * Next.js 16 uses proxy.ts instead of middleware.ts.
- * This uses the lightweight Edge-safe authConfig (no Prisma imports).
- */
 const nextAuth: NextAuthResult = NextAuth(authConfig);
-
 const auth: NextAuthResult["auth"] = nextAuth.auth;
-export default auth;
+
+const withNoIndex: NextMiddleware = () => {
+  const response = NextResponse.next();
+  applyNoIndexHeaders(response);
+  return response;
+};
+
+export default auth(withNoIndex as Parameters<typeof auth>[0]) as NextMiddleware;
 
 export const config = {
   matcher: [
-    // Bookings has no middleware; Admin must skip static public files or `authorized` redirects
-    // unauthenticated /logo.png → /login (HTML) and the login page image breaks.
     "/((?!_next/static|_next/image|favicon\\.ico|logo\\.png|loginbg\\.jpg|.*\\.(?:ico|png|jpe?g|gif|svg|webp|woff2?|ttf|eot)$).*)",
   ],
 };

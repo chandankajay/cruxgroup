@@ -6,14 +6,23 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "check-types": "turbo run check-types",
+    "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "db:generate": "pnpm --filter @repo/db db:generate",
     "db:push": "pnpm --filter @repo/db db:push",
     "db:seed": "pnpm --filter @repo/db db:seed",
-    "db:studio": "pnpm --filter @repo/db prisma studio"
+    "db:studio": "pnpm --filter @repo/db prisma studio",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/github": "^11.0.6",
+    "@semantic-release/release-notes-generator": "^14.0.0",
+    "husky": "^9.1.7",
     "prettier": "^3.6.0",
+    "semantic-release": "^24.2.7",
     "prettier-plugin-tailwindcss": "^0.7.1",
     "turbo": "^2.9.6"
   },

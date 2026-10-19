@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
 import { DictionaryProvider } from "@repo/ui/dictionary-provider";
+import { NonProdEnvironmentBanner } from "./components/non-prod-environment-banner";
 import { ThemeProvider } from "../components/theme-provider";
 import { getAdminLabels } from "./lib/get-labels";
 import { AdminShell } from "./components/admin-shell";
@@ -55,6 +56,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={geist.className}>
+        <NonProdEnvironmentBanner />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <DictionaryProvider labels={labels}>
             <AuthProvider>
