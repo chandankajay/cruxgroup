@@ -1,0 +1,194 @@
+# Crux Group catalogue data. Edit this file, then run: python build.py
+# Images: own photos go in assets/own/<slug>.jpg (any size; build.py resizes to ~1200 px and compresses).
+#         If an own photo is missing, the stock fallback (if any) is used, else a neutral placeholder.
+
+company:
+  legal_name: "CRUX AGRI & RURAL SERVICES LLP"
+  brand: "Crux Group"
+  tagline: "Equipment rentals and construction services"
+  address: "Fathimapur, Kothur, RR District 509325"
+  gstin: "36AAWFC4122B1ZO"
+  phone: "+919182054293"            # tel: link target; leave blank to hide
+  phone_display: "+91 91820 54293"  # shown text (defaults to phone)
+  email: "chandan@cruxgroup.in"     # leave blank to hide
+  website: "https://www.cruxgroup.in"
+  website_display: "www.cruxgroup.in"
+
+catalogue:
+  title: "Catalogue: Rentals and Services"
+  price_note: "Prices are indicative and exclude GST."
+  draft_labels: false  # true = show "photo slot" labels on missing own photos (test builds).
+
+sections:
+  - id: rentals
+    title: "Equipment Rentals"
+    items:
+      - slug: jcb
+        name: "JCB"
+        best_use: ["Trenching and foundation digging", "Loading and shifting earth", "Site clearing and backfilling"]
+        description: "JCB backhoe loader on hourly hire for digging, trenching, loading and site clearing."
+        prices:
+          - {text: "Rs 1,200/hour"}
+        image: {own: assets/own/jcb.jpg}
+      - slug: excavator
+        name: "Excavator (Hitachi)"
+        best_use: ["Bulk excavation", "Deep trenches, ponds and pits", "Loading tippers"]
+        description: "Hitachi excavator on hourly hire for bulk excavation, trenching and loading."
+        prices:
+          - {text: "From Rs 6,000/hour"}
+        image: {own: assets/own/excavator.png}            # PNG with white/transparent border: auto-trimmed
+      - slug: hydra-crane
+        name: "Hydra Cranes"
+        best_use: ["Lifting precast panels and posts", "Unloading and placing materials", "Shifting heavy items on site"]
+        description: "Hydra mobile crane on hourly hire for lifting and placing materials and precast panels on site."
+        prices:
+          - {text: "From Rs 800/hour"}
+        image: {own: assets/own/hydra-crane.png}          # auto-trimmed
+      - slug: dozer
+        name: "Dozer"
+        best_use: ["Pushing and spreading earth", "Clearing bushes and rough land", "Rough grading of large plots"]
+        description: "Dozer on hourly hire for pushing earth, land clearing and rough grading."
+        prices:
+          - {text: "From Rs 1,200/hour"}
+        image: {gen: booklet/assets/gen/dozer.jpg}
+
+  - id: services
+    title: "Services"
+    items:
+      - slug: earth-works
+        name: "Earth Works, Excavation & Land Levelling"
+        description: "Earth works, excavation and land levelling for plots, farms and building sites."
+        prices: []          # empty = "Contact for quote"
+        image: {own: assets/own/land-levelling.jpg}       # same photo as assets/own/earth-works.jpg
+      - slug: post-hole-digging
+        name: "Post-hole Digging"
+        best_use: ["Fencing posts", "Precast compound wall posts", "Holes for pillars and footings"]
+        description: "Post-hole digging for fencing and compound wall posts. Priced per hole."
+        prices:
+          - {text: "From Rs 100 per hole"}
+        image: {own: assets/own/post-hole-digger.jpg, rotate: 6}   # straightened 6 deg anticlockwise
+      - slug: precast-handmade
+        name: "Precast Compound Wall: Handmade"
+        description: "Precast concrete compound wall with handmade panels. Rate per square foot of wall."
+        prices:
+          - {text: "Rs 60/sft"}
+        # No own photo of handmade panels yet: generated illustrative image. Drop a real photo at
+        # assets/own/precast-handmade.jpg and change this to {own: assets/own/precast-handmade.jpg}.
+        image: {gen: booklet/assets/gen/precast-handmade.jpg}
+      - slug: precast-machine-made
+        name: "Precast Compound Wall: Prestressed Machine-Made"
+        description: "Precast compound wall with prestressed, machine-made panels, 2 inch thick. Rate per square foot of wall."
+        prices:
+          - {text: "Rs 100/sft"}
+        image: {own: assets/own/precast-machine-made.jpg, crop: [0, 0.25, 1, 1]}
+      - slug: fencing
+        name: "Fencing Contracts"
+        description: "Fencing work for farms, plots and open land, taken up on contract."
+        prices: []
+        image: {own: assets/own/fencing.jpg}
+      - slug: compound-wall
+        name: "Compound Wall"
+        description: "Compound wall construction on contract, to suit the site."
+        prices: []
+        image: {gen: booklet/assets/gen/wall-plastered.jpg}
+      - slug: farm-house
+        name: "Farm House Construction"
+        description: "Construction of farm houses on contract."
+        prices: []
+        image: {gen: booklet/assets/gen/farm-telangana-tiled.jpg}
+      - slug: building
+        name: "Building Contracts"
+        description: "Building construction work taken up on contract."
+        prices: []
+        image: {gen: booklet/assets/gen/building-construction.jpg}
+      - slug: civil
+        name: "Civil Contracts"
+        description: "General civil works taken up on contract."
+        prices: []
+        image: {gen: booklet/assets/gen/wall-granite.jpg}
+
+# ---------------------------------------------------------------------------------------------
+# PRINT BOOKLET + WEBSITE (booklet/build.py). Prices, rentals and company details above are reused;
+# only booklet-specific copy and images live here. Image paths are relative to /workspace/crux-catalogue.
+# kind: own = the user's real photo ("Our site" tag); design = generated design option; illus = generated illustration.
+booklet:
+  title: "Machinery. Earth works. Walls. Farm houses."
+  subtitle: "Rentals and construction services from Kothur, Rangareddy"
+  cover: {src: booklet/assets/gen/cover-hero.jpg, kind: illus}
+  design_label: "Design options we build"
+  about:
+    heading: "Built on our own machinery"
+    lead: "Crux Group (CRUX AGRI & RURAL SERVICES LLP) works out of Fathimapur, Kothur, in Rangareddy District, Telangana."
+    body:
+      - "We run our own machines: JCB, Hitachi excavator, hydra crane, dozer and a tractor-mounted post-hole digger."
+      - "That lets us take a plot from bare land to a finished project: clearing and levelling, digging, precast or built compound walls, fencing, and farm house or building construction."
+    points:
+      - {h: "Own machinery", t: "JCB, excavator, hydra crane, dozer and post-hole digger from our own fleet."}
+      - {h: "End to end", t: "Land work, walls, fencing and buildings in one contract, or any single part."}
+      - {h: "Clear pricing", t: "Written quotes, milestone payments."}
+    image: {src: assets/own/jcb.jpg, kind: own}
+  earthworks:
+    heading: "Earth works and land levelling"
+    lead: "Clearing, cutting, filling and levelling for farm land, plots and building sites, done with our own JCB, excavator and dozer."
+    image: {src: assets/own/land-levelling.jpg, kind: own}
+    image2: {src: assets/own/earth-works.jpg, kind: own, crop: [0, 0.05, 1, 0.6]}
+    process:
+      - {h: "Survey", t: "Site visit, levels and extent of work agreed with you."}
+      - {h: "Clearing", t: "Bushes, roots, stones and debris removed."}
+      - {h: "Cut and fill", t: "High ground cut, low ground filled."}
+      - {h: "Levelling", t: "Spread and graded to the agreed levels and slopes."}
+      - {h: "Handover", t: "Final levels checked with you on site."}
+  precast:
+    heading: "Precast compound walls"
+    lead: "Fast to put up, neat in line and ready to use. Choose the panel that suits your budget."
+    handmade: {src: booklet/assets/gen/precast-handmade.jpg, kind: illus}
+    machine: {src: assets/own/precast-machine-made.jpg, kind: own, crop: [0, 0.25, 1, 1]}
+    rows:
+      - ["Panels", "Hand-cast precast panels", "Prestressed, machine-made panels"]
+      - ["Panel thickness", "On request", "2 inch"]
+      - ["Rate", "Rs 60/sft", "Rs 100/sft"]
+    note: "Rates are per square foot of wall. Post holes can be dug with our own post-hole digger."
+  walls:
+    heading: "Compound wall designs"
+    lead: "Beyond precast, we build compound walls in stone, brick and concrete, finished the way you want."
+    items:
+      - {name: "Natural granite wall", text: "Random rubble granite masonry with a flat stone coping. Strong and low on maintenance, at home on a farm.", src: booklet/assets/gen/wall-granite.jpg}
+      - {name: "Plastered and painted wall", text: "Concrete or block wall with smooth plaster, a painted finish, pilasters and a projecting coping.", src: booklet/assets/gen/wall-plastered.jpg}
+      - {name: "Exposed brick wall", text: "Neat exposed brickwork with brick piers and a brick-on-edge coping.", src: booklet/assets/gen/wall-brick.jpg}
+      - {name: "Precast panel wall for farmland", text: "Slotted precast posts with panels between them, for long runs around agricultural land.", src: booklet/assets/gen/wall-precast-farm.jpg}
+      - {name: "Wall with MS grille", text: "Low plastered wall with mild steel grille panels between pillars. Secure, and keeps the view open.", src: booklet/assets/gen/wall-ms-grille.jpg}
+      - {name: "Gate pillars with cladding", text: "Entrance pillars clad in natural stone, with lamp caps and a steel gate.", src: booklet/assets/gen/wall-gate-pillar.jpg}
+  farmhouses:
+    heading: "Farm house designs"
+    lead: "Six directions for a farm house on your land, from traditional to modern. Every design can be adapted to your plot, layout and budget."
+    items:
+      - {name: "Traditional Telangana", text: "Clay-tiled sloping roof, an open central courtyard and a deep verandah on wooden posts. Lime-washed walls and red-oxide floors keep it cool and simple.", src: booklet/assets/gen/farm-telangana-tiled.jpg}
+      - {name: "Heritage pillared", text: "Inspired by Chettinad homes: a colonnade of round pillars, a carved wooden main door and patterned tiled floors under a terracotta roof.", src: booklet/assets/gen/farm-chettinad.jpg}
+      - {name: "Kerala-style sloped roof", text: "Layered steep roofs with wide overhangs for sun and rain, laterite-toned walls, timber pillars and a sit-out verandah.", src: booklet/assets/gen/farm-kerala.jpg}
+      - {name: "Contemporary stone and timber", text: "Natural stone cladding with vertical wooden louvres and large windows. A two-storey form with clean roof lines.", src: booklet/assets/gen/farm-contemporary-stone.jpg}
+      - {name: "Modern minimal", text: "A crisp flat-roof box with floor-to-ceiling glass and a thin cantilevered slab, opening straight onto the land.", src: booklet/assets/gen/farm-modern-minimal.jpg}
+      - {name: "Tropical modern with pool", text: "A timber pergola over a deck, a lap pool in front, and stone and wood finishes for weekend living.", src: booklet/assets/gen/farm-tropical-pool.jpg}
+  fencing:
+    heading: "Fencing"
+    lead: "Fencing for farms, plots and open land, taken up on contract, including post-hole digging with our own machine."
+    own: {src: assets/own/fencing.jpg, kind: own}
+    items:
+      - {name: "Barbed wire on concrete poles", text: "Concrete poles with tight strands of barbed wire. A practical boundary for large farm land.", src: booklet/assets/gen/fence-barbed.jpg}
+      - {name: "Chain-link with concrete posts", text: "Galvanised chain-link mesh between concrete posts, for plots, orchards and yards.", src: booklet/assets/gen/fence-chainlink.jpg}
+      - {name: "Solar fence for farmland", text: "Multi-wire fence on insulated posts, powered by a solar energiser, to protect crops.", src: booklet/assets/gen/fence-solar.jpg}
+  building:
+    heading: "Building and civil contracts"
+    lead: "Farm houses, buildings and general civil works on contract, backed by our own machinery for the earth work."
+    image: {src: booklet/assets/gen/building-construction.jpg, kind: illus}
+    blocks:
+      - {h: "Building contracts", t: "Building construction on contract, from foundations to finishing, to your drawings or designs we prepare with you."}
+      - {h: "Farm house construction", t: "Any of the farm house designs in this booklet, or your own, built on your land."}
+      - {h: "Civil contracts", t: "General civil works on contract, such as foundations, RCC, masonry and site works."}
+  process:
+    heading: "How we work"
+    steps:
+      - {h: "Survey", t: "We visit the site, take measurements and understand what you need."}
+      - {h: "Quote", t: "You get a written quote with scope, rates and timeline."}
+      - {h: "Milestone payments", t: "30% to start, 50% at the agreed mid-stage milestone, 20% on handover.", pay: [30, 50, 20]}
+      - {h: "Execution", t: "Our own machines and team carry out the work to the agreed scope."}
+      - {h: "Handover", t: "We walk the finished work with you before closing."}
