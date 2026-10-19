@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   BANNED_EN_PHRASES,
-  BANNED_TE_PHRASES,
   collectLocalizedEnStrings,
   collectLocalizedTeStrings,
   teTextContainsBannedPhrase,
