@@ -9,17 +9,38 @@
 
 ```bash
 pnpm --filter @repo/db db:push
-pnpm --filter @repo/db exec tsx scripts/seed-services-seo.ts
+APP_ENV=dev SEED_ALLOWED_DB=crux_dev DATABASE_URL='mongodb://127.0.0.1:27017/crux_dev' \
+  pnpm --filter @repo/db exec tsx scripts/seed-services-seo.ts
 ```
 
-`seed-services-seo.ts` refuses `APP_ENV=prod` and production-looking `DATABASE_URL` values.
+Seed guard (refuse by default):
+
+- `APP_ENV` must be **`dev`** or **`ci`** (unset → abort).
+- `SEED_ALLOWED_DB` must match the database name parsed from `DATABASE_URL`.
+- Database name **`crux_prod`** is always refused.
 
 ## Backfill
 
 1. Run `db:push` so nullable road fields exist.
-2. Run the seed on **dev** only — it recomputes `straightLineKmFromBase` from the C1 Fathimapur hub and clears bogus village-derived road km (leaves `roadKmFromBase` null unless `MEASURED_ROAD_KM_FROM_C1` has an entry).
-3. Existing `ServiceAreaPage` rows are **not** forced to `published: true`. Only the three launch area slugs get a `farmhouse-construction` page stub (`published: false`, `thinContent: true`) if missing.
-4. Publishing: set `lastReviewed`, fix `thinContent`, then `published: true` via admin CMS after CWA-29 copy is ready.
+2. Run the seed on **dev** only — every `ServicesArea` **update** sets `roadKmFromBase` and `roadKmFromBaseSource` to measured values or **`null`** (clears bogus 7 km from PR #25).
+3. `ServiceAreaPage`: seed sets `published: false` on all rows that are **not** a first-release pair (`farmhouse-construction` × `fatimapur-kothur` | `shadnagar` | `shamshabad`), including legacy C1 × six-service rows from #25.
+4. Publishing: admin CMS sets `lastReviewed` when publishing (counts as review); `thinContent` must be false before publish.
+
+### One-off (if seed not run yet)
+
+```javascript
+// Mongo / Prisma: unpublish every ServiceAreaPage outside the first-release allow-list
+db.service_area_pages.updateMany(
+  {
+    $nor: [
+      { serviceSlug: "farmhouse-construction", areaSlug: "fatimapur-kothur" },
+      { serviceSlug: "farmhouse-construction", areaSlug: "shadnagar" },
+      { serviceSlug: "farmhouse-construction", areaSlug: "shamshabad" },
+    ],
+  },
+  { $set: { published: false } },
+);
+```
 
 ## Rollback
 
@@ -29,5 +50,6 @@ pnpm --filter @repo/db exec tsx scripts/seed-services-seo.ts
 
 ## Verify
 
-- `pnpm --filter @repo/lib test` (C1=0, C2≈16.1, C5≈13.6 straight-line)
+- `pnpm --filter @repo/lib test` (distances + publish gate)
+- `pnpm --filter @repo/db test` (seed guard)
 - Spoke page shows straight-line km; road km only when `roadKmFromBase` + source are set.

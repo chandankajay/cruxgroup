@@ -8,7 +8,10 @@ import {
   serviceAreaPageTag,
   serviceAreaPagesListTag,
 } from "@repo/lib";
-import { serviceAreaPageIsPublic } from "@repo/lib/service-area-publish-gate";
+import {
+  isFirstReleaseServiceAreaPair,
+  serviceAreaPageIsPublic,
+} from "@repo/lib/service-area-publish-gate";
 
 export async function getPublishedServiceAreaPageTagged(
   serviceSlug: string,
@@ -108,6 +111,9 @@ export async function listPublishedServiceAreaPageParams(): Promise<
         },
       });
       return rows
+        .filter((row) =>
+          isFirstReleaseServiceAreaPair(row.serviceSlug, row.areaSlug),
+        )
         .filter((row) => serviceAreaPageIsPublic(row))
         .map(({ serviceSlug, areaSlug }) => ({ serviceSlug, areaSlug }));
     },

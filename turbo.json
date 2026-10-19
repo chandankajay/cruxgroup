@@ -3,6 +3,7 @@
   "ui": "tui",
   "globalEnv": [
     "APP_ENV",
+    "SEED_ALLOWED_DB",
     "NEXTAUTH_SECRET",
     "AUTH_SECRET",
     "DATABASE_URL",

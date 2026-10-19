@@ -1,12 +1,18 @@
 /**
  * Backfill ServicesArea rows from packages/lib clusters-data.json.
- * Run (dev DB only): pnpm --filter @repo/db exec tsx scripts/seed-services-seo.ts
+ * Run (dev DB only):
+ *   APP_ENV=dev SEED_ALLOWED_DB=crux_dev DATABASE_URL=... pnpm --filter @repo/db exec tsx scripts/seed-services-seo.ts
  */
 import { prisma } from "../src/client";
 import { assertSafeServicesSeoSeedTarget } from "../src/seed-services-seo-guard";
 import clustersJson from "../../lib/src/data/clusters-data.json";
 import type { ClustersData } from "../../lib/src/clusters.types";
 import { straightLineKmFromC1Hub } from "../../lib/src/area-hub-distance";
+import {
+  FIRST_RELEASE_AREA_SLUGS,
+  FIRST_RELEASE_SERVICE_SLUG,
+  isFirstReleaseServiceAreaPair,
+} from "../../lib/src/service-area-publish-gate";
 
 const SERVICE_SLUGS = [
   "land-levelling",
@@ -16,15 +22,6 @@ const SERVICE_SLUGS = [
   "compound-fencing",
   "debris-rock-breaking",
 ] as const;
-
-/** First public release (CWA-54): only these area × service pairs may be reviewed/published. */
-const FIRST_RELEASE_AREA_SLUGS = new Set([
-  "fatimapur-kothur",
-  "shadnagar",
-  "shamshabad",
-]);
-
-const FIRST_RELEASE_SERVICE_SLUG = "farmhouse-construction";
 
 /**
  * Hub-to-hub road km from C1 — only set when measured (OSRM/manual) with a documented source.
@@ -36,27 +33,22 @@ const MEASURED_ROAD_KM_FROM_C1: Readonly<
 
 const data = clustersJson as ClustersData;
 
-function areaDisplayName(slug: string, fallback: string): string {
-  if (slug === "fatimapur-kothur") return "Fathimapur (Kothur)";
-  return fallback;
-}
-
 async function main(): Promise<void> {
   assertSafeServicesSeoSeedTarget();
 
   for (const cluster of data.clusters) {
     const villages = data.villages.filter((v) => v.clusterId === cluster.id);
     const straightLineKm = straightLineKmFromC1Hub(cluster.hub.coordinates);
-    const measuredRoad = MEASURED_ROAD_KM_FROM_C1[cluster.slug];
+    const measured = MEASURED_ROAD_KM_FROM_C1[cluster.slug];
 
     await prisma.servicesArea.upsert({
       where: { slug: cluster.slug },
       create: {
         slug: cluster.slug,
-        displayName: areaDisplayName(cluster.slug, cluster.displayName),
+        displayName: cluster.displayName,
         clusterId: cluster.id,
-        roadKmFromBase: measuredRoad?.km ?? null,
-        roadKmFromBaseSource: measuredRoad?.source ?? null,
+        roadKmFromBase: measured?.km ?? null,
+        roadKmFromBaseSource: measured?.source ?? null,
         straightLineKmFromBase: straightLineKm,
         demandDrivers: [cluster.whyHere],
         villages: villages.slice(0, 50).map((v) => ({
@@ -67,14 +59,10 @@ async function main(): Promise<void> {
         published: false,
       },
       update: {
-        displayName: areaDisplayName(cluster.slug, cluster.displayName),
+        displayName: cluster.displayName,
         straightLineKmFromBase: straightLineKm,
-        ...(measuredRoad
-          ? {
-              roadKmFromBase: measuredRoad.km,
-              roadKmFromBaseSource: measuredRoad.source,
-            }
-          : {}),
+        roadKmFromBase: measured?.km ?? null,
+        roadKmFromBaseSource: measured?.source ?? null,
       },
     });
   }
@@ -107,7 +95,27 @@ async function main(): Promise<void> {
         thinContent: true,
         lastReviewed: null,
       },
-      update: {},
+      update: {
+        published: false,
+      },
+    });
+  }
+
+  const allPages = await prisma.serviceAreaPage.findMany({
+    select: { serviceSlug: true, areaSlug: true },
+  });
+  for (const page of allPages) {
+    if (isFirstReleaseServiceAreaPair(page.serviceSlug, page.areaSlug)) {
+      continue;
+    }
+    await prisma.serviceAreaPage.update({
+      where: {
+        serviceSlug_areaSlug: {
+          serviceSlug: page.serviceSlug,
+          areaSlug: page.areaSlug,
+        },
+      },
+      data: { published: false },
     });
   }
 }

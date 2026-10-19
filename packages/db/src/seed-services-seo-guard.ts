@@ -1,46 +1,68 @@
-const ALLOWED_APP_ENVS = new Set([
-  "dev",
-  "development",
-  "preview",
-  "ci",
-  "test",
-  "local",
-]);
+/** Production MongoDB database name — never seed against this. */
+export const SEED_REFUSED_PROD_DB_NAME = "crux_prod";
 
-const PROD_DATABASE_URL_MARKERS = [
-  "mongodb.net",
-  "/crux_prod",
-  "crux-prod",
-  "production",
-  "prod.cruxgroup",
-];
+const ALLOWED_APP_ENVS = new Set(["dev", "ci"]);
 
 /**
- * Refuses to run dev/preview seeds against production data (CWA-54).
+ * Parses the database name from a MongoDB connection string without logging the URL.
+ */
+export function parseMongoDatabaseName(databaseUrl: string): string {
+  const trimmed = databaseUrl.trim();
+  if (!trimmed) return "";
+
+  const withoutQuery = trimmed.split("?")[0] ?? trimmed;
+  const slash = withoutQuery.lastIndexOf("/");
+  if (slash === -1 || slash === withoutQuery.length - 1) {
+    return "";
+  }
+  const name = withoutQuery.slice(slash + 1);
+  return decodeURIComponent(name);
+}
+
+/**
+ * Refuses to run dev seeds unless APP_ENV and DATABASE_URL target an explicit allow-list DB (CWA-54).
  */
 export function assertSafeServicesSeoSeedTarget(): void {
   const appEnv = process.env.APP_ENV?.trim().toLowerCase();
-  if (appEnv === "prod" || appEnv === "production") {
+  if (!appEnv) {
     throw new Error(
-      "seed-services-seo: APP_ENV is production — aborting to protect prod data.",
+      "seed-services-seo: APP_ENV is required (set to dev or ci before running).",
     );
   }
-  if (appEnv && !ALLOWED_APP_ENVS.has(appEnv)) {
+  if (!ALLOWED_APP_ENVS.has(appEnv)) {
     throw new Error(
-      `seed-services-seo: APP_ENV="${appEnv}" is not allowed for this seed (use dev/preview/ci).`,
+      `seed-services-seo: APP_ENV must be dev or ci (got "${appEnv}").`,
     );
   }
 
-  const databaseUrl = (process.env.DATABASE_URL ?? "").toLowerCase();
+  const allowedDb = process.env.SEED_ALLOWED_DB?.trim();
+  if (!allowedDb) {
+    throw new Error(
+      "seed-services-seo: SEED_ALLOWED_DB is required (target dev database name).",
+    );
+  }
+
+  const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
   if (!databaseUrl) {
     throw new Error("seed-services-seo: DATABASE_URL is required.");
   }
 
-  for (const marker of PROD_DATABASE_URL_MARKERS) {
-    if (databaseUrl.includes(marker)) {
-      throw new Error(
-        `seed-services-seo: DATABASE_URL looks like production (${marker}) — aborting.`,
-      );
-    }
+  const dbName = parseMongoDatabaseName(databaseUrl);
+  if (!dbName) {
+    throw new Error(
+      "seed-services-seo: could not parse database name from DATABASE_URL.",
+    );
+  }
+
+  if (dbName === SEED_REFUSED_PROD_DB_NAME) {
+    throw new Error(
+      `seed-services-seo: refused to run against production database name "${SEED_REFUSED_PROD_DB_NAME}".`,
+    );
+  }
+
+  if (dbName !== allowedDb) {
+    throw new Error(
+      `seed-services-seo: database name "${dbName}" does not match SEED_ALLOWED_DB.`,
+    );
   }
 }
